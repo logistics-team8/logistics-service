@@ -8,7 +8,7 @@ main
 - main: 항상 배포 가능한 상태 유지 (운영 배포용)
 - develop: 팀원들 기능이 합쳐지는 통합 브랜치, 신규 브랜치는 항상 여기서 분기
 - feature/서비스명-기능명: 개인 작업 브랜치 (버그 수정·리팩토링·테스트도 이 안에서 처리, 커밋 prefix로 구분)
-- 브랜치명은 전부 소문자 (예: feature/order-생성)
+- 브랜치명은 전부 소문자 (예: - 예: `feature/order-create`, `feature/orderitem-update`)
 
 ## Merge 프로세스
 1. Issue 생성
@@ -26,8 +26,8 @@ main
 | develop | PR을 통해서만 병합, 리뷰 승인 3명 이상 |
 
 ## PR 규칙
-- 제목: `[모듈명] 작업 내용` (예: `[order-service] 주문 생성 API 구현`)
-- 여러 모듈 동시 수정 시: `[order-service,common] ...`
+- 제목: `[서비스명] 작업 내용` (예: `[order] 주문 생성 API 구현`,'[payment] 주문 생성 API 구현`)
+- 여러 모듈 동시 수정 시: `[order,common] ...`
 - 머지 방식: Merge commit
 
 ## 커밋 컨벤션 (Conventional Commits)
