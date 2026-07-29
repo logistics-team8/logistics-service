@@ -1,0 +1,2 @@
+rootProject.name = 'logistics-service'
+include 'common', 'order-service'
