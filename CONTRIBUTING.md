@@ -1,14 +1,17 @@
-# 협업 컨벤션
-
-## 브랜치 전략
-main
-└ develop
-└ feature/서비스명-기능명
-
 - main: 항상 배포 가능한 상태 유지 (운영 배포용)
 - develop: 팀원들 기능이 합쳐지는 통합 브랜치, 신규 브랜치는 항상 여기서 분기
 - feature/서비스명-기능명: 개인 작업 브랜치 (버그 수정·리팩토링·테스트도 이 안에서 처리, 커밋 prefix로 구분)
-- 브랜치명은 전부 소문자 (예: - 예: `feature/order-create`, `feature/orderitem-update`)
+- 브랜치명은 전부 소문자, 영어 사용 (예: `feature/order-create`, `feature/orderitem-update`)
+
+## 브랜치/기능명 작성 규칙
+- feature/서비스명-동사 (영어)
+- 동사는 CRUD 기준으로 통일:
+    - 생성: create
+    - 조회(단건): get
+    - 조회(목록): list
+    - 수정: update
+    - 삭제: delete
+- 예: `feature/order-create`, `feature/payment-update`
 
 ## Merge 프로세스
 1. Issue 생성
@@ -26,7 +29,7 @@ main
 | develop | PR을 통해서만 병합, 리뷰 승인 3명 이상 |
 
 ## PR 규칙
-- 제목: `[서비스명] 작업 내용` (예: `[order] 주문 생성 API 구현`,'[payment] 주문 생성 API 구현`)
+- 제목: `[서비스명] 작업 내용` (예: `[order] 주문 생성 API 구현`, `[payment] 결제 승인 처리`)
 - 여러 모듈 동시 수정 시: `[order,common] ...`
 - 머지 방식: Merge commit
 
@@ -52,7 +55,7 @@ main
 ## PR 크기 가이드라인
 - 하나의 PR엔 관련된 작업만 담기 (여러 기능을 한 PR에 몰아넣지 않기)
 - 너무 커지면 리뷰하기 어려워지니, 적당한 단위로 나눠서 올리기
-- 
+
 ## 코드 포맷
 - Spotless 사용 (자동 코드 스타일 정리)
 - Gradle 설정: 미완료 (추가 예정)
