@@ -43,7 +43,7 @@ main
 
 ## PR & Issue 템플릿
 - PR 템플릿 적용 완료 (`.github/pull_request_template.md`)
-- Issue 템플릿: 미정 (추가 예정)
+- Issue 템플릿 적용 완료 (`.github/ISSUE_TEMPLATE/task.md`)
 
 ## 환경변수
 - .env: 실제 비밀값 (커밋 금지, .gitignore 처리됨)
