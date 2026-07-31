@@ -1,25 +1,22 @@
 plugins {
     id 'java'
-    // 모든 모듈이 Java 프로젝트라는 걸 선언
 }
 
 allprojects {
     group = 'com.logistics'
     version = '0.0.1-SNAPSHOT'
-    // 프로젝트 전체에 적용되는 공통 정보
 
     repositories {
         mavenCentral()
-        // 라이브러리 받아올 저장소
     }
 }
 
 subprojects {
     apply plugin: 'java'
-    // common, order-service 등 하위 모듈 전부에 java 플러그인 자동 적용
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_17
-        // 모든 모듈 Java 17로 통일
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
     }
 }
