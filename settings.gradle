@@ -1,2 +1,6 @@
 rootProject.name = 'logistics-service'
-include 'common', 'order-service'
+include 'libs:common'
+include 'apps:order-service'
+include 'infra:config-server'
+include 'infra:eureka-server'
+include 'infra:gateway'
