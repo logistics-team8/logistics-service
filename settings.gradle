@@ -1,6 +1,13 @@
 rootProject.name = 'logistics-service'
 include 'libs:common'
-include 'apps:order-service'
+
 include 'infra:config-server'
 include 'infra:eureka-server'
 include 'infra:gateway'
+
+include 'apps:user-service'
+include 'apps:hub-service'
+include 'apps:company-product-service'
+include 'apps:delivery-service'
+include 'apps:order-service'
+include 'apps:notification-service'

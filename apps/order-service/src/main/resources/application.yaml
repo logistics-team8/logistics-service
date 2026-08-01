@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: order-service
+  profiles:
+    default: local
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
