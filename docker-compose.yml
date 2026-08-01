@@ -1,8 +1,21 @@
-services: {}
-# 인프라 담당자가 여기에 서비스 컨테이너 추가
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-logistics}
+      POSTGRES_USER: ${DB_USERNAME:-logistics}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-logistics}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - msa-network
+
+volumes:
+  postgres-data:
 
 networks:
   msa-network:
     driver: bridge
-    # 모든 서비스 컨테이너가 이 네트워크에 묶여야 서로 통신 가능
-    # (각 서비스 담당자가 자기 서비스 컨테이너 추가할 때 이 네트워크에 연결하면 됨)
