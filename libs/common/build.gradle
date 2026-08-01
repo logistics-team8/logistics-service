@@ -1,0 +1,32 @@
+plugins {
+    id 'java-library'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom 'org.springframework.boot:spring-boot-dependencies:4.0.7'
+    }
+}
+
+dependencies {
+    api 'org.springframework:spring-web'
+
+    implementation 'org.slf4j:slf4j-api'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation 'org.springframework:spring-webmvc'
+    implementation 'org.springframework.security:spring-security-core'
+    implementation 'jakarta.validation:jakarta.validation-api'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api'
+
+    annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-validation'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
