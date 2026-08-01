@@ -2,3 +2,14 @@ eureka:
   client:
     service-url:
       defaultZone: http://eureka-server:8761/eureka/
+
+app:
+  database:
+    host: ${DB_HOST:postgres}
+    port: ${DB_PORT:5432}
+    name: ${DB_NAME:logistics}
+
+spring:
+  datasource:
+    username: ${DB_USERNAME:logistics}
+    password: ${DB_PASSWORD:logistics}
