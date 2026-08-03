@@ -1,5 +1,6 @@
 package com.logistics.userservice.domain;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,9 +15,9 @@ public interface UserRepository {
 
     Optional<User> findByUsernameAndDeletedAtIsNull(String username);
 
-    boolean existsByUsername(String username);
-
-    boolean existsBySlackId(String slackId);
+    List<User> findByUsernameOrSlackId(String username, String slackId);
 
     void deleteAllInBatch();
+
+
 }
