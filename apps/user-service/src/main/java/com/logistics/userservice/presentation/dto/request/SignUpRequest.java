@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
-public record UserSignUpRequest(
+public record SignUpRequest(
         @NotBlank
                 @Size(min = 4, max = 10)
                 @Pattern(regexp = "^[a-z0-9]+$")

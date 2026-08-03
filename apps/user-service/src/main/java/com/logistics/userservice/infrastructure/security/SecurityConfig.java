@@ -33,8 +33,7 @@ public class SecurityConfig {
             HttpSecurity httpSecurity,
             UserContextFilter userContextFilter,
             AccessDeniedHandler accessDeniedHandler,
-            CustomAuthenticationEntryPoint customAuthenticationEntryPoint)
-            throws Exception {
+            CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         // csrf 비활성화
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 
