@@ -13,6 +13,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @Transactional
@@ -25,12 +27,11 @@ public class UserService {
         User user = User.create(command);
         validateDuplicate(command);
 
-        try {
-            user.encodePassword(passwordEncoder.encode(user.getPassword()));
+        user.encodePassword(passwordEncoder.encode(user.getPassword()));
 
+        try {
             userRepository.saveAndFlush(user);
             log.debug("[UserService] User 생성 완료");
-
         } catch (
         DataIntegrityViolationException e) {
             log.error("[UserService] User 생성 실패 : {}", e.getMessage());
@@ -39,14 +40,17 @@ public class UserService {
     }
 
     private void validateDuplicate(UserSignUpCommand command) {
-        if (userRepository.existsByUsername(command.username())) {
-            throw new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME);
-        }
-        log.debug("[UserService] Username 유효성 체크: {}", command.username());
+        List<User> existUsers = userRepository.findByUsernameOrSlackId(command.username(), command.slackId());
 
-        if (userRepository.existsBySlackId(command.slackId())) {
-            throw new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID);
+        for (User user : existUsers) {
+            if (command.username().equals(user.getUsername())) {
+                log.debug("[UserService] Username 유효성 체크: {}", command.username());
+                throw new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME);
+            }
+            if (command.slackId().equals(user.getSlackId())) {
+                log.debug("[UserService] Slack ID 유효성 체크: {}", command.slackId());
+                throw new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID);
+            }
         }
-        log.debug("[UserService] Slack ID 유효성 체크: {}", command.slackId());
     }
 }
