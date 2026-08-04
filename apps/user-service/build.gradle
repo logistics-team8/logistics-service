@@ -35,9 +35,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
-    // .env
-    implementation("me.paulschwarz:springboot4-dotenv:5.1.0")
-
     // UUID v7
     implementation 'com.github.f4b6a3:uuid-creator:6.1.1'
 
@@ -47,6 +44,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
     // TODO : QueryDSL, Redis
+
+    // Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.2'
 
     // PostgresSQL
     runtimeOnly 'org.postgresql:postgresql'
