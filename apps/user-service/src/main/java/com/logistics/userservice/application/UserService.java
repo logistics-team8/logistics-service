@@ -3,7 +3,7 @@ package com.logistics.userservice.application;
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.UserInfo;
-import com.logistics.userservice.application.dto.UserRole;
+import com.logistics.userservice.application.dto.UserRoleInfo;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
 import com.logistics.userservice.application.dto.UserSlackInfo;
 import com.logistics.userservice.domain.User;
@@ -76,8 +76,8 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public UserRole getUserRole(UUID userId) {
-        return new UserRole(
+    public UserRoleInfo getUserRole(UUID userId) {
+        return new UserRoleInfo(
                 userId,
                 userRepository
                         .findRoleById(userId)
