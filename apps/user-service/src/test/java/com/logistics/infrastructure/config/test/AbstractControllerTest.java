@@ -1,7 +1,9 @@
 package com.logistics.infrastructure.config.test;
 
-import com.logistics.userservice.infrastructure.config.SecurityConfig;
+import com.logistics.userservice.infrastructure.security.JwtProperties;
+import com.logistics.userservice.infrastructure.security.SecurityConfig;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -13,6 +15,7 @@ import tools.jackson.databind.json.JsonMapper;
 @WebMvcTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@EnableConfigurationProperties(JwtProperties.class)
 @Import(SecurityConfig.class)
 public abstract class AbstractControllerTest {
     @Autowired protected MockMvc mockMvc;
