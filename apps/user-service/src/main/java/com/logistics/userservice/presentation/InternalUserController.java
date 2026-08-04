@@ -2,7 +2,7 @@ package com.logistics.userservice.presentation;
 
 import com.logistics.userservice.application.UserService;
 import com.logistics.userservice.application.dto.UserInfo;
-import com.logistics.userservice.application.dto.UserRole;
+import com.logistics.userservice.application.dto.UserRoleInfo;
 import com.logistics.userservice.application.dto.UserSlackInfo;
 import io.swagger.v3.oas.annotations.Hidden;
 import java.util.UUID;
@@ -27,7 +27,7 @@ public class InternalUserController {
     }
 
     @GetMapping("/{userId}/role")
-    public UserRole getUserRole(@PathVariable UUID userId) {
+    public UserRoleInfo getUserRole(@PathVariable UUID userId) {
         return userService.getUserRole(userId);
     }
 
