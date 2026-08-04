@@ -1,13 +1,11 @@
 package com.logistics.userservice.domain;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
-import com.logistics.userservice.presentation.dto.request.SignUpRequest;
 import com.logistics.userservice.presentation.exception.AuthErrorCode;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 class UserEntityTest {
     private User user;

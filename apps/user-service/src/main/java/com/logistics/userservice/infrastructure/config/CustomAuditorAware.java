@@ -10,7 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @Configuration
-public class CustomAuditorAware implements AuditorAware<UUID> { // 1. 타입 매핑을 UUID로 변경
+public class CustomAuditorAware implements AuditorAware<UUID> {
 
     @Override
     public Optional<UUID> getCurrentAuditor() {

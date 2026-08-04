@@ -10,7 +10,6 @@ import com.logistics.userservice.application.dto.UserSignUpCommand;
 import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
-
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -45,7 +44,8 @@ class UserServiceUnitTest {
 
             User existUsers = User.create(command);
 
-            given(userRepository.findByUsernameOrSlackId(command.username(), command.slackId())).willReturn(List.of(existUsers));
+            given(userRepository.findByUsernameOrSlackId(command.username(), command.slackId()))
+                    .willReturn(List.of(existUsers));
 
             // when & then
             assertThatThrownBy(() -> userService.createUser(command))
@@ -81,7 +81,8 @@ class UserServiceUnitTest {
                             Role.COMPANY_MANAGER);
 
             User existUsers = User.create(command2);
-            given(userRepository.findByUsernameOrSlackId(command.username(), command.slackId())).willReturn(List.of(existUsers));
+            given(userRepository.findByUsernameOrSlackId(command.username(), command.slackId()))
+                    .willReturn(List.of(existUsers));
 
             // when & then
             assertThatThrownBy(() -> userService.createUser(command))

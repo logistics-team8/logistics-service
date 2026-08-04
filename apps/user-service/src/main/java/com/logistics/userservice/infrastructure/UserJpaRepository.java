@@ -2,7 +2,6 @@ package com.logistics.userservice.infrastructure;
 
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

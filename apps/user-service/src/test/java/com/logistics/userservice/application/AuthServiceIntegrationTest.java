@@ -1,5 +1,7 @@
 package com.logistics.userservice.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.logistics.infrastructure.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.application.dto.TokenResult;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
@@ -14,8 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @Transactional
 @SpringBootTest
