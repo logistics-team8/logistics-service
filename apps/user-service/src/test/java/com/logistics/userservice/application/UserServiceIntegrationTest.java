@@ -6,18 +6,20 @@ import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.infrastructure.config.test.AbstractIntegrationTest;
 import com.logistics.infrastructure.config.test.ConcurrencyTestingUtil;
+import com.logistics.userservice.application.dto.UserInfo;
+import com.logistics.userservice.application.dto.UserRoleInfo;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.application.dto.UserSlackInfo;
 import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.domain.UserStatus;
+import jakarta.persistence.EntityManager;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,7 +29,26 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserServiceIntegrationTest extends AbstractIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private EntityManager entityManager;
     @Autowired private UserService userService;
+
+    private User dummyUser;
+    private UUID userId;
+
+    @BeforeEach
+    void setUp() {
+        UserSignUpCommand command =
+                new UserSignUpCommand(
+                        "dummy1234",
+                        "Testtest123!",
+                        "김철수",
+                        "U33333333",
+                        null,
+                        null,
+                        Role.COMPANY_MANAGER);
+        dummyUser = userRepository.save(User.create(command));
+        userId = dummyUser.getId();
+    }
 
     @AfterEach
     void tearDown() {
@@ -47,13 +68,16 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
                             "test1234",
                             "Testtest123!",
                             "김철수",
-                            "U123456789",
+                            "U22222222",
                             null,
                             null,
                             Role.COMPANY_MANAGER);
 
             // when
             userService.createUser(command);
+
+            entityManager.flush();
+            entityManager.clear();
 
             User savedUser =
                     userRepository
@@ -62,10 +86,11 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
 
             // then
             assertThat(savedUser.getUsername()).isEqualTo(command.username());
-            assertThat(passwordEncoder.matches("Testtest123!", savedUser.getPassword())).isTrue();
-            assertThat(savedUser.getName()).isEqualTo("김철수");
-            assertThat(savedUser.getSlackId()).isEqualTo("U123456789");
-            assertThat(savedUser.getRole()).isEqualTo(Role.COMPANY_MANAGER);
+            assertThat(passwordEncoder.matches(command.password(), savedUser.getPassword()))
+                    .isTrue();
+            assertThat(savedUser.getName()).isEqualTo(command.name());
+            assertThat(savedUser.getSlackId()).isEqualTo(command.slackId());
+            assertThat(savedUser.getRole()).isEqualTo(command.role());
             assertThat(savedUser.getUserStatus()).isEqualTo(UserStatus.PENDING);
             assertThat(savedUser.getCreatedAt()).isNotNull();
             assertThat(savedUser.getCreatedBy()).isNull();
@@ -77,10 +102,10 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
             // given
             UserSignUpCommand command =
                     new UserSignUpCommand(
-                            "test1234",
+                            "test123456",
                             "Testtest123!",
                             "김철수",
-                            "U123456789",
+                            "U11111111",
                             null,
                             null,
                             Role.COMPANY_MANAGER);
@@ -102,6 +127,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
                     });
 
             // then
+            assertThat(successCount.get()).isEqualTo(1);
             assertThat(failures).hasSize(4);
             assertThat(failures)
                     .allSatisfy(
@@ -110,6 +136,52 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
                                 assertThat(((BusinessException) e).getErrorCode())
                                         .isEqualTo(CommonErrorCode.DUPLICATE_RESOURCE);
                             });
+        }
+    }
+
+    @Nested
+    @DisplayName("내부 통신 Service - 통합 테스트")
+    class InternalTest {
+        @Test
+        @Transactional
+        @DisplayName("회원 정보 조회 성공")
+        void getUserInfo_success() {
+            // given
+            UserInfo savedUserInfo = UserInfo.from(dummyUser);
+
+            // when
+            UserInfo userInfo = userService.getUserInfo(userId);
+
+            // then
+            assertThat(savedUserInfo).isEqualTo(userInfo);
+        }
+
+        @Test
+        @Transactional
+        @DisplayName("회원 권한 조회 성공")
+        void getUserRole_success() {
+            // given
+            UserRoleInfo savedUserRoleInfo = new UserRoleInfo(userId, dummyUser.getRole());
+
+            // when
+            UserRoleInfo userRoleInfo = userService.getUserRole(userId);
+
+            // then
+            assertThat(savedUserRoleInfo).isEqualTo(userRoleInfo);
+        }
+
+        @Test
+        @Transactional
+        @DisplayName("회원 슬랙ID 조회 성공")
+        void getUserSlackId_success() {
+            // given
+            UserSlackInfo savedUserSlackInfo = new UserSlackInfo(userId, dummyUser.getSlackId());
+
+            // when
+            UserSlackInfo userSlackInfo = userService.getUserSlackId(userId);
+
+            // then
+            assertThat(savedUserSlackInfo).isEqualTo(userSlackInfo);
         }
     }
 }
