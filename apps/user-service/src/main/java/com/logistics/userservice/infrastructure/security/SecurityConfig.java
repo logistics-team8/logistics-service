@@ -1,4 +1,4 @@
-package com.logistics.userservice.infrastructure.config;
+package com.logistics.userservice.infrastructure.security;
 
 import com.logistics.common.security.filter.UserContextFilter;
 import com.logistics.common.security.hendler.CustomAccessDeniedHandler;
