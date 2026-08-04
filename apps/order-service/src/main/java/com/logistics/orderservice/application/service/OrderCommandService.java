@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
@@ -43,13 +44,18 @@ public class OrderCommandService {
     }
 
 
+
     private String generateOrderNumber() {
         String date = LocalDate.now()
                 .format(DateTimeFormatter.BASIC_ISO_DATE);
 
-        int randomNumber = ThreadLocalRandom.current()
-                .nextInt(100_000, 1_000_000);
+        //ex)ORD-20260804-A12F45C98D01
+        String suffix = UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 12)
+                .toUpperCase();
 
-        return "ORD-" + date + "-" + randomNumber;
+        return "ORD-" + date + "-" + suffix;
     }
 }

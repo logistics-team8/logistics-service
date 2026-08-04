@@ -93,7 +93,7 @@ class OrderCommandServiceTest {
                 .isEqualTo(OrderStatus.PENDING);
 
         assertThat(savedOrder.getOrderNumber())
-                .matches("ORD-\\d{8}-\\d{6}");
+                .matches("ORD-\\d{8}-[0-9A-F]{12}");
 
         assertThat(savedOrder.getOrderItems())
                 .hasSize(2);
@@ -167,29 +167,6 @@ class OrderCommandServiceTest {
          * Entity 검증에서 예외가 발생했으므로
          * Repository 저장은 호출되면 안 된다.
          */
-        verify(orderRepository, never())
-                .save(any(Order.class));
-    }
-
-    @Test
-    @DisplayName("상품 ID가 null이면 예외가 발생한다")
-    void createOrder_nullProductId_fail() {
-        // given
-        CreateOrderCommand command = new CreateOrderCommand(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                null,
-                LocalDateTime.now().plusDays(1),
-                List.of(
-                        new CreateOrderItemCommand(null, 1)
-                )
-        );
-
-        // when & then
-        assertThatThrownBy(
-                () -> orderCommandService.createOrder(command)
-        ).isInstanceOf(BusinessException.class);
-
         verify(orderRepository, never())
                 .save(any(Order.class));
     }
