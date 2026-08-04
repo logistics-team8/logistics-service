@@ -15,9 +15,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class AuthService {
     private final PasswordEncoder passwordEncoder;
@@ -25,6 +27,7 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtProperties jwtProperties;
 
+    @Transactional(readOnly = true)
     public TokenResult login(@Valid LoginRequest request) {
         User user =
                 userRepository
@@ -63,7 +66,7 @@ public class AuthService {
 
             return new TokenResult(accessToken, refreshToken);
         } catch (Exception e) {
-            log.error("토큰 생성 중 오류 발생 {}", e.getMessage());
+            log.error("[AuthService] 토큰 발급 중 에러 발생", e);
             throw new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
