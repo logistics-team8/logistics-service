@@ -9,7 +9,6 @@ import com.logistics.userservice.infrastructure.security.JwtProperties;
 import com.logistics.userservice.infrastructure.security.JwtTokenProvider;
 import com.logistics.userservice.presentation.dto.request.LoginRequest;
 import com.logistics.userservice.presentation.exception.AuthErrorCode;
-import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +27,7 @@ public class AuthService {
     private final JwtProperties jwtProperties;
 
     @Transactional(readOnly = true)
-    public TokenResult login(@Valid LoginRequest request) {
+    public TokenResult login(LoginRequest request) {
         User user =
                 userRepository
                         .findByUsernameAndDeletedAtIsNull(request.username())
@@ -37,6 +36,11 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BusinessException(AuthErrorCode.INVALID_LOGIN);
         }
+
+        // TODO : 사용자 상태 검증 로직 (PENDING)
+        //        개발 어느정도 진행됐을 시 주석 해제
+        // user.validateActive();
+
         log.info("[AuthService] 사용자 인증 성공: {}", user.getUsername());
 
         return createAuthResponse(user);
