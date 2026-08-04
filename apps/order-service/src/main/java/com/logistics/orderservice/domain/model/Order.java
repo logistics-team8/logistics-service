@@ -63,30 +63,48 @@ public class Order extends BaseEntity {
     private LocalDateTime canceledAt;
 
 
+    private Order(
+            String orderNumber,
+            UUID requesterId,
+            UUID receiverCompanyId,
+            String requestMessage,
+            LocalDateTime requestedDeliveryAt
+    ) {
+        this.orderNumber = orderNumber;
+        this.requesterId = requesterId;
+        this.receiverCompanyId = receiverCompanyId;
+        this.requestMessage = requestMessage;
+        this.requestedDeliveryAt = requestedDeliveryAt;
+        this.status = OrderStatus.PENDING;
+    }
+
     public static Order create(
             String orderNumber,
             UUID requesterId,
             UUID receiverCompanyId,
             String requestMessage,
             LocalDateTime requestedDeliveryAt
-    ){
-        Order order = new Order();
-
-        order.orderNumber = orderNumber;
-        order.requesterId = requesterId;
-        order.receiverCompanyId = receiverCompanyId;
-        order.requestMessage = requestMessage;
-        order.requestedDeliveryAt = requestedDeliveryAt;
-        order.status = OrderStatus.PENDING;
-
-        return order;
+    ) {
+        return new Order(
+                orderNumber,
+                requesterId,
+                receiverCompanyId,
+                requestMessage,
+                requestedDeliveryAt
+        );
     }
 
-    public void addOrderItem(UUID productId, Integer quantity){
-        if(productId == null){
-            throw new BusinessException(OrderErrorCode.PRODUCT_ID_REQUIRED);
-        }
 
+    public void addOrderItem(UUID productId, Integer quantity){
+        validateDuplicateProduct(productId);
+
+        OrderItem orderItem =
+                OrderItem.create(this, productId, quantity);
+        this.orderItems.add(orderItem);
+    }
+
+
+    private void validateDuplicateProduct(UUID productId){
         boolean duplicatedOrderItem = orderItems.stream()
                 .anyMatch(orderItem ->
                         orderItem.getProductId().equals(productId)
@@ -98,13 +116,6 @@ public class Order extends BaseEntity {
                     OrderErrorCode.DUPLICATE_ORDER_PRODUCT
             );
         }
-
-        OrderItem orderItem = OrderItem.create(
-                this,
-                productId,
-                quantity
-        );
-        this.orderItems.add(orderItem);
     }
 
 }
