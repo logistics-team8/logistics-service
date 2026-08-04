@@ -53,20 +53,36 @@ public class OrderItem extends BaseEntity {
     private LocalDateTime canceledAt;
 
 
-    public static OrderItem create(Order order, UUID productId, Integer quantity) {
 
+    private OrderItem(
+            Order order,
+            UUID productId,
+            Integer quantity
+    ) {
+        this.order = order;
+        this.productId = productId;
+        this.quantity = quantity;
+        this.status = OrderItemStatus.ACTIVE;
+    }
+
+    static OrderItem create(
+            Order order,
+            UUID productId,
+            Integer quantity
+    ) {
+        validateQuantity(quantity);
+        return new OrderItem(
+                order,
+                productId,
+                quantity
+        );
+    }
+
+
+    private static void validateQuantity(Integer quantity){
         if(quantity == null || quantity < 1) {
             throw new BusinessException(OrderErrorCode.INVALID_ORDER_QUANTITY);
         }
-
-
-        OrderItem orderItem = new OrderItem();
-        orderItem.order = order;
-        orderItem.productId = productId;
-        orderItem.quantity = quantity;
-        orderItem.status = OrderItemStatus.ACTIVE;
-
-        return orderItem;
     }
 
 
