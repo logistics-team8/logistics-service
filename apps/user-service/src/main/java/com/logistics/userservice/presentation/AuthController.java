@@ -6,6 +6,7 @@ import com.logistics.userservice.application.dto.TokenResult;
 import com.logistics.userservice.infrastructure.security.JwtProperties;
 import com.logistics.userservice.presentation.dto.request.LoginRequest;
 import com.logistics.userservice.presentation.dto.response.TokenResponse;
+import com.logistics.userservice.presentation.swagger.AuthApi;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
-public class AuthController {
+public class AuthController implements AuthApi {
     private final AuthService authService;
     private final JwtProperties jwtProperties;
 

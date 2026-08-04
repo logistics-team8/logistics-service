@@ -21,7 +21,7 @@ public record SignUpRequest(
                         regexp =
                                 "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?`~]).+$",
                         message = "비밀번호는 소문자, 대문자, 숫자, 특수문자를 모두 포함해야 합니다.")
-                @Schema(description = "패스워드", example = "password")
+                @Schema(description = "비밀번호", example = "Test1234!")
                 String password,
         @NotBlank
                 @Size(min = 1, max = 50, message = "이름은 50자 이하로 입력해 주세요.")
