@@ -53,12 +53,12 @@ public interface HubApi {
     @GetMapping
     ResponseEntity<ApiResponse<List<HubResponseDto>>> getAll();
 
-    @Operation(summary = "허브 수정", description = "MASTER 권한이 필요합니다. 하나 이상의 수정 항목을 보내야 하며, 전달한 필드만 변경됩니다.")
+    @Operation(summary = "허브 수정", description = "MASTER 또는 HUB_MANAGER 권한이 필요합니다. 하나 이상의 수정 항목을 보내야 하며, 전달한 필드만 변경됩니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "MASTER 권한 필요"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "MASTER 또는 HUB_MANAGER 권한 필요"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "허브 없음")
     })
     @PatchMapping("/{hubId}")

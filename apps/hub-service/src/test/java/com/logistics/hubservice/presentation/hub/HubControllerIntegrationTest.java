@@ -36,6 +36,7 @@ import org.springframework.web.context.WebApplicationContext;
 class HubControllerIntegrationTest {
 
     private static final UUID MASTER_ID = UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
+    private static final UUID HUB_MANAGER_ID = UUID.fromString("5136e949-d047-4f31-8da2-e9654dd80f38");
     private static final UUID USER_ID = UUID.fromString("c69b113d-0991-4d8c-b7d0-87bdfadd18ae");
 
     private MockMvc mockMvc;
@@ -119,7 +120,7 @@ class HubControllerIntegrationTest {
     }
 
     @Test
-    void nonMasterCannotUpdateHub() throws Exception {
+    void unauthorizedRoleCannotUpdateHub() throws Exception {
         Hub hub = saveHub("서울 허브");
 
         mockMvc.perform(authenticated(patch("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER")
@@ -167,6 +168,22 @@ class HubControllerIntegrationTest {
         Hub hub = saveHub("서울 허브");
 
         mockMvc.perform(master(patch("/api/v1/hubs/{hubId}", hub.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "name": "동서울 허브" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.hubId").value(hub.getId().toString()))
+                .andExpect(jsonPath("$.data.name").value("동서울 허브"))
+                .andExpect(jsonPath("$.error").doesNotExist());
+    }
+
+    @Test
+    void hubManagerCanUpdateHub() throws Exception {
+        Hub hub = saveHub("서울 허브");
+
+        mockMvc.perform(authenticated(
+                        patch("/api/v1/hubs/{hubId}", hub.getId()), HUB_MANAGER_ID, "HUB_MANAGER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 { "name": "동서울 허브" }
