@@ -1,4 +1,4 @@
-package com.logistics.hubservice.presentation.config;
+package com.logistics.hubservice.infrastructure.security;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.logistics.common.security.filter.UserContextFilter;
