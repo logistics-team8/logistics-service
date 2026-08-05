@@ -29,14 +29,15 @@ public class UserContextFilter extends OncePerRequestFilter {
         String companyIdStr = request.getHeader("X-Company-Id");
         String roleStr = request.getHeader("X-Role");
 
-        if (userIdStr != null
+        logger.info("userIdStr {}", userIdStr);
+
+        if (StringUtils.hasText(userIdStr)
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             UUID userId = UUID.fromString(userIdStr);
             UUID hubId = StringUtils.hasText(hubIdStr) ? UUID.fromString(hubIdStr) : null;
             UUID companyId = StringUtils.hasText(companyIdStr) ? UUID.fromString(companyIdStr) : null;
 
             setAuthentication(userId, hubId, companyId, roleStr);
-            logger.info("userId = {}, hubId = {}, companyId = {}, role = {}", userId, hubId, companyId, roleStr);
         }
         filterChain.doFilter(request, response);
     }
