@@ -17,10 +17,10 @@ import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
- @Order(-2)
- @Configuration
- @RequiredArgsConstructor
- public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
+@Order(-2)
+@Configuration
+@RequiredArgsConstructor
+public class GatewayExceptionHandler implements ErrorWebExceptionHandler {
     private final JsonMapper jsonMapper;
 
     @Override

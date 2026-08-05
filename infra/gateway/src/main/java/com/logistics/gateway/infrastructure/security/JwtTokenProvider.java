@@ -6,19 +6,18 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
-import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
-
-import javax.crypto.SecretKey;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import javax.crypto.SecretKey;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
 
 @Slf4j
 @Component
@@ -41,15 +40,20 @@ public class JwtTokenProvider {
      * @param validity
      * @return Access Token || Refresh Token
      */
-    private String generateToken(TokenClaims tokenClaims, UUID sessionId, Key signingKey, long validity) {
+    private String generateToken(
+            TokenClaims tokenClaims, UUID sessionId, Key signingKey, long validity) {
         Map<String, Object> claims = new HashMap<>();
         Date date = new Date();
 
         claims.put("sessionId", sessionId.toString());
-        claims.put("hubId", tokenClaims.hubId() != null ? tokenClaims.hubId().toString() : null); // null 주의
+        claims.put(
+                "hubId",
+                tokenClaims.hubId() != null ? tokenClaims.hubId().toString() : null); // null 주의
         claims.put(
                 "companyId",
-                tokenClaims.companyId() != null ? tokenClaims.companyId().toString() : null); // null 주의
+                tokenClaims.companyId() != null
+                        ? tokenClaims.companyId().toString()
+                        : null); // null 주의
 
         return Jwts.builder()
                 .subject(tokenClaims.userId().toString())

@@ -1,11 +1,14 @@
 package com.logistics.gateway.filter;
 
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+
 import com.logistics.gateway.infrastructure.config.PathProperties;
 import com.logistics.gateway.infrastructure.security.JwtTokenProvider;
 import com.logistics.gateway.presentation.error.GatewayErrorCode;
 import com.logistics.gateway.presentation.exception.BusinessException;
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,19 +16,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
-import org.springframework.data.redis.core.ReactiveValueOperations;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
-import java.util.List;
-
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class AuthenticationFilterTest {
@@ -41,12 +37,9 @@ class AuthenticationFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new AuthenticationFilter(
-                redisTemplate,
-                webClientBuilder,
-                jwtTokenProvider,
-                pathProperties
-        );
+        filter =
+                new AuthenticationFilter(
+                        redisTemplate, webClientBuilder, jwtTokenProvider, pathProperties);
     }
 
     @Test
@@ -54,19 +47,12 @@ class AuthenticationFilterTest {
     void whitelistPass() {
         // given
         ServerWebExchange exchange =
-                MockServerWebExchange.from(
-                        MockServerHttpRequest.get("/auth/login")
-                                .build()
-                );
+                MockServerWebExchange.from(MockServerHttpRequest.get("/auth/login").build());
 
-        given(pathProperties.whitelist())
-                .willReturn(List.of("/auth/**"));
+        given(pathProperties.whitelist()).willReturn(List.of("/auth/**"));
 
         // when & then
-        StepVerifier.create(
-                        filter.filter(exchange, chain -> Mono.empty())
-                )
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty())).verifyComplete();
     }
 
     @Test
@@ -74,21 +60,14 @@ class AuthenticationFilterTest {
     void accessTokenNotFound() {
         // given
         ServerWebExchange exchange =
-                MockServerWebExchange.from(
-                        MockServerHttpRequest.get("/api/orders")
-                                .build()
-                );
+                MockServerWebExchange.from(MockServerHttpRequest.get("/api/orders").build());
 
-        given(pathProperties.whitelist())
-                .willReturn(List.of());
+        given(pathProperties.whitelist()).willReturn(List.of());
 
-        given(jwtTokenProvider.resolveAccessToken(exchange))
-                .willReturn(null);
+        given(jwtTokenProvider.resolveAccessToken(exchange)).willReturn(null);
 
         // when & then
-        StepVerifier.create(
-                        filter.filter(exchange, chain -> Mono.empty())
-                )
+        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty()))
                 .expectError(BusinessException.class)
                 .verify();
     }
@@ -98,32 +77,23 @@ class AuthenticationFilterTest {
     void expiredToken() {
         // given
         ServerWebExchange exchange =
-                MockServerWebExchange.from(
-                        MockServerHttpRequest.get("/api/orders")
-                                .build()
-                );
+                MockServerWebExchange.from(MockServerHttpRequest.get("/api/orders").build());
 
-        given(pathProperties.whitelist())
-                .willReturn(List.of());
+        given(pathProperties.whitelist()).willReturn(List.of());
 
-        given(jwtTokenProvider.resolveAccessToken(exchange))
-                .willReturn("expired-token");
+        given(jwtTokenProvider.resolveAccessToken(exchange)).willReturn("expired-token");
 
         given(jwtTokenProvider.getAllClaimsFromToken("expired-token"))
                 .willThrow(mock(ExpiredJwtException.class));
 
         // when & then
-        StepVerifier.create(
-                        filter.filter(exchange, chain -> Mono.empty())
-                )
-                .expectErrorSatisfies(error -> {
+        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty()))
+                .expectErrorSatisfies(
+                        error -> {
+                            BusinessException exception = (BusinessException) error;
 
-                    BusinessException exception =
-                            (BusinessException) error;
-
-                    assert exception.getErrorCode()
-                            == GatewayErrorCode.TOKEN_EXPIRED;
-                })
+                            assert exception.getErrorCode() == GatewayErrorCode.TOKEN_EXPIRED;
+                        })
                 .verify();
     }
 

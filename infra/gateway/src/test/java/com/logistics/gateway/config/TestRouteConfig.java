@@ -11,9 +11,7 @@ public class TestRouteConfig {
     @Bean
     RouteLocator testRouteLocator(RouteLocatorBuilder builder) {
         return builder.routes()
-                .route("test", r -> r
-                        .path("/**")
-                        .uri("http://localhost:8080"))
+                .route("test", r -> r.path("/**").uri("http://localhost:8080"))
                 .build();
     }
 }

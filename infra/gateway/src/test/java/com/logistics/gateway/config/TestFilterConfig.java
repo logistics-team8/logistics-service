@@ -17,27 +17,19 @@ public class TestFilterConfig {
             String path = exchange.getRequest().getPath().value();
 
             if (path.equals("/business-exception")) {
-                return Mono.error(
-                        new BusinessException(GatewayErrorCode.TOKEN_EXPIRED)
-                );
+                return Mono.error(new BusinessException(GatewayErrorCode.TOKEN_EXPIRED));
             }
 
             if (path.equals("/not-found")) {
-                return Mono.error(
-                        new ResponseStatusException(HttpStatus.NOT_FOUND)
-                );
+                return Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND));
             }
 
             if (path.equals("/bad-request")) {
-                return Mono.error(
-                        new ResponseStatusException(HttpStatus.BAD_REQUEST)
-                );
+                return Mono.error(new ResponseStatusException(HttpStatus.BAD_REQUEST));
             }
 
             if (path.equals("/internal-server-error")) {
-                return Mono.error(
-                        new IllegalStateException("test")
-                );
+                return Mono.error(new IllegalStateException("test"));
             }
 
             return chain.filter(exchange);

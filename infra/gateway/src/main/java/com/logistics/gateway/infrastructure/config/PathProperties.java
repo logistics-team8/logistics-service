@@ -1,8 +1,7 @@
 package com.logistics.gateway.infrastructure.config;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.util.List;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "path")
 public record PathProperties(List<String> whitelist) {}

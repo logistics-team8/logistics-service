@@ -19,25 +19,24 @@ class GatewayExceptionHandlerTest {
 
     private WebTestClient webTestClient;
 
-    @LocalServerPort
-    int port;
+    @LocalServerPort int port;
 
     @BeforeEach
     void setUp() {
-        webTestClient = WebTestClient
-                .bindToServer()
-                .baseUrl("http://localhost:" + port)
-                .build();
+        webTestClient = WebTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
     }
 
     @Test
     void handle_businessException() {
         // when & then
-        webTestClient.get()
+        webTestClient
+                .get()
                 .uri("/business-exception")
                 .exchange()
-                .expectStatus().isEqualTo(GatewayErrorCode.TOKEN_EXPIRED.status())
-                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectStatus()
+                .isEqualTo(GatewayErrorCode.TOKEN_EXPIRED.status())
+                .expectHeader()
+                .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.error.code");
     }
@@ -45,10 +44,12 @@ class GatewayExceptionHandlerTest {
     @Test
     void handle_responseStatusException_notFound() {
         // when & then
-        webTestClient.get()
+        webTestClient
+                .get()
                 .uri("/not-found")
                 .exchange()
-                .expectStatus().isEqualTo(GatewayErrorCode.RESOURCE_NOT_FOUND.status())
+                .expectStatus()
+                .isEqualTo(GatewayErrorCode.RESOURCE_NOT_FOUND.status())
                 .expectBody()
                 .jsonPath("$.error.code")
                 .isEqualTo(GatewayErrorCode.RESOURCE_NOT_FOUND.code());
@@ -57,10 +58,12 @@ class GatewayExceptionHandlerTest {
     @Test
     void handle_responseStatusException_badRequest() {
         // when & then
-        webTestClient.get()
+        webTestClient
+                .get()
                 .uri("/bad-request")
                 .exchange()
-                .expectStatus().isEqualTo(GatewayErrorCode.INVALID_INPUT.status())
+                .expectStatus()
+                .isEqualTo(GatewayErrorCode.INVALID_INPUT.status())
                 .expectBody()
                 .jsonPath("$.error.code")
                 .isEqualTo(GatewayErrorCode.INVALID_INPUT.code());
@@ -69,10 +72,12 @@ class GatewayExceptionHandlerTest {
     @Test
     void handle_internalServerError() {
         // when & then
-        webTestClient.get()
+        webTestClient
+                .get()
                 .uri("/internal-server-error")
                 .exchange()
-                .expectStatus().isEqualTo(GatewayErrorCode.INTERNAL_SERVER_ERROR.status())
+                .expectStatus()
+                .isEqualTo(GatewayErrorCode.INTERNAL_SERVER_ERROR.status())
                 .expectBody()
                 .jsonPath("$.error.code")
                 .isEqualTo(GatewayErrorCode.INTERNAL_SERVER_ERROR.code());

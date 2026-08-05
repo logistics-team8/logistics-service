@@ -1,7 +1,6 @@
 package com.logistics.gateway.presentation.response;
 
 import com.logistics.gateway.presentation.error.ErrorCode;
-
 import java.util.List;
 
 public final class ApiResponse<T> {
