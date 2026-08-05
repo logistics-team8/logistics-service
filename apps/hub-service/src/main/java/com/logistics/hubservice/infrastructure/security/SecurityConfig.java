@@ -31,7 +31,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/hubs", "/api/v1/hubs/**").hasAuthority("MASTER")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/hubs", "/api/v1/hubs/**").hasAuthority("MASTER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/hubs", "/api/v1/hubs/**")
+                        .hasAnyAuthority("MASTER", "HUB_MANAGER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/hubs", "/api/v1/hubs/**").hasAuthority("MASTER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/hubs", "/api/v1/hubs/**").authenticated()
                         .anyRequest().authenticated())
