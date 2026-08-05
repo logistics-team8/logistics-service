@@ -2,8 +2,11 @@ package com.logistics.hubservice.presentation.hub;
 
 import com.logistics.common.response.ApiResponse;
 import com.logistics.common.security.CustomUserDetails;
-import com.logistics.hubservice.application.hub.HubCommandService;
-import com.logistics.hubservice.application.hub.HubQueryService;
+import com.logistics.hubservice.application.hub.command.HubCommandService;
+import com.logistics.hubservice.application.hub.query.HubQueryService;
+import com.logistics.hubservice.presentation.hub.dto.CreateHubRequest;
+import com.logistics.hubservice.presentation.hub.dto.HubResponseDto;
+import com.logistics.hubservice.presentation.hub.dto.UpdateHubRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;

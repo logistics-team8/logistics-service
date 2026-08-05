@@ -1,6 +1,6 @@
-package com.logistics.hubservice.presentation.hub;
+package com.logistics.hubservice.presentation.hub.dto;
 
-import com.logistics.hubservice.application.hub.UpdateHubCommand;
+import com.logistics.hubservice.application.hub.command.UpdateHubCommand;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
@@ -31,7 +31,7 @@ public record UpdateHubRequest(
         return name != null || address != null || latitude != null || longitude != null;
     }
 
-    UpdateHubCommand toCommand() {
+    public UpdateHubCommand toCommand() {
         return new UpdateHubCommand(name, address, latitude, longitude);
     }
 }

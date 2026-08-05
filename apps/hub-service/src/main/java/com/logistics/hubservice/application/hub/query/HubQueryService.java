@@ -1,22 +1,22 @@
-package com.logistics.hubservice.application.hub;
+package com.logistics.hubservice.application.hub.query;
 
 import com.logistics.common.exception.BusinessException;
+import com.logistics.hubservice.application.hub.HubErrorCode;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import java.util.List;
 import java.util.UUID;
+
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
+@RequiredArgsConstructor
 public class HubQueryService {
 
     private final HubRepository hubRepository;
-
-    public HubQueryService(HubRepository hubRepository) {
-        this.hubRepository = hubRepository;
-    }
 
     public HubResponse getOne(UUID hubId) {
         return HubResponse.from(findActiveHub(hubId));

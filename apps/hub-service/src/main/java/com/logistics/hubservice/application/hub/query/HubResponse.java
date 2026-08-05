@@ -1,4 +1,4 @@
-package com.logistics.hubservice.application.hub;
+package com.logistics.hubservice.application.hub.query;
 
 import com.logistics.hubservice.domain.hub.Hub;
 import java.math.BigDecimal;

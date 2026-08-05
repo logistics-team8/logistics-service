@@ -1,6 +1,6 @@
-package com.logistics.hubservice.presentation.hub;
+package com.logistics.hubservice.presentation.hub.dto;
 
-import com.logistics.hubservice.application.hub.CreateHubCommand;
+import com.logistics.hubservice.application.hub.command.CreateHubCommand;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -28,7 +28,7 @@ public record CreateHubRequest(
         BigDecimal longitude
 ) {
 
-    CreateHubCommand toCommand() {
+    public CreateHubCommand toCommand() {
         return new CreateHubCommand(name, address, latitude, longitude);
     }
 }
