@@ -9,7 +9,9 @@ import org.springframework.boot.webflux.error.ErrorWebExceptionHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import tools.jackson.databind.json.JsonMapper;
@@ -33,6 +35,13 @@ import tools.jackson.databind.json.JsonMapper;
         if (throwable instanceof BusinessException e) {
             log.warn("[GatewayExceptionHandler] {}", e.getMessage());
             errorCode = e.getErrorCode();
+        } else if (throwable instanceof ResponseStatusException e) {
+            log.warn("[GatewayExceptionHandler] {}", e.getMessage());
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                errorCode = GatewayErrorCode.RESOURCE_NOT_FOUND;
+            } else {
+                errorCode = GatewayErrorCode.INVALID_INPUT;
+            }
         } else {
             log.error("[GatewayExceptionHandler] ", throwable);
             errorCode = GatewayErrorCode.INTERNAL_SERVER_ERROR;
