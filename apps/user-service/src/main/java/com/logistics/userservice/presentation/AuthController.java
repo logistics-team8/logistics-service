@@ -7,16 +7,14 @@ import com.logistics.userservice.infrastructure.security.JwtProperties;
 import com.logistics.userservice.presentation.dto.request.LoginRequest;
 import com.logistics.userservice.presentation.dto.response.TokenResponse;
 import com.logistics.userservice.presentation.swagger.AuthApi;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
@@ -30,6 +28,31 @@ public class AuthController implements AuthApi {
     public ResponseEntity<ApiResponse<TokenResponse>> login(
             @Valid @RequestBody LoginRequest request) {
         TokenResult tokenResult = authService.login(request);
+
+        var cookie =
+                createRefreshToken(
+                        tokenResult.refreshToken(),
+                        jwtProperties.refreshTokenExpirationInSeconds());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.success(TokenResponse.from(tokenResult.accessToken())));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
+        authService.logout(request);
+
+        var cookie = createRefreshToken("", 0);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.success(null));
+    }
+
+    @PostMapping("/reissue")
+    public ResponseEntity<ApiResponse<TokenResponse>> reissue(
+            @CookieValue(value = "refreshToken", required = false) String refreshToken) {
+        TokenResult tokenResult = authService.reissue(refreshToken);
 
         var cookie =
                 createRefreshToken(
