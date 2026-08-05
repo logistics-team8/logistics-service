@@ -2,6 +2,9 @@ package com.logistics.hubservice.presentation.hub;
 
 import com.logistics.common.response.ApiResponse;
 import com.logistics.common.security.CustomUserDetails;
+import com.logistics.hubservice.presentation.hub.dto.CreateHubRequest;
+import com.logistics.hubservice.presentation.hub.dto.HubResponseDto;
+import com.logistics.hubservice.presentation.hub.dto.UpdateHubRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
