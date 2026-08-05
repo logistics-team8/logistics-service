@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.0.7'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.diffplug.spotless' version '6.25.0'
 }
 
 group = 'com.logistics'
@@ -25,17 +26,39 @@ ext {
 dependencies {
     implementation project(':libs:common')
 
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-    compileOnly 'org.projectlombok:lombok'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // .env
+    implementation("me.paulschwarz:springboot4-dotenv:5.1.0")
+
+    // UUID v7
+    implementation 'com.github.f4b6a3:uuid-creator:6.1.1'
+
+    // JWT
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // TODO : QueryDSL, Redis
+
+    // PostgresSQL
     runtimeOnly 'org.postgresql:postgresql'
+
+    // testcontainers
+    testImplementation 'org.testcontainers:testcontainers:1.21.4'
+    testImplementation 'org.testcontainers:junit-jupiter:1.21.4'
+    testImplementation 'org.testcontainers:postgresql:1.21.4'
+
+    compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
@@ -54,4 +77,19 @@ dependencyManagement {
 
 tasks.named('test') {
     useJUnitPlatform()
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        outputs.upToDateWhen { false }
+    }
+}
+
+spotless {
+    java {
+        googleJavaFormat('1.22.0').aosp().reflowLongStrings()
+    }
+}
+
+tasks.named('build') {
+    dependsOn 'spotlessApply'
 }
