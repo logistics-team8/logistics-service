@@ -44,7 +44,11 @@ dependencies {
     // Swagger Webflux
     implementation 'org.springdoc:springdoc-openapi-starter-webflux-ui:3.0.2'
 
+    // Redis Reactive
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
+    testImplementation("org.springframework.boot:spring-boot-starter-webflux")
     testImplementation 'io.projectreactor:reactor-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
