@@ -1,12 +1,13 @@
 package com.logistics.hubservice.presentation.hub;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.hamcrest.Matchers.nullValue;
 
 import com.logistics.common.security.CustomUserDetails;
 import com.logistics.hubservice.domain.hub.Hub;
@@ -118,6 +119,28 @@ class HubControllerIntegrationTest {
     }
 
     @Test
+    void nonMasterCannotUpdateHub() throws Exception {
+        Hub hub = saveHub("서울 허브");
+
+        mockMvc.perform(authenticated(patch("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "name": "동서울 허브" }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("COMMON_102"));
+    }
+
+    @Test
+    void nonMasterCannotDeleteHub() throws Exception {
+        Hub hub = saveHub("서울 허브");
+
+        mockMvc.perform(authenticated(delete("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("COMMON_102"));
+    }
+
+    @Test
     void authenticatedUserCanGetOneHub() throws Exception {
         Hub hub = saveHub("서울 허브");
 
@@ -192,6 +215,20 @@ class HubControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}']").exists());
+    }
+
+    @Test
+    void actuatorHealthIsPublic() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotIn(401, 403));
+    }
+
+    @Test
+    void swaggerUiIsPublic() throws Exception {
+        mockMvc.perform(get("/swagger-ui/index.html"))
+                .andExpect(result -> assertThat(result.getResponse().getStatus())
+                        .isIn(200, 302)
+                        .isNotIn(401, 403));
     }
 
     private Hub saveHub(String name) {
