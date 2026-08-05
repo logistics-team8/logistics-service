@@ -1,0 +1,14 @@
+.git
+.github
+.idea
+.gradle
+.agents
+.junie
+.grok
+docs
+**/build
+**/.DS_Store
+*.md
+.env
+.env.*
+!/.env.example
