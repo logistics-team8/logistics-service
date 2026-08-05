@@ -281,9 +281,10 @@ gradle-app.setting
 AGENTS.md
 CLAUDE.md
 GEMINI.md
+.agents/
 .claude/
 .codex/
 .cursor/
 .grok/
 
-docs/plans/**.md
+docs/
