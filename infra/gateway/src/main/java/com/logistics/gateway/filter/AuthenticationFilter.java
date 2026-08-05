@@ -7,8 +7,7 @@ import com.logistics.gateway.presentation.error.GatewayErrorCode;
 import com.logistics.gateway.presentation.exception.BusinessException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.security.SignatureException;
+import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -44,6 +43,16 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         // Whitelist 체크
         if (isWhitelisted) {
+            ServerHttpRequest sanitizedRequest = exchange.getRequest().mutate()
+                    // 헤더 스푸핑 방지
+                    .headers(httpHeaders -> {
+                        httpHeaders.remove("X-User-Id");
+                        httpHeaders.remove("X-Hub-Id");
+                        httpHeaders.remove("X-Company-Id");
+                        httpHeaders.remove("X-Role");
+                    })
+                    .build();
+
             return chain.filter(exchange);
         }
 
@@ -52,39 +61,48 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         if (accessToken == null) {
             // 액세스 토큰이 없는 경우
-            throw new BusinessException(GatewayErrorCode.UNAUTHORIZED);
+            return Mono.error(
+                    new BusinessException(GatewayErrorCode.UNAUTHORIZED)
+            );
         }
+
+        Claims claims;
+
         try {
-            Claims claims = jwtTokenProvider.getAllClaimsFromToken(accessToken);
-
-            String userId = claims.getSubject();
-            String hubId = claims.get("hubId", String.class);
-            String companyId = claims.get("companyId", String.class);
-
-            return verifyUserRole(userId, path)
-                    .flatMap(role -> {
-
-                        ServerHttpRequest.Builder requestBuilder =
-                                exchange.getRequest().mutate();
-
-                        addHeader(requestBuilder, "X-User-Id", userId);
-                        addHeader(requestBuilder, "X-Hub-Id", hubId);
-                        addHeader(requestBuilder, "X-Company-Id", companyId);
-                        addHeader(requestBuilder, "X-Role", role);
-
-                        ServerWebExchange mutatedExchange = exchange.mutate()
-                                .request(requestBuilder.build())
-                                .build();
-
-                        return chain.filter(mutatedExchange);
-                    });
+            claims = jwtTokenProvider.getAllClaimsFromToken(accessToken);
         } catch (ExpiredJwtException e) {
             // 만료된 토큰 401
-            throw new BusinessException(GatewayErrorCode.TOKEN_EXPIRED);
-        } catch (SignatureException | MalformedJwtException | IllegalArgumentException e) {
+            return Mono.error(
+                    new BusinessException(GatewayErrorCode.TOKEN_EXPIRED)
+            );
+        } catch (JwtException e) {
             // 유효하지 않은 토큰 401
-            throw new BusinessException(GatewayErrorCode.TOKEN_INVALID);
+            return Mono.error(
+                    new BusinessException(GatewayErrorCode.TOKEN_INVALID)
+            );
         }
+
+        String userId = claims.getSubject();
+        String hubId = claims.get("hubId", String.class);
+        String companyId = claims.get("companyId", String.class);
+
+        return verifyUserRole(userId, path)
+                .flatMap(role -> {
+
+                    ServerHttpRequest.Builder requestBuilder =
+                            exchange.getRequest().mutate();
+
+                    addHeader(requestBuilder, "X-User-Id", userId);
+                    addHeader(requestBuilder, "X-Hub-Id", hubId);
+                    addHeader(requestBuilder, "X-Company-Id", companyId);
+                    addHeader(requestBuilder, "X-Role", role);
+
+                    ServerWebExchange mutatedExchange = exchange.mutate()
+                            .request(requestBuilder.build())
+                            .build();
+
+                    return chain.filter(mutatedExchange);
+                });
     }
 
     @Override
