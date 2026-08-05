@@ -1,6 +1,7 @@
 package com.logistics.orderservice.presentation;
 
 import com.logistics.common.response.ApiResponse;
+import com.logistics.common.security.CustomUserDetails;
 import com.logistics.orderservice.application.service.OrderCommandService;
 import com.logistics.orderservice.application.service.OrderQueryService;
 import com.logistics.orderservice.page.PageResponse;
@@ -39,18 +40,24 @@ public class OrderController {
 
     @GetMapping("/{orderId}")
     public ApiResponse<OrderDetailResponse> getOrder(
-            @PathVariable UUID orderId
+            @PathVariable UUID orderId,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader("X-User-Role") String role
+            //@AuthenticationPrincipal CustomUserDetails userDetails
     ){
-        OrderDetailResponse response = orderQueryService.getOrder(orderId);
+        OrderDetailResponse response = orderQueryService.getOrder(orderId, userId, role);
         return ApiResponse.success(response);
     }
 
 
     @GetMapping
     public ApiResponse<PageResponse<OrderSummaryResponse>> getOrders(
-            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader("X-User-Role") String role
+            //@AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Page<OrderSummaryResponse> page = orderQueryService.getOrders(pageable);
+        Page<OrderSummaryResponse> page = orderQueryService.getOrders(pageable, userId, role);
         return ApiResponse.success(PageResponse.from(page));
     }
 
