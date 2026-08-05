@@ -2,6 +2,7 @@ package com.logistics.userservice.application;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
+import com.logistics.userservice.application.dto.TokenClaims;
 import com.logistics.userservice.application.dto.TokenResult;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
@@ -37,36 +38,39 @@ public class AuthService {
             throw new BusinessException(AuthErrorCode.INVALID_LOGIN);
         }
 
-        // TODO : 사용자 상태 검증 로직 (PENDING)
+        // TODO : 사용자 상태 검증 로직 (PENDING, REJECTED)
         //        개발 어느정도 진행됐을 시 주석 해제
         // user.validateActive();
 
-        log.info("[AuthService] 사용자 인증 성공: {}", user.getUsername());
+        TokenClaims tokenClaims =
+                new TokenClaims(user.getId(), user.getHubId(), user.getCompanyId(), user.getRole());
 
-        return createAuthResponse(user);
+        log.info("[AuthService] 사용자 인증 성공: {}", tokenClaims.userId());
+
+        return createAuthResponse(tokenClaims);
     }
 
     /**
      * 액세스 토큰, 리프래시 토큰 생성 후, Redis에 Refresh Token 저장한 뒤 TokenResult 반환
      *
-     * @param user 사용자 정보
+     * @param tokenClaims 사용자 정보
      * @return TokenResult (AccessToken, RefreshToken)
      */
-    private TokenResult createAuthResponse(User user) {
+    private TokenResult createAuthResponse(TokenClaims tokenClaims) {
         try {
             UUID sessionId = UUID.randomUUID();
 
             String accessToken =
                     jwtTokenProvider.generateAccessToken(
-                            user, sessionId, jwtProperties.accessTokenExpirationInMillis());
+                            tokenClaims, sessionId, jwtProperties.accessTokenExpirationInMillis());
 
             String refreshToken =
                     jwtTokenProvider.generateRefreshToken(
-                            user, sessionId, jwtProperties.refreshTokenExpirationInMillis());
+                            tokenClaims, sessionId, jwtProperties.refreshTokenExpirationInMillis());
 
             // TODO : Redis 도입 시 Refresh Token 저장 로직 추가
             // List<String> key = Collections.singletonList("user:sessions:" + userid);
-            log.info("[AuthService] 토큰 발급 완료: {}", user.getUsername());
+            log.info("[AuthService] 토큰 발급 완료: {}", tokenClaims.userId());
 
             return new TokenResult(accessToken, refreshToken);
         } catch (Exception e) {

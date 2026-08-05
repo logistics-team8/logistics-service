@@ -66,10 +66,13 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
-    /** 승인 대기중인 사용자 검증 */
+    /** 사용자 검증 */
     public void validateActive() {
         if (this.userStatus == UserStatus.PENDING) {
             throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
+        }
+        if (this.userStatus == UserStatus.REJECTED) {
+            throw new BusinessException(AuthErrorCode.APPROVAL_REJECTED);
         }
     }
 
