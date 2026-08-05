@@ -178,6 +178,18 @@ class HubControllerIntegrationTest {
     }
 
     @Test
+    void masterCannotUpdateHubWithoutAnyFields() throws Exception {
+        Hub hub = saveHub("서울 허브");
+
+        mockMvc.perform(master(patch("/api/v1/hubs/{hubId}", hub.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.data").value(nullValue()))
+                .andExpect(jsonPath("$.error.code").value("COMMON_002"));
+    }
+
+    @Test
     void masterCanDeleteHubWithNullSuccessEnvelopeAndDeletedHubReturnsHub001() throws Exception {
         Hub hub = saveHub("서울 허브");
 
@@ -187,6 +199,19 @@ class HubControllerIntegrationTest {
                 .andExpect(jsonPath("$.error").value(nullValue()));
 
         mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_001"))
+                .andExpect(jsonPath("$.error.message").value("허브를 찾을 수 없습니다."));
+    }
+
+    @Test
+    void deletingSameHubTwiceReturnsHub001() throws Exception {
+        Hub hub = saveHub("서울 허브");
+
+        mockMvc.perform(master(delete("/api/v1/hubs/{hubId}", hub.getId())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(master(delete("/api/v1/hubs/{hubId}", hub.getId())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("HUB_001"))
                 .andExpect(jsonPath("$.error.message").value("허브를 찾을 수 없습니다."));
@@ -214,7 +239,9 @@ class HubControllerIntegrationTest {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs']").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}']").exists());
+                .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}'].patch.responses['401']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}'].delete.responses['401']").exists());
     }
 
     @Test

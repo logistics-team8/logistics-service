@@ -54,6 +54,7 @@ public interface HubApi {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "MASTER 권한 필요"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "허브 없음")
     })
@@ -64,6 +65,7 @@ public interface HubApi {
     @Operation(summary = "허브 삭제", description = "MASTER 권한이 필요합니다. 성공하면 data와 error가 모두 null인 응답을 반환합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "MASTER 권한 필요"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "허브 없음")
     })
