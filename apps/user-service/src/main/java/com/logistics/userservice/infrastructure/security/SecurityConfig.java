@@ -58,12 +58,15 @@ public class SecurityConfig {
                         requests.requestMatchers("/v3/api-docs/**", "/swagger-ui/**")
                                 .permitAll()
 
-                                // 공통 권한
+                                // 회원가입, 로그인
                                 .requestMatchers(
                                         HttpMethod.POST, "/api/v1/users", "/api/v1/auth/login")
                                 .permitAll()
 
-                                // 나머지
+                                // 내부 API 허용
+                                .requestMatchers("/internal/**")
+                                .permitAll()
+
                                 .anyRequest()
                                 .authenticated());
 
