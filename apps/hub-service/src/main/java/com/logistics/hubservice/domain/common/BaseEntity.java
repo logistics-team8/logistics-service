@@ -1,10 +1,10 @@
-package com.logistics.hubservice.infrastructure.persistence.audit;
+package com.logistics.hubservice.domain.common;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 import jakarta.persistence.Column;
-import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.MappedSuperclass;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
