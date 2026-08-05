@@ -25,12 +25,6 @@ import org.springframework.stereotype.Component;
 public class JwtTokenProvider {
     private final JwtProperties jwtProperties;
 
-    @PostConstruct
-    public void checkSecret() {
-        log.debug("Access Secret: {}", jwtProperties.accessSecret());
-        log.debug("Refresh Secret: {}", jwtProperties.refreshSecret());
-    }
-
     /**
      * JWT 토큰 생성
      *
@@ -54,7 +48,6 @@ public class JwtTokenProvider {
                 tokenClaims.companyId() != null
                         ? tokenClaims.companyId().toString()
                         : null); // null 주의
-        claims.put("role", tokenClaims.role());
 
         return Jwts.builder()
                 .subject(tokenClaims.userId().toString())

@@ -50,7 +50,6 @@ public class JwtTokenProvider {
         claims.put(
                 "companyId",
                 tokenClaims.companyId() != null ? tokenClaims.companyId().toString() : null); // null 주의
-        claims.put("role", tokenClaims.role());
 
         return Jwts.builder()
                 .subject(tokenClaims.userId().toString())

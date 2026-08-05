@@ -43,7 +43,7 @@ public class AuthService {
         // user.validateActive();
 
         TokenClaims tokenClaims =
-                new TokenClaims(user.getId(), user.getHubId(), user.getCompanyId(), user.getRole());
+                new TokenClaims(user.getId(), user.getHubId(), user.getCompanyId());
 
         return createAuthResponse(tokenClaims);
     }
