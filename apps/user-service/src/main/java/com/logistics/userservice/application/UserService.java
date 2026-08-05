@@ -39,9 +39,7 @@ public class UserService {
 
         try {
             userRepository.saveAndFlush(user);
-            log.info("[UserService] User 생성 완료");
         } catch (DataIntegrityViolationException e) {
-            log.error("[UserService] User 생성 실패 : {}", e.getMessage());
             throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
         }
     }
@@ -57,11 +55,9 @@ public class UserService {
 
         for (User user : existUsers) {
             if (command.username().equals(user.getUsername())) {
-                log.warn("[UserService] Username 유효성 예외: {}", command.username());
                 throw new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME);
             }
             if (command.slackId().equals(user.getSlackId())) {
-                log.warn("[UserService] Slack ID 유효성 예외: {}", command.slackId());
                 throw new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID);
             }
         }

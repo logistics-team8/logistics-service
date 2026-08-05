@@ -29,9 +29,7 @@ public class AuthController implements AuthApi {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<TokenResponse>> login(
             @Valid @RequestBody LoginRequest request) {
-        log.info("[AuthController] Login 요청 시작: {}", request.username());
         TokenResult tokenResult = authService.login(request);
-        log.info("[AuthController] Login 성공: {}", request.username());
 
         var cookie =
                 createRefreshToken(

@@ -45,8 +45,6 @@ public class AuthService {
         TokenClaims tokenClaims =
                 new TokenClaims(user.getId(), user.getHubId(), user.getCompanyId(), user.getRole());
 
-        log.info("[AuthService] 사용자 인증 성공: {}", tokenClaims.userId());
-
         return createAuthResponse(tokenClaims);
     }
 
@@ -70,11 +68,9 @@ public class AuthService {
 
             // TODO : Redis 도입 시 Refresh Token 저장 로직 추가
             // List<String> key = Collections.singletonList("user:sessions:" + userid);
-            log.info("[AuthService] 토큰 발급 완료: {}", tokenClaims.userId());
 
             return new TokenResult(accessToken, refreshToken);
         } catch (Exception e) {
-            log.error("[AuthService] 토큰 발급 중 에러 발생", e);
             throw new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR);
         }
     }

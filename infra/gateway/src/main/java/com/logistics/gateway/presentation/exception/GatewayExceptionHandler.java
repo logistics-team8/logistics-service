@@ -33,17 +33,14 @@ import tools.jackson.databind.json.JsonMapper;
         DataBuffer dataBuffer;
 
         if (throwable instanceof BusinessException e) {
-            log.warn("[GatewayExceptionHandler] {}", e.getMessage());
             errorCode = e.getErrorCode();
         } else if (throwable instanceof ResponseStatusException e) {
-            log.warn("[GatewayExceptionHandler] {}", e.getMessage());
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
                 errorCode = GatewayErrorCode.RESOURCE_NOT_FOUND;
             } else {
                 errorCode = GatewayErrorCode.INVALID_INPUT;
             }
         } else {
-            log.error("[GatewayExceptionHandler] ", throwable);
             errorCode = GatewayErrorCode.INTERNAL_SERVER_ERROR;
         }
 
