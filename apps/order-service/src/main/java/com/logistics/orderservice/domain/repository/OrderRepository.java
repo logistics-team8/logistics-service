@@ -12,9 +12,20 @@ public interface OrderRepository{
     Order save(Order order);
 
 
+
+    /**
+     * 마스터 권한의 단건, 목록 조회
+     */
     Optional<Order> findByIdAndDeletedAtIsNull(UUID orderId);
 
     Page<Order> findAllByDeletedAtIsNull(Pageable pageable);
 
 
+
+    /**
+     * 로그인한 사용자의 주문 조회
+     */
+    Optional<Order> findByIdAndRequesterIdAndDeletedAtIsNull(UUID orderId, UUID userId);
+
+    Page<Order> findAllByRequesterIdAndDeletedAtIsNull(UUID userId, Pageable pageable);
 }
