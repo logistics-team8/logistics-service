@@ -26,7 +26,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,19 +38,15 @@ class OrderQueryServiceTest {
     private OrderQueryService orderQueryService;
 
     private UUID orderId;
-    private UUID requesterId;
-    private UUID otherUserId;
     private Order order;
 
     @BeforeEach
     void setUp() {
         orderId = UUID.randomUUID();
-        requesterId = UUID.randomUUID();
-        otherUserId = UUID.randomUUID();
 
         order = Order.create(
                 "ORD-20260805-123456",
-                requesterId,
+                UUID.randomUUID(),
                 UUID.randomUUID(),
                 "테스트 주문입니다.",
                 LocalDateTime.of(2026, 8, 10, 10, 0)
@@ -59,18 +54,15 @@ class OrderQueryServiceTest {
     }
 
     @Test
-    @DisplayName("마스터는 주문 ID로 모든 주문을 단건 조회할 수 있다")
-    void getOrder_master_success() {
+    @DisplayName("주문 ID로 삭제되지 않은 주문을 단건 조회한다")
+    void getOrder_success() {
         // given
         given(orderRepository.findByIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.of(order));
 
         // when
-        OrderDetailResponse response = orderQueryService.getOrder(
-                orderId,
-                UUID.randomUUID(),
-                "ROLE_MASTER"
-        );
+        OrderDetailResponse response =
+                orderQueryService.getOrder(orderId);
 
         // then
         assertThat(response).isNotNull();
@@ -79,28 +71,18 @@ class OrderQueryServiceTest {
 
         verify(orderRepository)
                 .findByIdAndDeletedAtIsNull(orderId);
-
-        verify(orderRepository, never())
-                .findByIdAndRequesterIdAndDeletedAtIsNull(
-                        orderId,
-                        requesterId
-                );
     }
 
     @Test
-    @DisplayName("마스터가 존재하지 않는 주문을 조회하면 예외가 발생한다")
-    void getOrder_master_notFound() {
+    @DisplayName("존재하지 않거나 삭제된 주문을 단건 조회하면 예외가 발생한다")
+    void getOrder_notFound() {
         // given
         given(orderRepository.findByIdAndDeletedAtIsNull(orderId))
                 .willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() ->
-                orderQueryService.getOrder(
-                        orderId,
-                        UUID.randomUUID(),
-                        "ROLE_MASTER"
-                )
+                orderQueryService.getOrder(orderId)
         )
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
@@ -110,73 +92,14 @@ class OrderQueryServiceTest {
                     assertThat(businessException.getErrorCode())
                             .isEqualTo(OrderErrorCode.ORDER_NOT_FOUND);
                 });
-    }
-
-    @Test
-    @DisplayName("마스터가 아닌 로그인 사용자는 자신이 생성한 주문을 조회할 수 있다")
-    void getOrder_requester_success() {
-        // given
-        given(
-                orderRepository.findByIdAndRequesterIdAndDeletedAtIsNull(
-                        orderId,
-                        requesterId
-                )
-        ).willReturn(Optional.of(order));
-
-        // when
-        OrderDetailResponse response = orderQueryService.getOrder(
-                orderId,
-                requesterId,
-                "ROLE_COMPANY_MANAGER"
-        );
-
-        // then
-        assertThat(response).isNotNull();
-        assertThat(response.orderNumber())
-                .isEqualTo("ORD-20260805-123456");
 
         verify(orderRepository)
-                .findByIdAndRequesterIdAndDeletedAtIsNull(
-                        orderId,
-                        requesterId
-                );
-
-        verify(orderRepository, never())
                 .findByIdAndDeletedAtIsNull(orderId);
     }
 
     @Test
-    @DisplayName("다른 사용자의 주문은 조회할 수 없다")
-    void getOrder_otherUser_notFound() {
-        // given
-        given(
-                orderRepository.findByIdAndRequesterIdAndDeletedAtIsNull(
-                        orderId,
-                        otherUserId
-                )
-        ).willReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() ->
-                orderQueryService.getOrder(
-                        orderId,
-                        otherUserId,
-                        "ROLE_DELIVERY_MANAGER"
-                )
-        )
-                .isInstanceOf(BusinessException.class)
-                .satisfies(exception -> {
-                    BusinessException businessException =
-                            (BusinessException) exception;
-
-                    assertThat(businessException.getErrorCode())
-                            .isEqualTo(OrderErrorCode.ORDER_NOT_FOUND);
-                });
-    }
-
-    @Test
-    @DisplayName("마스터는 삭제되지 않은 전체 주문 목록을 조회한다")
-    void getOrders_master_success() {
+    @DisplayName("삭제되지 않은 주문 목록을 페이징하여 조회한다")
+    void getOrders_success() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
 
@@ -191,14 +114,11 @@ class OrderQueryServiceTest {
 
         // when
         Page<OrderSummaryResponse> response =
-                orderQueryService.getOrders(
-                        pageable,
-                        UUID.randomUUID(),
-                        "ROLE_MASTER"
-                );
+                orderQueryService.getOrders(pageable);
 
         // then
         assertThat(response.getTotalElements()).isEqualTo(1);
+        assertThat(response.getTotalPages()).isEqualTo(1);
         assertThat(response.getContent()).hasSize(1);
         assertThat(response.getContent().getFirst().orderNumber())
                 .isEqualTo("ORD-20260805-123456");
@@ -208,43 +128,25 @@ class OrderQueryServiceTest {
     }
 
     @Test
-    @DisplayName("마스터가 아닌 로그인 사용자는 자신이 생성한 주문 목록만 조회한다")
-    void getOrders_requester_success() {
+    @DisplayName("조회할 주문이 없으면 빈 페이지를 반환한다")
+    void getOrders_empty() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
+        Page<Order> emptyPage = Page.empty(pageable);
 
-        Page<Order> orderPage = new PageImpl<>(
-                List.of(order),
-                pageable,
-                1
-        );
-
-        given(
-                orderRepository.findAllByRequesterIdAndDeletedAtIsNull(
-                        requesterId,
-                        pageable
-                )
-        ).willReturn(orderPage);
+        given(orderRepository.findAllByDeletedAtIsNull(pageable))
+                .willReturn(emptyPage);
 
         // when
         Page<OrderSummaryResponse> response =
-                orderQueryService.getOrders(
-                        pageable,
-                        requesterId,
-                        "ROLE_COMPANY_MANAGER"
-                );
+                orderQueryService.getOrders(pageable);
 
         // then
-        assertThat(response.getTotalElements()).isEqualTo(1);
-        assertThat(response.getContent()).hasSize(1);
+        assertThat(response.getContent()).isEmpty();
+        assertThat(response.getTotalElements()).isZero();
+        assertThat(response.getTotalPages()).isZero();
 
         verify(orderRepository)
-                .findAllByRequesterIdAndDeletedAtIsNull(
-                        requesterId,
-                        pageable
-                );
-
-        verify(orderRepository, never())
                 .findAllByDeletedAtIsNull(pageable);
     }
 }
