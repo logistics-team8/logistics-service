@@ -30,10 +30,14 @@ public class CustomUserDetails implements UserDetails {
 
     public static CustomUserDetails from(UUID userId, String roleStr) {
         Collection<GrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority(roleStr)
+                new SimpleGrantedAuthority(toRoleAuthority(roleStr))
         );
 
         return new CustomUserDetails(userId, null, authorities);
+    }
+
+    private static String toRoleAuthority(String roleStr) {
+        return roleStr.startsWith("ROLE_") ? roleStr : "ROLE_" + roleStr;
     }
 
     public Set<String> getRoleNames() {
