@@ -27,6 +27,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * Access Token 생성
+     *
      * @param tokenClaims
      * @param sessionId
      * @return String Access Token
@@ -41,6 +42,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * Refresh Token 생성
+     *
      * @param tokenClaims
      * @param sessionId
      * @return String Refresh Token
@@ -55,6 +57,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * Access Token Claims 파싱
+     *
      * @param accessToken
      * @return TokenPayload DTO
      */
@@ -67,6 +70,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * Refresh Token Claims 파싱
+     *
      * @param refreshToken
      * @return TokenPayload DTO
      */
@@ -79,6 +83,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * Access Token 만료기간 확인
+     *
      * @param accessToken
      * @return 만료기간
      */
@@ -91,6 +96,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * Token 생성
+     *
      * @param tokenClaims
      * @param sessionId
      * @param signingKey
@@ -121,6 +127,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * Token 파싱
+     *
      * @param token
      * @param signingKey
      * @return Claims
@@ -131,6 +138,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * DTO 객체 변환
+     *
      * @param claims
      * @return TokenPayload
      */
@@ -147,6 +155,7 @@ public class JwtTokenProvider implements TokenProvider {
 
     /**
      * JWT 시크릿 키 생성
+     *
      * @param secret
      * @return SecretKey
      */
