@@ -87,8 +87,19 @@ public enum OrderErrorCode implements ErrorCode {
             "ORD_014",
             HttpStatus.FORBIDDEN,
             "해당 주문을 삭제할 권한이 없습니다."
-    );
+    ),
 
+    INVALID_REQUESTED_DELIVERY_AT(
+            "ORD_015",
+            HttpStatus.BAD_REQUEST,
+            "희망 납품 일시는 현재 시각으로부터 최소 1일 이후여야 합니다."
+    ),
+
+    REQUESTED_DELIVERY_AT_REQUIRED(
+            "ORD_016",
+            HttpStatus.BAD_REQUEST,
+                "희망 납품 일시는 필수입니다."
+    );
 
 
     private final String code;
