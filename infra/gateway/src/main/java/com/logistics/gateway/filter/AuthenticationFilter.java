@@ -40,6 +40,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 pathProperties.whitelist().stream()
                         .anyMatch(pattern -> pathMatcher.match(pattern, path));
 
+
         // Whitelist 체크
         if (isWhitelisted) {
             ServerHttpRequest sanitizedRequest =
@@ -86,7 +87,14 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 .flatMap(
                         role -> {
                             ServerHttpRequest.Builder requestBuilder =
-                                    exchange.getRequest().mutate();
+                                    exchange.getRequest()
+                                            .mutate()
+                                            .headers(headers -> {
+                                                headers.remove("X-User-Id");
+                                                headers.remove("X-Hub-Id");
+                                                headers.remove("X-Company-Id");
+                                                headers.remove("X-Role");
+                                            });
 
                             addHeader(requestBuilder, "X-User-Id", userId);
                             addHeader(requestBuilder, "X-Hub-Id", hubId);
