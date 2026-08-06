@@ -24,11 +24,12 @@ public record CreateOrderRequest(
         String requestMessage,
 
         @NotNull(message = "희망 납품 일시는 필수입니다.")
-        @Future(message = "희망 납품 일시는 현재 이후여야 합니다.")
+        @Future(message = "희망 납품 일시는 현재로부터 최소 1일 이후여야 합니다.")
         LocalDateTime requestedDeliveryAt,
 
-        @NotEmpty(message = "주문상픔은 1개 이상이어야 합니다.")
-        List<@Valid CreateOrderItemRequest> items
+        @NotEmpty(message = "주문상품은 1개 이상이어야 합니다.")
+        List<@NotNull(message = "주문상품 정보는 필수입니다.")
+                @Valid CreateOrderItemRequest> items
 ) {
 
     public CreateOrderCommand toCommand(UUID requesterId) {
