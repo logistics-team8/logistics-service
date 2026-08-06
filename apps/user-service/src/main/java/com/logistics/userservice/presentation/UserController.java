@@ -2,7 +2,7 @@ package com.logistics.userservice.presentation;
 
 import com.logistics.common.response.ApiResponse;
 import com.logistics.userservice.application.UserService;
-import com.logistics.userservice.presentation.dto.request.UserSignUpRequest;
+import com.logistics.userservice.presentation.dto.request.SignUpRequest;
 import com.logistics.userservice.presentation.swagger.UserApi;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +22,10 @@ public class UserController implements UserApi {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createUser(
-            @Valid @RequestBody UserSignUpRequest request) {
-        log.debug("[UserController] User 회원가입 시작");
+    public ResponseEntity<ApiResponse<Void>> createUser(@Valid @RequestBody SignUpRequest request) {
+        log.info("[UserController] User 회원가입 시작");
         userService.createUser(request.toCommand());
-        log.debug("[UserController] User 회원가입 완료");
+        log.info("[UserController] User 회원가입 완료");
 
         return ResponseEntity.status(HttpStatus.CREATED).body((ApiResponse.success(null)));
     }
