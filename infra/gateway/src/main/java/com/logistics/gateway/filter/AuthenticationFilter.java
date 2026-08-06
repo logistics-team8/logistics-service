@@ -1,19 +1,19 @@
 package com.logistics.gateway.filter;
 
 import com.logistics.gateway.infrastructure.config.PathProperties;
+import com.logistics.gateway.infrastructure.redis.RedisUserRoleCache;
 import com.logistics.gateway.infrastructure.security.JwtTokenProvider;
 import com.logistics.gateway.presentation.error.GatewayErrorCode;
 import com.logistics.gateway.presentation.exception.BusinessException;
+import com.logistics.gateway.presentation.response.UserRoleResponse;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
-import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
@@ -27,7 +27,7 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class AuthenticationFilter implements GlobalFilter, Ordered {
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
-    private final ReactiveStringRedisTemplate redisTemplate;
+    private final RedisUserRoleCache roleCache;
     private final WebClient.Builder webClientBuilder;
     private final JwtTokenProvider jwtTokenProvider;
     private final PathProperties pathProperties;
@@ -39,7 +39,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         boolean isWhitelisted =
                 pathProperties.whitelist().stream()
                         .anyMatch(pattern -> pathMatcher.match(pattern, path));
-
 
         // Whitelist 체크
         if (isWhitelisted) {
@@ -83,18 +82,19 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String hubId = claims.get("hubId", String.class);
         String companyId = claims.get("companyId", String.class);
 
-        return verifyUserRole(userId, path)
+        return verifyUserRole(userId)
                 .flatMap(
                         role -> {
                             ServerHttpRequest.Builder requestBuilder =
                                     exchange.getRequest()
                                             .mutate()
-                                            .headers(headers -> {
-                                                headers.remove("X-User-Id");
-                                                headers.remove("X-Hub-Id");
-                                                headers.remove("X-Company-Id");
-                                                headers.remove("X-Role");
-                                            });
+                                            .headers(
+                                                    headers -> {
+                                                        headers.remove("X-User-Id");
+                                                        headers.remove("X-Hub-Id");
+                                                        headers.remove("X-Company-Id");
+                                                        headers.remove("X-Role");
+                                                    });
 
                             addHeader(requestBuilder, "X-User-Id", userId);
                             addHeader(requestBuilder, "X-Hub-Id", hubId);
@@ -104,6 +104,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                             ServerWebExchange mutatedExchange =
                                     exchange.mutate().request(requestBuilder.build()).build();
 
+                            log.info("캐시 정보 {}", role);
                             return chain.filter(mutatedExchange);
                         });
     }
@@ -126,25 +127,40 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
     }
 
-    public Mono<String> verifyUserRole(String userId, String path) {
-        String redisKey = "user:role:" + userId;
-
-        return redisTemplate
-                .opsForValue()
-                .get(redisKey)
+    /**
+     * 회원 권한 Redis에서 조회 캐시 미스 시 User Service에서 조회
+     *
+     * @param userId 회원 PK
+     * @return 회원 권한
+     */
+    public Mono<String> verifyUserRole(String userId) {
+        return roleCache
+                .findByUserId(userId)
                 // switchIfEmpty 웹플럭스 스트림 형태 IF문 앞의 데이터가 Empty -> 후속 메서드 실행
                 // Mono.defer() 생성 시간 지연 - 메서드의 인자로 넘어갈 시 즉시 실행 방지
-                .switchIfEmpty(Mono.defer(() -> fetchAndCacheUserRole(userId, redisKey, path)));
+                .switchIfEmpty(Mono.defer(() -> fetchAndCacheUserRole(userId)));
     }
 
-    private Mono<String> fetchAndCacheUserRole(String userId, String redisKey, String path) {
-        return verifyRoleFromUserService(userId, path)
+    /**
+     * User Service에서 권한 조회 후 Redis에 캐싱
+     *
+     * @param userId
+     * @return
+     */
+    private Mono<String> fetchAndCacheUserRole(String userId) {
+        return verifyRoleFromUserService(userId)
                 // flatMap 비동기 작업 체이닝 -> 앞의 비동기 작업 끝나면 다음 비동기 작업을 이어받음.
                 // verifyRoleFromUserService -> saveToRedis 형태
-                .flatMap(role -> saveToRedis(redisKey, role));
+                .flatMap(role -> roleCache.save(userId, role));
     }
 
-    private Mono<String> verifyRoleFromUserService(String userId, String path) {
+    /**
+     * User service에서 권한 조회
+     *
+     * @param userId
+     * @return
+     */
+    private Mono<String> verifyRoleFromUserService(String userId) {
         log.info("[Cache] Role Miss");
         return webClientBuilder
                 .build()
@@ -155,17 +171,10 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                                         .scheme("http")
                                         .host("user-service")
                                         .path("/internal/v1/users/{userId}/role")
-                                        .queryParam("path", path)
                                         .build(userId))
                 .retrieve()
-                .bodyToMono(String.class)
+                .bodyToMono(UserRoleResponse.class)
+                .map(UserRoleResponse::role)
                 .onErrorMap(e -> new BusinessException(GatewayErrorCode.INTERNAL_SERVER_ERROR));
-    }
-
-    private Mono<String> saveToRedis(String redisKey, String role) {
-        return redisTemplate
-                .opsForValue()
-                .set(redisKey, role, Duration.ofMinutes(30))
-                .thenReturn(role);
     }
 }
