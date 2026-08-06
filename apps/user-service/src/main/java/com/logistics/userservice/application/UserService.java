@@ -2,10 +2,7 @@ package com.logistics.userservice.application;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.UserInfo;
-import com.logistics.userservice.application.dto.UserRoleInfo;
-import com.logistics.userservice.application.dto.UserSignUpCommand;
-import com.logistics.userservice.application.dto.UserSlackInfo;
+import com.logistics.userservice.application.dto.*;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.presentation.exception.UserErrorCode;
@@ -20,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
-@Transactional
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
@@ -31,6 +28,7 @@ public class UserService {
      *
      * @param command
      */
+    @Transactional
     public void createUser(UserSignUpCommand command) {
         User user = User.create(command);
         validateDuplicate(command);
@@ -63,7 +61,6 @@ public class UserService {
         }
     }
 
-    @Transactional(readOnly = true)
     public UserInfo getUserInfo(UUID userId) {
         return UserInfo.from(
                 userRepository
@@ -82,9 +79,14 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserSlackInfo getUserSlackId(UUID userId) {
         return new UserSlackInfo(
-                userId,
                 userRepository
                         .findSlackIdById(userId)
                         .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
     }
+
+    @Transactional
+    public void deleteUser(UUID id) {}
+
+    @Transactional
+    public void updateUser(UserUpdateCommand command) {}
 }
