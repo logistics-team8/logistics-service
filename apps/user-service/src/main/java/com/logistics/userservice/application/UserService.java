@@ -72,7 +72,7 @@ public class UserService {
     public UserRoleInfo getUserRole(UUID userId) {
         return new UserRoleInfo(
                 userRepository
-                        .findRoleById(userId)
+                        .findRoleByIdDeletedAtIsNull(userId)
                         .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
     }
 
@@ -80,12 +80,14 @@ public class UserService {
     public UserSlackInfo getUserSlackId(UUID userId) {
         return new UserSlackInfo(
                 userRepository
-                        .findSlackIdById(userId)
+                        .findSlackIdByIdDeletedAtIsNull(userId)
                         .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
     }
 
     @Transactional
-    public void deleteUser(UUID id) {}
+    public void deleteUser(UUID userId) {
+
+    }
 
     @Transactional
     public void updateUser(UserUpdateCommand command) {}
