@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.logistics.infrastructure.config.test.AbstractControllerTest;
 import com.logistics.userservice.application.UserService;
 import com.logistics.userservice.domain.Role;
-import com.logistics.userservice.presentation.dto.request.UserSignUpRequest;
+import com.logistics.userservice.presentation.dto.request.SignUpRequest;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
@@ -32,8 +32,8 @@ class UserControllerUnitTest extends AbstractControllerTest {
         @DisplayName("회원가입 성공")
         void createUser_success() throws Exception {
             // given
-            UserSignUpRequest request =
-                    new UserSignUpRequest(
+            SignUpRequest request =
+                    new SignUpRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -55,7 +55,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
         @ParameterizedTest
         @MethodSource("testCase")
         @DisplayName("회원가입 시 유효성 체크를 통과하지 못하면 예외가 발생해야한다.")
-        void createUser_fail_when_invalid(UserSignUpRequest request) throws Exception {
+        void createUser_fail_when_invalid(SignUpRequest request) throws Exception {
             // when & then
             mockMvc.perform(
                             post("/api/v1/users")
@@ -66,10 +66,10 @@ class UserControllerUnitTest extends AbstractControllerTest {
             verifyNoInteractions(userService);
         }
 
-        static Stream<UserSignUpRequest> testCase() {
+        static Stream<SignUpRequest> testCase() {
             return Stream.of(
                     // 1. 아이디 유효성 검사 실패
-                    new UserSignUpRequest(
+                    new SignUpRequest(
                             "아이디",
                             "Testtest123!",
                             "김철수",
@@ -79,7 +79,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 2. 비밀번호 유효성 검사 실패
-                    new UserSignUpRequest(
+                    new SignUpRequest(
                             "test1234",
                             "비밀번호",
                             "김철수",
@@ -89,7 +89,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 3. 이름 유효성 검사 실패
-                    new UserSignUpRequest(
+                    new SignUpRequest(
                             "test1234",
                             "Testtest123!",
                             "",
@@ -99,7 +99,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 4. 슬랙ID 유효성 검사 실패
-                    new UserSignUpRequest(
+                    new SignUpRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -109,7 +109,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 5. 허브 ID 유효성 검사 실패
-                    new UserSignUpRequest(
+                    new SignUpRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -119,7 +119,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 6. 권한 유효성 검사 실패
-                    new UserSignUpRequest(
+                    new SignUpRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",

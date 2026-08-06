@@ -1,13 +1,14 @@
 package com.logistics.userservice.domain;
 
 import com.github.f4b6a3.uuid.UuidCreator;
+import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
 import com.logistics.userservice.infrastructure.config.BaseEntity;
+import com.logistics.userservice.presentation.exception.AuthErrorCode;
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
+import lombok.*;
 
 @Getter
 @Entity
@@ -27,35 +28,29 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true, length = 50)
     private String name;
 
-    @Column(unique = true, length = 50)
+    @Column(nullable = false, unique = true, length = 50)
     private String slackId;
-
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private UserStatus userStatus;
 
-    @Column
-    private UUID hubId;
+    @Column private UUID hubId;
 
-    @Column
-    private UUID companyId;
+    @Column private UUID companyId;
 
     @Column
     @Enumerated(EnumType.STRING)
     private Role role;
 
-    @Column
-    private UUID approvedBy;
+    @Column private UUID approvedBy;
 
-    @Column
-    private LocalDateTime approvedAt;
+    @Column private LocalDateTime approvedAt;
 
-    @Column
-    private String rejectionReason;
+    @Column private String rejectionReason;
 
     public static User create(UserSignUpCommand command) {
-        User user =  new User();
+        User user = new User();
         user.username = command.username();
         user.password = command.password();
         user.name = command.name();
@@ -71,6 +66,14 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
+    /** 승인 대기중인 사용자 검증 */
+    public void validateActive() {
+        if (this.userStatus == UserStatus.PENDING) {
+            throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
+        }
+    }
+
+    /** UUID v7 삽입 */
     @PrePersist
     protected void onCreate() {
         if (this.id == null) {

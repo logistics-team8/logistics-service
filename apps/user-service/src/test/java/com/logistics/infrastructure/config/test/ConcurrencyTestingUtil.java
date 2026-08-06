@@ -1,10 +1,9 @@
 package com.logistics.infrastructure.config.test;
 
-import lombok.experimental.UtilityClass;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import lombok.experimental.UtilityClass;
 
 /** 동시성 테스트 유틸 클래스 */
 @UtilityClass

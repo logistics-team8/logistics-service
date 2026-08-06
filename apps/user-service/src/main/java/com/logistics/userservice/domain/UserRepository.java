@@ -18,6 +18,4 @@ public interface UserRepository {
     List<User> findByUsernameOrSlackId(String username, String slackId);
 
     void deleteAllInBatch();
-
-
 }
