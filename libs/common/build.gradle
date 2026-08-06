@@ -15,7 +15,14 @@ dependencies {
     implementation 'org.slf4j:slf4j-api'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework:spring-webmvc'
+
+    // Security
     implementation 'org.springframework.security:spring-security-core'
+    implementation 'org.springframework.security:spring-security-web'
+
+    // Jackson
+    implementation 'tools.jackson.core:jackson-databind'
+
     implementation 'jakarta.validation:jakarta.validation-api'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'
 
