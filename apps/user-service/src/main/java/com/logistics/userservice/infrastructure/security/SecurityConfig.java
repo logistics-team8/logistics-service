@@ -1,4 +1,4 @@
-package com.logistics.userservice.infrastructure.config;
+package com.logistics.userservice.infrastructure.security;
 
 import com.logistics.common.security.filter.UserContextFilter;
 import com.logistics.common.security.hendler.CustomAccessDeniedHandler;
@@ -33,8 +33,7 @@ public class SecurityConfig {
             HttpSecurity httpSecurity,
             UserContextFilter userContextFilter,
             AccessDeniedHandler accessDeniedHandler,
-            CustomAuthenticationEntryPoint customAuthenticationEntryPoint)
-            throws Exception {
+            CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         // csrf 비활성화
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
 

@@ -1,5 +1,7 @@
 package com.logistics.userservice.application;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.infrastructure.config.test.AbstractIntegrationTest;
@@ -9,6 +11,9 @@ import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.domain.UserStatus;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -17,12 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 public class UserServiceIntegrationTest extends AbstractIntegrationTest {
