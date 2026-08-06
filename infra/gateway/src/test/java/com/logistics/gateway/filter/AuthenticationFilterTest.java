@@ -1,21 +1,17 @@
 package com.logistics.gateway.filter;
 
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-
 import com.logistics.gateway.infrastructure.config.PathProperties;
+import com.logistics.gateway.infrastructure.redis.RedisUserRoleCache;
 import com.logistics.gateway.infrastructure.security.JwtTokenProvider;
 import com.logistics.gateway.presentation.error.GatewayErrorCode;
 import com.logistics.gateway.presentation.exception.BusinessException;
 import io.jsonwebtoken.ExpiredJwtException;
-import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
 import org.springframework.mock.web.server.MockServerWebExchange;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -23,9 +19,15 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.util.List;
+
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+
 @ExtendWith(MockitoExtension.class)
 class AuthenticationFilterTest {
-    @Mock ReactiveStringRedisTemplate redisTemplate;
+    @Mock
+    RedisUserRoleCache roleCache;
 
     @Mock WebClient.Builder webClientBuilder;
 
@@ -39,7 +41,7 @@ class AuthenticationFilterTest {
     void setUp() {
         filter =
                 new AuthenticationFilter(
-                        redisTemplate, webClientBuilder, jwtTokenProvider, pathProperties);
+                        roleCache, webClientBuilder, jwtTokenProvider, pathProperties);
     }
 
     @Test

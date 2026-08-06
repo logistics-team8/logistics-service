@@ -74,7 +74,6 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserRoleInfo getUserRole(UUID userId) {
         return new UserRoleInfo(
-                userId,
                 userRepository
                         .findRoleById(userId)
                         .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));

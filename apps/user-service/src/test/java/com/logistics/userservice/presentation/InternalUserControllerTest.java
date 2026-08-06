@@ -101,7 +101,7 @@ class InternalUserControllerTest extends AbstractControllerTest {
     void getUserRole_success() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
-        UserRoleInfo userRoleInfo = new UserRoleInfo(userId, Role.COMPANY_MANAGER);
+        UserRoleInfo userRoleInfo = new UserRoleInfo(Role.COMPANY_MANAGER);
 
         given(userService.getUserRole(eq(userId))).willReturn(userRoleInfo);
 
