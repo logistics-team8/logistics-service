@@ -50,8 +50,8 @@ public class Order extends BaseEntity {
 
     @OneToMany(
             mappedBy = "order",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
+            cascade = CascadeType.ALL
+            //orphanRemoval = true
     )
     private final List<OrderItem> orderItems =
             new ArrayList<>();
@@ -104,6 +104,34 @@ public class Order extends BaseEntity {
     }
 
 
+    public void update(
+            String requestMessage,
+            LocalDateTime requestedDeliveryAt
+    ){
+        if(this.status != OrderStatus.PENDING){
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_NOT_UPDATABLE
+            );
+        }
+        this.requestMessage = requestMessage;
+        this.requestedDeliveryAt = requestedDeliveryAt;
+    }
+
+
+    public void delete(UUID deleteBy){
+        if(this.status != OrderStatus.CANCELED
+                && this.status != OrderStatus.FAILED){
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_DELETABLE);
+        }
+
+        this.orderItems.forEach(
+                orderItem -> orderItem.delete(deleteBy)
+        );
+
+        softDelete(deleteBy);
+    }
+
+
     private void validateDuplicateProduct(UUID productId){
         boolean duplicatedOrderItem = orderItems.stream()
                 .anyMatch(orderItem ->
@@ -117,5 +145,4 @@ public class Order extends BaseEntity {
             );
         }
     }
-
 }

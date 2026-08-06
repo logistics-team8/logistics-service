@@ -79,6 +79,11 @@ public class OrderItem extends BaseEntity {
     }
 
 
+    public void delete(UUID deleteBy){
+        softDelete(deleteBy);
+    }
+
+
     private static void validateQuantity(Integer quantity){
         if(quantity == null || quantity < 1) {
             throw new BusinessException(OrderErrorCode.INVALID_ORDER_QUANTITY);
