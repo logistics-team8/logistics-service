@@ -60,6 +60,10 @@ dependencyManagement {
     }
 }
 
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
 spotless {
     java {
         googleJavaFormat('1.22.0').aosp().reflowLongStrings()
