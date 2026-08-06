@@ -4,6 +4,6 @@ import java.time.LocalDateTime;
 
 public record UpdateOrderCommand(
         String requestMessage,
-        LocalDateTime requestDeliveryAt
+        LocalDateTime requestedDeliveryAt
 ) {
 }

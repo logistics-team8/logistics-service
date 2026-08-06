@@ -23,6 +23,7 @@ public record CreateOrderRequest(
         )
         String requestMessage,
 
+        @NotNull(message = "희망 납품 일시는 필수입니다.")
         @Future(message = "희망 납품 일시는 현재 이후여야 합니다.")
         LocalDateTime requestedDeliveryAt,
 

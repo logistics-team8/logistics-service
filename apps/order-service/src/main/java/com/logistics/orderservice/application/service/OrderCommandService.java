@@ -15,7 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
@@ -25,16 +27,20 @@ import java.util.UUID;
 public class OrderCommandService {
 
     private final OrderRepository orderRepository;
+    private final Clock clock;
 
 
     @Transactional
     public CreateOrderResponse createOrder(CreateOrderCommand command) {
+        LocalDateTime now = LocalDateTime.now(clock);
+
         Order order = Order.create(
-                generateOrderNumber(),
+                generateOrderNumber(now),
                 command.requesterId(),
                 command.receiverCompanyId(),
                 command.requestMessage(),
-                command.requestedDeliveryAt()
+                command.requestedDeliveryAt(),
+                now
         );
 
         for (CreateOrderItemCommand item : command.items()) {
@@ -46,25 +52,6 @@ public class OrderCommandService {
 
         return CreateOrderResponse.from(orderRepository.save(order));
     }
-
-
-
-    private String generateOrderNumber() {
-        String date = LocalDate.now()
-                .format(DateTimeFormatter.BASIC_ISO_DATE);
-
-        //ex)ORD-20260804-A12F45C98D01
-        String suffix = UUID.randomUUID()
-                .toString()
-                .replace("-", "")
-                .substring(0, 12)
-                .toUpperCase();
-
-        return "ORD-" + date + "-" + suffix;
-    }
-
-
-
 
     /**
      * 주문 수정
@@ -78,16 +65,17 @@ public class OrderCommandService {
     public UpdateOrderResponse updateOrder(UUID userId, UpdateOrderCommand command, UUID orderId) {
         //user의 role을 확인하고 수정할 권한과 범위를 체크해야한다.
 
-
         Order order = orderRepository
                 .findByIdAndDeletedAtIsNull(orderId)
                 .orElseThrow(() ->
-                    new BusinessException(OrderErrorCode.ORDER_NOT_FOUND)
+                        new BusinessException(OrderErrorCode.ORDER_NOT_FOUND)
                 );
 
+        LocalDateTime now = LocalDateTime.now(clock);
         order.update(
                 command.requestMessage(),
-                command.requestDeliveryAt()
+                command.requestedDeliveryAt(),
+                now
         );
 
         return UpdateOrderResponse.from(order);
@@ -115,4 +103,28 @@ public class OrderCommandService {
         order.delete(userId);
         return DeleteOrderResponse.from(order);
     }
+
+
+    /**
+     * 주문 번호 생성 메서드
+     * //ex)ORD-20260804-A12F45C98D01
+     */
+    private String generateOrderNumber(LocalDateTime now) {
+        String date = now.toLocalDate()
+                .format(DateTimeFormatter.BASIC_ISO_DATE);
+
+
+        String suffix = UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 12)
+                .toUpperCase();
+
+        return "ORD-" + date + "-" + suffix;
+    }
+
+
+
+
+
 }

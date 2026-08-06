@@ -83,8 +83,11 @@ public class Order extends BaseEntity {
             UUID requesterId,
             UUID receiverCompanyId,
             String requestMessage,
-            LocalDateTime requestedDeliveryAt
+            LocalDateTime requestedDeliveryAt,
+            LocalDateTime now
     ) {
+        validateRequestedDeliveryAt(requestedDeliveryAt,now);
+
         return new Order(
                 orderNumber,
                 requesterId,
@@ -106,15 +109,21 @@ public class Order extends BaseEntity {
 
     public void update(
             String requestMessage,
-            LocalDateTime requestedDeliveryAt
+            LocalDateTime requestedDeliveryAt,
+            LocalDateTime now
     ){
         if(this.status != OrderStatus.PENDING){
             throw new BusinessException(
                     OrderErrorCode.ORDER_NOT_UPDATABLE
             );
         }
-        this.requestMessage = requestMessage;
-        this.requestedDeliveryAt = requestedDeliveryAt;
+        if(requestMessage != null){
+            this.requestMessage = requestMessage;
+        }
+        if(requestedDeliveryAt != null){
+            validateRequestedDeliveryAt(requestedDeliveryAt,now);
+            this.requestedDeliveryAt = requestedDeliveryAt;
+        }
     }
 
 
@@ -132,17 +141,30 @@ public class Order extends BaseEntity {
     }
 
 
+    //하나의 주문안에 같은 상품ID 중복 방지
     private void validateDuplicateProduct(UUID productId){
         boolean duplicatedOrderItem = orderItems.stream()
                 .anyMatch(orderItem ->
                         orderItem.getProductId().equals(productId)
                 );
 
-        //하나의 주문안에 같은 상품ID 중복 방지
         if(duplicatedOrderItem){
             throw new BusinessException(
                     OrderErrorCode.DUPLICATE_ORDER_PRODUCT
             );
+        }
+    }
+
+    //현재 시간에서 최소 1일 이후의 납품 일시를 선택해야 한다.
+    private static void validateRequestedDeliveryAt(LocalDateTime requestedDeliveryAt, LocalDateTime now){
+        if(requestedDeliveryAt == null){
+            throw new BusinessException(OrderErrorCode.REQUESTED_DELIVERY_AT_REQUIRED);
+        }
+
+        LocalDateTime minimumDeliveryAt = now.plusDays(1);
+
+        if(requestedDeliveryAt.isBefore(minimumDeliveryAt)){
+            throw new BusinessException(OrderErrorCode.INVALID_REQUESTED_DELIVERY_AT);
         }
     }
 }
