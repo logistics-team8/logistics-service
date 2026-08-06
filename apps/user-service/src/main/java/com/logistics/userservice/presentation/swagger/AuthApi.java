@@ -1,8 +1,8 @@
 package com.logistics.userservice.presentation.swagger;
 
 import com.logistics.common.response.ApiResponse;
-import com.logistics.userservice.presentation.dto.request.LoginRequest;
-import com.logistics.userservice.presentation.dto.response.TokenResponse;
+import com.logistics.userservice.presentation.dto.auth.LoginRequest;
+import com.logistics.userservice.presentation.dto.auth.TokenResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

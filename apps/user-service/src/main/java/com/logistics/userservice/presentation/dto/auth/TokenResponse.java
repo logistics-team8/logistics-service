@@ -1,4 +1,4 @@
-package com.logistics.userservice.presentation.dto.response;
+package com.logistics.userservice.presentation.dto.auth;
 
 public record TokenResponse(String accessToken) {
     public static TokenResponse from(String accessToken) {

@@ -1,4 +1,4 @@
-package com.logistics.userservice.presentation.dto.request;
+package com.logistics.userservice.presentation.dto.user;
 
 import com.logistics.userservice.application.dto.UserSignUpCommand;
 import com.logistics.userservice.domain.Role;

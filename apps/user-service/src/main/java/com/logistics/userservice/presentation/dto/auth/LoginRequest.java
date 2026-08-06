@@ -1,4 +1,4 @@
-package com.logistics.userservice.presentation.dto.request;
+package com.logistics.userservice.presentation.dto.auth;
 
 import com.logistics.userservice.application.dto.UserLoginCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
