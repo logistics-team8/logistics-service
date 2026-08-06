@@ -1,5 +1,6 @@
 package com.logistics.infrastructure.config.test;
 
+import com.logistics.common.web.GlobalExceptionHandler;
 import com.logistics.userservice.infrastructure.security.JwtProperties;
 import com.logistics.userservice.infrastructure.security.SecurityConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,8 +16,8 @@ import tools.jackson.databind.json.JsonMapper;
 @WebMvcTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import({SecurityConfig.class, GlobalExceptionHandler.class})
 @EnableConfigurationProperties(JwtProperties.class)
-@Import(SecurityConfig.class)
 public abstract class AbstractControllerTest {
     @Autowired protected MockMvc mockMvc;
     @Autowired protected JsonMapper jsonMapper;
