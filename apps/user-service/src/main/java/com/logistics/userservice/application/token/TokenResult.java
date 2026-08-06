@@ -1,3 +1,3 @@
-package com.logistics.userservice.application.dto;
+package com.logistics.userservice.application.token;
 
 public record TokenResult(String accessToken, String refreshToken) {}
