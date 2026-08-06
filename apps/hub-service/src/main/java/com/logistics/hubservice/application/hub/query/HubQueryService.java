@@ -2,6 +2,7 @@ package com.logistics.hubservice.application.hub.query;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.hubservice.application.hub.HubErrorCode;
+import com.logistics.hubservice.application.hub.dto.HubResponse;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import java.util.List;
