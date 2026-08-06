@@ -1,11 +1,20 @@
 package com.logistics.orderservice.presentation;
 
 import com.logistics.common.response.ApiResponse;
+import com.logistics.common.security.CustomUserDetails;
 import com.logistics.orderservice.application.service.OrderCommandService;
+import com.logistics.orderservice.application.service.OrderQueryService;
+import com.logistics.orderservice.page.PageResponse;
 import com.logistics.orderservice.presentation.dto.request.CreateOrderRequest;
 import com.logistics.orderservice.presentation.dto.response.CreateOrderResponse;
+import com.logistics.orderservice.presentation.dto.response.OrderDetailResponse;
+import com.logistics.orderservice.presentation.dto.response.OrderSummaryResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -16,6 +25,7 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderCommandService orderCommandService;
+    private final OrderQueryService orderQueryService;
 
     @PostMapping
     public ApiResponse<CreateOrderResponse> createOrder(
@@ -26,6 +36,37 @@ public class OrderController {
             CreateOrderResponse response =
                     orderCommandService.createOrder(request.toCommand(requesterId));
             return ApiResponse.success(response);
+    }
+
+    /**
+     * 주문 단건 조회
+     *
+     * Security 적용되면 추가하겠습니다.
+     * - MASTER: 전체 주문
+     * - HUB_MANAGER: 본인 주문 또는 담당 허브 주문
+     * - 그 외 로그인 사용자: 본인 주문
+     */
+    @GetMapping("/{orderId}")
+    public ApiResponse<OrderDetailResponse> getOrder(
+            @PathVariable UUID orderId
+    ) {
+        return ApiResponse.success(orderQueryService.getOrder(orderId));
+    }
+
+    /**
+     * 주문 목록 조회
+     *
+     * Security 적용되면 추가하겠습니다.
+     * - MASTER: 전체 주문
+     * - HUB_MANAGER: 본인 주문 또는 담당 허브 주문
+     * - 그 외 로그인 사용자: 본인 주문
+     */
+    @GetMapping
+    public ApiResponse<PageResponse<OrderSummaryResponse>> getOrders(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<OrderSummaryResponse> page = orderQueryService.getOrders(pageable);
+        return ApiResponse.success(PageResponse.from(page));
     }
 
 }
