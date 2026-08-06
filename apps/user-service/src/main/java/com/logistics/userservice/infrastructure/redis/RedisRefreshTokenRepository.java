@@ -2,6 +2,7 @@ package com.logistics.userservice.infrastructure.redis;
 
 import com.logistics.userservice.domain.redis.RefreshTokenRepository;
 import com.logistics.userservice.infrastructure.security.JwtProperties;
+import java.time.Duration;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -21,7 +22,7 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
                 .set(
                         generateKey(userId),
                         refreshToken,
-                        jwtProperties.refreshTokenExpirationInMillis());
+                        Duration.ofMillis(jwtProperties.refreshTokenExpirationInMillis()));
     }
 
     @Override
