@@ -298,6 +298,6 @@ class HubControllerIntegrationTest {
             MockHttpServletRequestBuilder request, UUID userId, String authority) {
         return request
                 .header("X-User-Id", userId)
-                .header("X-User-Role", authority);
+                .header("X-Role", authority);
     }
 }

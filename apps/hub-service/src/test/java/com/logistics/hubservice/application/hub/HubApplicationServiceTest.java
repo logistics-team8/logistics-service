@@ -8,7 +8,7 @@ import com.logistics.hubservice.application.hub.command.CreateHubCommand;
 import com.logistics.hubservice.application.hub.command.HubCommandService;
 import com.logistics.hubservice.application.hub.command.UpdateHubCommand;
 import com.logistics.hubservice.application.hub.query.HubQueryService;
-import com.logistics.hubservice.application.hub.query.HubResponse;
+import com.logistics.hubservice.application.hub.dto.HubResponse;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import jakarta.validation.Validation;

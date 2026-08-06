@@ -118,7 +118,7 @@ class HubJpaRepositoryAdapterTest {
     }
 
     private void authenticate(UUID userId) {
-        CustomUserDetails principal = CustomUserDetails.from(userId, "ROLE_MASTER");
+        CustomUserDetails principal = CustomUserDetails.from(userId, "MASTER");
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
         );

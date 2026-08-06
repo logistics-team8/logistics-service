@@ -1,6 +1,6 @@
 package com.logistics.hubservice.presentation.hub.dto;
 
-import com.logistics.hubservice.application.hub.query.HubResponse;
+import com.logistics.hubservice.application.hub.dto.HubResponse;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
