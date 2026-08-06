@@ -19,13 +19,21 @@ class OrderTest {
     private UUID requesterId;
     private UUID receiverCompanyId;
     private LocalDateTime requestedDeliveryAt;
-
+    private LocalDateTime now;
     @BeforeEach
     void setUp() {
         requesterId = UUID.randomUUID();
         receiverCompanyId = UUID.randomUUID();
-        requestedDeliveryAt =
-                LocalDateTime.of(2026, 8, 15, 14, 0);
+
+        now = LocalDateTime.of(
+                2026,
+                8,
+                6,
+                10,
+                0
+        );
+
+        requestedDeliveryAt = now.plusDays(9);
     }
 
     private Order createOrder() {
@@ -34,8 +42,60 @@ class OrderTest {
                 requesterId,
                 receiverCompanyId,
                 "기존 요청사항",
-                requestedDeliveryAt
+                requestedDeliveryAt,
+                now
         );
+    }
+
+    @Test
+    @DisplayName("희망 납품일이 현재보다 하루 미만이면 생성할 수 없다")
+    void createOrder_invalidRequestedDeliveryAt() {
+
+        assertThatThrownBy(() ->
+                Order.create(
+                        "ORD-1",
+                        requesterId,
+                        receiverCompanyId,
+                        "요청",
+                        now.plusHours(12),
+                        now
+                )
+        )
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException =
+                            (BusinessException) exception;
+
+                    assertThat(businessException.getErrorCode())
+                            .isEqualTo(
+                                    OrderErrorCode.INVALID_REQUESTED_DELIVERY_AT
+                            );
+                });
+    }
+
+    @Test
+    @DisplayName("희망 납품일이 하루 미만이면 수정할 수 없다")
+    void updateOrder_invalidRequestedDeliveryAt() {
+
+        Order order = createOrder();
+
+        assertThatThrownBy(() ->
+                order.update(
+                        "변경",
+                        now.plusHours(5),
+                        now
+                )
+        )
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> {
+                    BusinessException businessException =
+                            (BusinessException) exception;
+
+                    assertThat(businessException.getErrorCode())
+                            .isEqualTo(
+                                    OrderErrorCode.INVALID_REQUESTED_DELIVERY_AT
+                            );
+                });
     }
 
     @Nested
@@ -254,7 +314,8 @@ class OrderTest {
             // when
             order.update(
                     newRequestMessage,
-                    newRequestedDeliveryAt
+                    newRequestedDeliveryAt,
+                    now
             );
 
             // then
@@ -289,7 +350,8 @@ class OrderTest {
             assertThatThrownBy(() ->
                     order.update(
                             "변경 요청사항",
-                            LocalDateTime.now().plusDays(10)
+                            now.plusDays(10),
+                            now
                     )
             )
                     .isInstanceOf(BusinessException.class)
@@ -326,7 +388,8 @@ class OrderTest {
             assertThatThrownBy(() ->
                     order.update(
                             "변경 요청사항",
-                            LocalDateTime.now().plusDays(10)
+                            now.plusDays(10),
+                            now
                     )
             )
                     .isInstanceOf(BusinessException.class)
@@ -357,7 +420,8 @@ class OrderTest {
             assertThatThrownBy(() ->
                     order.update(
                             "변경 요청사항",
-                            LocalDateTime.now().plusDays(10)
+                            now.plusDays(10),
+                            now
                     )
             )
                     .isInstanceOf(BusinessException.class)

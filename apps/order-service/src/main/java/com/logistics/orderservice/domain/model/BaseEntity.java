@@ -1,4 +1,4 @@
-package com.logistics.orderservice.config;
+package com.logistics.orderservice.domain.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
