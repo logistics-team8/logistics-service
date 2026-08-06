@@ -10,6 +10,7 @@ spring:
 
   datasource:
     url: jdbc:postgresql://localhost:5433/logistics
+
     username: ${USER_NAME}
     password: ${PASSWORD}
 
