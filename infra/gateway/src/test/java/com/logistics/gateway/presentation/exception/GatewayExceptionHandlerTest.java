@@ -14,7 +14,17 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 @Import({TestFilterConfig.class, TestRouteConfig.class})
 @DisplayName("게이트웨이 예외 처리 테스트")
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+        properties = {
+            "spring.cloud.config.enabled=false",
+            "eureka.client.register-with-eureka=false",
+            "eureka.client.fetch-registry=false",
+            "path.whitelist[0]=/business-exception",
+            "path.whitelist[1]=/not-found",
+            "path.whitelist[2]=/bad-request",
+            "path.whitelist[3]=/internal-server-error"
+        })
 class GatewayExceptionHandlerTest {
 
     private WebTestClient webTestClient;
@@ -38,7 +48,8 @@ class GatewayExceptionHandlerTest {
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
-                .jsonPath("$.error.code");
+                .jsonPath("$.error.code")
+                .isEqualTo(GatewayErrorCode.TOKEN_EXPIRED.code());
     }
 
     @Test
