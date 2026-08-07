@@ -8,7 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.logistics.infrastructure.config.test.AbstractControllerTest;
 import com.logistics.userservice.application.UserService;
 import com.logistics.userservice.domain.Role;
-import com.logistics.userservice.presentation.dto.request.SignUpRequest;
+import com.logistics.userservice.presentation.dto.user.SignUpRequest;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
@@ -20,16 +20,17 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+@DisplayName("UserController - 단위 테스트")
 @WebMvcTest(controllers = UserController.class)
 class UserControllerUnitTest extends AbstractControllerTest {
     @MockitoBean private UserService userService;
 
     @Nested
     @DisplayName("회원가입")
-    class CreateUser {
+    class SignUp {
         @Test
         @DisplayName("회원가입 성공")
-        void createUser_success() throws Exception {
+        void signUp_success() throws Exception {
             // given
             SignUpRequest request =
                     new SignUpRequest(
@@ -54,7 +55,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
         @ParameterizedTest
         @MethodSource("testCase")
         @DisplayName("회원가입 시 유효성 체크를 통과하지 못하면 예외가 발생해야한다.")
-        void createUser_fail_when_invalid(SignUpRequest request) throws Exception {
+        void signUp_fail_when_invalid(SignUpRequest request) throws Exception {
             // when & then
             mockMvc.perform(
                             post("/api/v1/users")
@@ -127,5 +128,27 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             UUID.randomUUID(),
                             null));
         }
+    }
+
+    @Nested
+    @DisplayName("회원 정보 조회")
+    class GetMyInfo {
+        @Test
+        @DisplayName("회원 정보 조회 성공")
+        void getMyInfo_success() throws Exception {
+
+        }
+    }
+
+    @Nested
+    @DisplayName("회원 정보 수정")
+    class UpdateMyInfo {
+
+    }
+
+    @Nested
+    @DisplayName("회원 탈퇴")
+    class DeleteMyAccount {
+
     }
 }

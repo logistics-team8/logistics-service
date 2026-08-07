@@ -16,7 +16,7 @@ import com.logistics.userservice.application.dto.UserInfo;
 import com.logistics.userservice.application.dto.UserRoleInfo;
 import com.logistics.userservice.application.dto.UserSlackInfo;
 import com.logistics.userservice.domain.Role;
-import com.logistics.userservice.presentation.exception.UserErrorCode;
+import com.logistics.userservice.error.UserErrorCode;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +25,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+@DisplayName("InternalUserController - 단위 테스트")
 @WebMvcTest(InternalUserController.class)
 class InternalUserControllerTest extends AbstractControllerTest {
     @MockitoBean private UserService userService;
@@ -123,7 +124,7 @@ class InternalUserControllerTest extends AbstractControllerTest {
     void getUserSlackId_success() throws Exception {
         // given
         UUID userId = UUID.randomUUID();
-        UserSlackInfo userSlackInfo = new UserSlackInfo(userId, "U12345678");
+        UserSlackInfo userSlackInfo = new UserSlackInfo("U12345678");
 
         given(userService.getUserSlackId(eq(userId))).willReturn(userSlackInfo);
 

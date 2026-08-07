@@ -11,8 +11,8 @@ import com.logistics.userservice.application.AuthService;
 import com.logistics.userservice.application.dto.UserLoginCommand;
 import com.logistics.userservice.application.token.TokenProvider;
 import com.logistics.userservice.application.token.TokenResult;
-import com.logistics.userservice.presentation.dto.request.LoginRequest;
-import com.logistics.userservice.presentation.exception.AuthErrorCode;
+import com.logistics.userservice.error.AuthErrorCode;
+import com.logistics.userservice.presentation.dto.auth.LoginRequest;
 import jakarta.servlet.http.Cookie;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-@DisplayName("AuthController 유닛 테스트")
+@DisplayName("AuthController - 단위 테스트")
 @WebMvcTest(controllers = AuthController.class)
 class AuthControllerUnitTest extends AbstractControllerTest {
     @MockitoBean private AuthService authService;
