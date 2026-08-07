@@ -2,6 +2,10 @@ server:
   port: 8081
 
 spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
   datasource:
     url: jdbc:postgresql://${app.database.host}:${app.database.port}/${app.database.name}?currentSchema=users
   jpa:

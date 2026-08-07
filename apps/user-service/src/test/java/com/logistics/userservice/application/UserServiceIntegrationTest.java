@@ -161,7 +161,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
         @DisplayName("회원 권한 조회 성공")
         void getUserRole_success() {
             // given
-            UserRoleInfo savedUserRoleInfo = new UserRoleInfo(userId, dummyUser.getRole());
+            UserRoleInfo savedUserRoleInfo = new UserRoleInfo(dummyUser.getRole());
 
             // when
             UserRoleInfo userRoleInfo = userService.getUserRole(userId);

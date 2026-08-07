@@ -1,13 +1,129 @@
 server:
   port: ${GATEWAY_SERVER_PORT:8080}
 
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+
 spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  main:
+    web-application-type: reactive
   cloud:
     gateway:
       server:
         webflux:
           routes:
-            - id: hub-service
-              uri: lb://hub-service
-              predicates:
-                - Path=/api/v1/hubs,/api/v1/hubs/**
+          # User
+          - id: user-service
+            uri: lb://user-service
+            predicates:
+              - Path=/api/v1/users/**, /api/v1/auth/**, /api/v1/admin/**
+
+          - id: user-swagger
+            uri: lb://user-service
+            predicates:
+              - Path=/user-service/v3/api-docs/**
+            filters:
+              - RewritePath=/user-service/(?<segment>.*), /${segment}
+
+          # Hub
+          - id: hub-service
+            uri: lb://hub-service
+            predicates:
+              - Path=/api/v1/hubs/**
+
+          - id: hub-swagger
+            uri: lb://hub-service
+            predicates:
+              - Path=/hub-service/v3/api-docs/**
+            filters:
+              - RewritePath=/hub-service/(?<segment>.*), /${segment}
+
+          # Company
+          - id: company-product-service
+            uri: lb://company-product-service
+            predicates:
+              - Path=/api/v1/companies/**
+
+          - id: company-swagger
+            uri: lb://company-service
+            predicates:
+              - Path=/company-service/v3/api-docs/**
+            filters:
+              - RewritePath=/company-service/(?<segment>.*), /${segment}
+
+          # Order
+          - id: order-service
+            uri: lb://order-service
+            predicates:
+              - Path=/api/v1/orders/**
+
+          - id: order-swagger
+            uri: lb://order-service
+            predicates:
+              - Path=/order-service/v3/api-docs/**
+            filters:
+              - RewritePath=/order-service/(?<segment>.*), /${segment}
+
+          # Delivery
+          - id: delivery-service
+            uri: lb://delivery-service
+            predicates:
+              - Path=/api/v1/delivery/**
+
+          - id: delivery-swagger
+            uri: lb://delivery-service
+            predicates:
+              - Path=/delivery-service/v3/api-docs/**
+            filters:
+              - RewritePath=/delivery-service/(?<segment>.*), /${segment}
+
+          # Notification
+          - id: notification-service
+            uri: lb://notification-service
+            predicates:
+              - Path=/api/v1/notifications/**
+
+          - id: notification-swagger
+            uri: lb://notification-service
+            predicates:
+              - Path=/notification-service/v3/api-docs/**
+            filters:
+              - RewritePath=/notification-service/(?<segment>.*), /${segment}
+
+jwt: # 테스트용 더미 값
+  access-secret: ${JWT_ACCESS_SECRET:8Xn6SF+pB8BIodzuhKV+WCOJf+L+biGG4UD0Uch6fdA=}
+  refresh-secret: ${JWT_REFRESH_SECRET:snNL4F2vawnUY+RM6t/IVloSZhrdHyKu96RV9c/h4kg=}
+  cookie-secure: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway,health,info
+
+springdoc:
+  swagger-ui:
+    urls[0]:
+      name: user-service
+      url: /user-service/v3/api-docs
+
+path:
+  whitelist:
+    # Service
+    - /api/v1/users
+    - /api/v1/auth/login
+    # Swagger
+    - /swagger-ui/**
+    - /**/v3/api-docs/**
+    # Test
+    - /business-exception
+    - /not-found
+    - /bad-request
+    - /internal-server-error
+

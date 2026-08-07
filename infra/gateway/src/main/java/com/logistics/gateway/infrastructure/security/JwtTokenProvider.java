@@ -1,12 +1,11 @@
-package com.logistics.userservice.infrastructure.security;
+package com.logistics.gateway.infrastructure.security;
 
-import com.logistics.userservice.application.dto.TokenClaims;
+import com.logistics.gateway.infrastructure.security.token.TokenClaims;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,12 +17,19 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtTokenProvider {
     private final JwtProperties jwtProperties;
+
+    @PostConstruct
+    public void checkSecret() {
+        log.debug("Access Secret: {}", jwtProperties.accessSecret());
+        log.debug("Refresh Secret: {}", jwtProperties.refreshSecret());
+    }
 
     /**
      * JWT 토큰 생성
@@ -141,9 +147,9 @@ public class JwtTokenProvider {
         return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
     }
 
-    // Access Token 접두사 제거 - Service
-    public String resolveAccessToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+    // Access Token 접두사 제거 - Gateway
+    public String resolveAccessToken(ServerWebExchange exchange) {
+        String bearerToken = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         return resolveBearerToken(bearerToken);
     }
 
