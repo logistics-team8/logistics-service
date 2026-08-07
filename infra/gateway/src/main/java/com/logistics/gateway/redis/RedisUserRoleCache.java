@@ -1,4 +1,4 @@
-package com.logistics.gateway.infrastructure.redis;
+package com.logistics.gateway.redis;
 
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;

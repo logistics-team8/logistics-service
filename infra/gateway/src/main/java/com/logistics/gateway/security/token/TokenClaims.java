@@ -1,4 +1,4 @@
-package com.logistics.gateway.infrastructure.security.token;
+package com.logistics.gateway.security.token;
 
 import java.util.UUID;
 

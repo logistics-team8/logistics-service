@@ -1,4 +1,4 @@
-package com.logistics.gateway.presentation.response;
+package com.logistics.gateway.response;
 
 import java.util.List;
 

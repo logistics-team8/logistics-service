@@ -1,4 +1,4 @@
-package com.logistics.gateway.presentation.error;
+package com.logistics.gateway.error;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

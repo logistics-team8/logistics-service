@@ -1,6 +1,6 @@
-package com.logistics.gateway.infrastructure.security;
+package com.logistics.gateway.security;
 
-import com.logistics.gateway.infrastructure.security.token.TokenClaims;
+import com.logistics.gateway.security.token.TokenClaims;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;

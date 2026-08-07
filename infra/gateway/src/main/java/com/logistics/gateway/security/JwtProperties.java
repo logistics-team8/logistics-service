@@ -1,4 +1,4 @@
-package com.logistics.gateway.infrastructure.security;
+package com.logistics.gateway.security;
 
 import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;

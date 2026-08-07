@@ -1,4 +1,4 @@
-package com.logistics.gateway.presentation.response;
+package com.logistics.gateway.response;
 
 import com.logistics.gateway.error.ErrorCode;
 import java.util.List;

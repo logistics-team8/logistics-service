@@ -1,8 +1,6 @@
-package com.logistics.gateway.presentation.exception;
+package com.logistics.gateway.error;
 
-import com.logistics.gateway.error.ErrorCode;
-import com.logistics.gateway.error.GatewayErrorCode;
-import com.logistics.gateway.presentation.response.ApiResponse;
+import com.logistics.gateway.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.webflux.error.ErrorWebExceptionHandler;

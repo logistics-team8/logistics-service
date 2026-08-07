@@ -1,4 +1,4 @@
-package com.logistics.gateway.infrastructure.config;
+package com.logistics.gateway.config;
 
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
