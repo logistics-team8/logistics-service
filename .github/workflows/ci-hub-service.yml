@@ -45,4 +45,4 @@ jobs:
       module-name: hub-service
       gradle-task: ":apps:hub-service:build"
       test-report-path: apps/hub-service/build/reports/tests/
-      use-postgres: false
+      use-postgres: true
