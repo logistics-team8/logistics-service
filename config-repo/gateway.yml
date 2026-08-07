@@ -33,7 +33,7 @@ spring:
 
           # Hub
           - id: hub-service
-            uri: lb://hub-service,/api/v1/hubs/**
+            uri: lb://hub-service
             predicates:
               - Path=/api/v1/hubs/**
 
@@ -45,8 +45,8 @@ spring:
               - RewritePath=/hub-service/(?<segment>.*), /${segment}
 
           # Company
-          - id: company-service
-            uri: lb://company-service
+          - id: company-product-service
+            uri: lb://company-product-service
             predicates:
               - Path=/api/v1/companies/**
 
