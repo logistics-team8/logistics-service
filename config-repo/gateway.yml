@@ -1,7 +1,6 @@
 server:
   port: ${GATEWAY_SERVER_PORT:8080}
 
-<<<<<<< HEAD
 eureka:
   client:
     service-url:
@@ -14,15 +13,11 @@ spring:
       port: 6379
   main:
     web-application-type: reactive
-=======
-spring:
->>>>>>> origin/develop
   cloud:
     gateway:
       server:
         webflux:
           routes:
-<<<<<<< HEAD
           # User
           - id: user-api
             uri: lb://user-service
@@ -37,10 +32,10 @@ spring:
               - RewritePath=/user-service/(?<segment>.*), /${segment}
 
           # Hub
-          - id: hub-service
+          - id: hub-api
             uri: lb://hub-service
             predicates:
-              - Path=/api/v1/hubs,/api/v1/hubs/**
+              - Path=/api/v1/hubs/**
 
           - id: hub-swagger
             uri: lb://hub-service
@@ -131,3 +126,4 @@ path:
     - /not-found
     - /bad-request
     - /internal-server-error
+
