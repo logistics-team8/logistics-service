@@ -175,7 +175,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
         @DisplayName("회원 슬랙ID 조회 성공")
         void getUserSlackId_success() {
             // given
-            UserSlackInfo savedUserSlackInfo = new UserSlackInfo(userId, dummyUser.getSlackId());
+            UserSlackInfo savedUserSlackInfo = new UserSlackInfo(dummyUser.getSlackId());
 
             // when
             UserSlackInfo userSlackInfo = userService.getUserSlackId(userId);
