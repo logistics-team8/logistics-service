@@ -42,7 +42,7 @@ public class User extends BaseEntity {
 
     @Column private UUID companyId;
 
-    @Column
+    @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private Role role;
 
@@ -50,7 +50,7 @@ public class User extends BaseEntity {
 
     @Column private LocalDateTime approvedAt;
 
-    @Column private String rejectionReason;
+    @Column(length = 255) private String rejectionReason;
 
     public static User create(UserSignUpCommand command) {
         User user = new User();
@@ -88,7 +88,14 @@ public class User extends BaseEntity {
         }
     }
 
-    /** UUID v7 삽입 */
+    /** 회원 삭제 */
+    public void delete(UUID deletedBy) {
+        super.delete(deletedBy);
+        this.username = this.username + "_" + this.id;
+        this.slackId = this.slackId + "_" + this.id;
+    }
+
+    /** UUID 삽입 */
     @PrePersist
     protected void onCreate() {
         if (this.id == null) {
