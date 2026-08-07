@@ -50,7 +50,8 @@ public class User extends BaseEntity {
 
     @Column private LocalDateTime approvedAt;
 
-    @Column(length = 255) private String rejectionReason;
+    @Column(length = 255)
+    private String rejectionReason;
 
     public static User create(UserSignUpCommand command) {
         User user = new User();
