@@ -47,7 +47,6 @@ jobs:
 
     env:
       SPRING_CLOUD_CONFIG_ENABLED: "false"
-      EUREKA_CLIENT_ENABLED: "false"
       EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
       EUREKA_CLIENT_FETCH_REGISTRY: "false"
 
