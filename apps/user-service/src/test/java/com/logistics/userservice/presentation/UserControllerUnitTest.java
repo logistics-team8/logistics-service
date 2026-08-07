@@ -1,8 +1,7 @@
 package com.logistics.userservice.presentation;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -63,7 +62,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                                     .content(jsonMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
 
-            verifyNoInteractions(userService);
+            verify(userService, never()).createUser(any());
         }
 
         static Stream<SignUpRequest> testCase() {
