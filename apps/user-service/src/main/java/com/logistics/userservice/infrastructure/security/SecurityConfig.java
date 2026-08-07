@@ -32,7 +32,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(
             HttpSecurity httpSecurity,
             UserContextFilter userContextFilter,
-            AccessDeniedHandler accessDeniedHandler,
+            CustomAccessDeniedHandler accessDeniedHandler,
             CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         // csrf 비활성화
         httpSecurity.csrf(AbstractHttpConfigurer::disable);
