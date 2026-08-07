@@ -18,7 +18,7 @@ public record UpdateRequest(
         @Pattern(
                 regexp = "^[UW][A-Z0-9]{8,12}$",
                 message = "올바른 Slack Member ID 형식이 아닙니다. (예: U1234567890)")
-        @Schema(description = "Slack Member ID", example = "U06ABC12345")
+        @Schema(description = "Slack Member ID", example = "U1234567890")
         String slackId) {
     public UserUpdateCommand toCommand(UUID userId) {
         return new UserUpdateCommand(userId, name, slackId);
