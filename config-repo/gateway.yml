@@ -19,7 +19,7 @@ spring:
         webflux:
           routes:
           # User
-          - id: user-api
+          - id: user-service
             uri: lb://user-service
             predicates:
               - Path=/api/v1/users/**, /api/v1/auth/**, /api/v1/admin/**
@@ -32,7 +32,7 @@ spring:
               - RewritePath=/user-service/(?<segment>.*), /${segment}
 
           # Hub
-          - id: hub-api
+          - id: hub-service
             uri: lb://hub-service
             predicates:
               - Path=/api/v1/hubs/**
@@ -45,8 +45,8 @@ spring:
               - RewritePath=/hub-service/(?<segment>.*), /${segment}
 
           # Company
-          - id: company-api
-            uri: lb://company-service
+          - id: company-product-service
+            uri: lb://company-product-service
             predicates:
               - Path=/api/v1/companies/**
 
@@ -58,7 +58,7 @@ spring:
               - RewritePath=/company-service/(?<segment>.*), /${segment}
 
           # Order
-          - id: order-api
+          - id: order-service
             uri: lb://order-service
             predicates:
               - Path=/api/v1/orders/**
@@ -71,7 +71,7 @@ spring:
               - RewritePath=/order-service/(?<segment>.*), /${segment}
 
           # Delivery
-          - id: delivery-api
+          - id: delivery-service
             uri: lb://delivery-service
             predicates:
               - Path=/api/v1/delivery/**
@@ -84,7 +84,7 @@ spring:
               - RewritePath=/delivery-service/(?<segment>.*), /${segment}
 
           # Notification
-          - id: notification-api
+          - id: notification-service
             uri: lb://notification-service
             predicates:
               - Path=/api/v1/notifications/**
@@ -112,6 +112,9 @@ springdoc:
     urls[0]:
       name: user-service
       url: /user-service/v3/api-docs
+    urls[1]:
+      name: hub-service
+      url: /hub-service/v3/api-docs
 
 path:
   whitelist:
