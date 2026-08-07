@@ -34,7 +34,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataAccessException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@DisplayName("AuthService 유닛 테스트")
+@DisplayName("AuthService - 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class AuthServiceUnitTest {
     @Mock private UserRepository userRepository;
@@ -48,7 +48,7 @@ class AuthServiceUnitTest {
     @DisplayName("로그인 실패 테스트")
     class Login {
         @Test
-        @DisplayName("로그인 시 존재하지 않는 아이디를 입력하면 예외가 발생해야한다.")
+        @DisplayName("로그인 시 존재하지 않는 아이디를 입력하면 INVALID_LOGIN 예외가 발생해야한다.")
         void login_fail_when_invalid_login() {
             // given
             LoginRequest request = new LoginRequest("test1234", "testtest1234!");
@@ -59,14 +59,14 @@ class AuthServiceUnitTest {
             // when & then
             assertThatThrownBy(() -> authService.login(request.toCommand()))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessage("아이디가 존재하지 않거나 비밀번호가 올바르지 않습니다.");
+                    .hasMessage(AuthErrorCode.INVALID_LOGIN.message());
 
             verify(userRepository).findByUsernameAndDeletedAtIsNull(request.username());
             verify(passwordEncoder, never()).matches(anyString(), anyString());
         }
 
         @Test
-        @DisplayName("로그인 시 틀린 비밀번호를 입력하면 예외가 발생해야한다.")
+        @DisplayName("로그인 시 틀린 비밀번호를 입력하면 INVALID_LOGIN 예외가 발생해야한다.")
         void login_fail_when_invalid_password() {
             // given
             LoginRequest request = new LoginRequest("test1234", "testtest1234!");
@@ -92,14 +92,14 @@ class AuthServiceUnitTest {
             // when & then
             assertThatThrownBy(() -> authService.login(request.toCommand()))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessage("아이디가 존재하지 않거나 비밀번호가 올바르지 않습니다.");
+                    .hasMessage(AuthErrorCode.INVALID_LOGIN.message());
 
             verify(userRepository).findByUsernameAndDeletedAtIsNull(request.username());
             verify(passwordEncoder).matches(request.password(), mockUser.getPassword());
         }
 
         @Test
-        @DisplayName("리프레시 토큰 저장에 실패하면 500 예외가 발생한다.")
+        @DisplayName("리프레시 토큰 저장에 실패하면 INTERNAL_SERVER_ERROR 예외가 발생한다.")
         void login_fail_when_refreshToken_save_failed() {
             // given
             LoginRequest request = new LoginRequest("test1234", "testtest1234!");
@@ -192,7 +192,7 @@ class AuthServiceUnitTest {
         }
 
         @Test
-        @DisplayName("로그아웃 시 유효하지 않은 액세스 토큰을 보내면 401 예외가 발생한다.")
+        @DisplayName("로그아웃 시 유효하지 않은 액세스 토큰을 보내면 TOKEN_INVALID 예외가 발생한다.")
         void logout_fail_when_invalid_token() {
             // given
             String accessToken = "accessToken";
@@ -214,7 +214,7 @@ class AuthServiceUnitTest {
     @DisplayName("토큰 재발급 실패 테스트")
     class Reissue {
         @Test
-        @DisplayName("Redis에 저장된 토큰과 쿠키로 보낸 토큰이 일치하지않으면 401 예외가 발생한다.")
+        @DisplayName("Redis에 저장된 토큰과 쿠키로 보낸 토큰이 일치하지않으면 TOKEN_INVALID 예외가 발생한다.")
         void reissue_fail_when_token_mismatch() {
             // given
             String refreshToken = "refreshToken";
@@ -227,7 +227,7 @@ class AuthServiceUnitTest {
 
             given(tokenPayload.userId()).willReturn(userId);
 
-            given(refreshTokenRepository.findByUserId(userId)).willReturn(redisToken);
+            given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(redisToken));
 
             // when & then
             assertThatThrownBy(() -> authService.reissue(refreshToken))
@@ -236,7 +236,7 @@ class AuthServiceUnitTest {
         }
 
         @Test
-        @DisplayName("토큰 재발급 시 만료된 리프레시 토큰을 보내면 401 예외가 발생한다.")
+        @DisplayName("토큰 재발급 시 만료된 리프레시 토큰을 보내면 TOKEN_EXPIRED 예외가 발생한다.")
         void reissue_fail_when_expired_token() {
             // given
             String refreshToken = "refreshToken";
@@ -251,7 +251,7 @@ class AuthServiceUnitTest {
         }
 
         @Test
-        @DisplayName("토큰 재발급 시 유효하지 않은 리프레시 토큰을 보내면 401 예외가 발생한다.")
+        @DisplayName("토큰 재발급 시 유효하지 않은 리프레시 토큰을 보내면 TOKEN_INVALID 예외가 발생한다.")
         void reissue_fail_when_invalid_token() {
             // given
             String refreshToken = "refreshToken";
@@ -266,7 +266,7 @@ class AuthServiceUnitTest {
         }
 
         @Test
-        @DisplayName("탈퇴하거나 존재하지 않는 회원이 토큰 재발급을 하면 404 예외가 발생한다.")
+        @DisplayName("탈퇴하거나 존재하지 않는 회원이 토큰 재발급을 하면 USER_NOT_FOUND 예외가 발생한다.")
         void reissue_fail_when_user_not_found() {
             // given
             String refreshToken = "refreshToken";
@@ -278,7 +278,8 @@ class AuthServiceUnitTest {
 
             given(tokenPayload.userId()).willReturn(userId);
 
-            given(refreshTokenRepository.findByUserId(userId)).willReturn(refreshToken);
+            given(refreshTokenRepository.findByUserId(userId))
+                    .willReturn(Optional.of(refreshToken));
 
             given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
 

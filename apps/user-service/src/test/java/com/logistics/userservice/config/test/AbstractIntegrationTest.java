@@ -1,4 +1,4 @@
-package com.logistics.infrastructure.config.test;
+package com.logistics.userservice.config.test;
 
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;

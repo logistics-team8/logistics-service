@@ -24,4 +24,6 @@ public interface UserRepository {
     Optional<Role> findRoleByIdDeletedAtIsNull(UUID userId);
 
     Optional<String> findSlackIdByIdDeletedAtIsNull(UUID userId);
+
+    void flush();
 }

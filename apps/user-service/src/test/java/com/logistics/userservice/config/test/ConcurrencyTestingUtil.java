@@ -1,4 +1,4 @@
-package com.logistics.infrastructure.config.test;
+package com.logistics.userservice.config.test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;

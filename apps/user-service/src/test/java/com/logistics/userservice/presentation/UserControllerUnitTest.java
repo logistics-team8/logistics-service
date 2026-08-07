@@ -7,21 +7,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.logistics.common.error.CommonErrorCode;
-import com.logistics.infrastructure.config.test.AbstractControllerTest;
 import com.logistics.userservice.application.UserService;
+import com.logistics.userservice.config.test.AbstractControllerTest;
 import com.logistics.userservice.domain.Role;
-import com.logistics.userservice.error.AuthErrorCode;
 import com.logistics.userservice.presentation.dto.user.SignUpRequest;
+import com.logistics.userservice.presentation.dto.user.UpdateRequest;
 import java.util.UUID;
 import java.util.stream.Stream;
-
-import com.logistics.userservice.presentation.dto.user.UpdateRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.mockito.Mock;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -137,18 +134,14 @@ class UserControllerUnitTest extends AbstractControllerTest {
         }
     }
 
-
     @Test
     @DisplayName("로그인 하지 않은 유저가 조회 요청 시 401 예외가 발생한다.")
     void getMyInfo_fail_when_unauthorized() throws Exception {
         // when & then
-        mockMvc.perform(
-                        get("/api/v1/users/me")
-                                .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/users/me").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
                 .andExpect(
-                        jsonPath("$.error.message")
-                                .value(CommonErrorCode.UNAUTHORIZED.message()));
+                        jsonPath("$.error.message").value(CommonErrorCode.UNAUTHORIZED.message()));
 
         verify(userService, never()).getUserInfo(any());
     }
@@ -160,9 +153,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
         @DisplayName("로그인 하지 않은 유저가 회원 정보 수정 요청 시 401 예외가 발생한다.")
         void updateMyInfo_fail_when_unauthorized() throws Exception {
             // when & then
-            mockMvc.perform(
-                            patch("/api/v1/users/me")
-                                    .contentType(MediaType.APPLICATION_JSON))
+            mockMvc.perform(patch("/api/v1/users/me").contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isUnauthorized())
                     .andExpect(
                             jsonPath("$.error.message")
@@ -177,9 +168,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
         @DisplayName("유효성 검사가 실패하면 400 예외가 발생한다.")
         void updateMyInfo_fail_when_invalid() throws Exception {
             // when & then
-            mockMvc.perform(
-                            patch("/api/v1/users/me")
-                                    .contentType(MediaType.APPLICATION_JSON))
+            mockMvc.perform(patch("/api/v1/users/me").contentType(MediaType.APPLICATION_JSON))
                     .andExpect(status().isBadRequest())
                     .andExpect(
                             jsonPath("$.error.message")
@@ -191,14 +180,10 @@ class UserControllerUnitTest extends AbstractControllerTest {
         static Stream<UpdateRequest> updateTestCase() {
             return Stream.of(
                     // 1. 아이디 유효성 검사 실패
-                    new UpdateRequest(
-                            "",
-                            "U1234567890"),
+                    new UpdateRequest("", "U1234567890"),
 
                     // 2. Slack Id 유효성 검사 실패
-                    new UpdateRequest(
-                            "김철수",
-                            "qweqwr213"));
+                    new UpdateRequest("김철수", "qweqwr213"));
         }
     }
 
@@ -206,13 +191,10 @@ class UserControllerUnitTest extends AbstractControllerTest {
     @DisplayName("로그인 하지 않은 유저가 회원 탈퇴 요청 시 401 예외가 발생한다.")
     void deleteMyAccount_fail_when_unauthorized() throws Exception {
         // when & then
-        mockMvc.perform(
-                        delete("/api/v1/users/me")
-                                .contentType(MediaType.APPLICATION_JSON))
+        mockMvc.perform(delete("/api/v1/users/me").contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
                 .andExpect(
-                        jsonPath("$.error.message")
-                                .value(CommonErrorCode.UNAUTHORIZED.message()));
+                        jsonPath("$.error.message").value(CommonErrorCode.UNAUTHORIZED.message()));
 
         verify(userService, never()).deleteUser(any());
     }

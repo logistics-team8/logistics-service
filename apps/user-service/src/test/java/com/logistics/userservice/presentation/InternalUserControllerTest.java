@@ -10,11 +10,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.infrastructure.config.test.AbstractControllerTest;
 import com.logistics.userservice.application.UserService;
 import com.logistics.userservice.application.dto.UserInfo;
 import com.logistics.userservice.application.dto.UserRoleInfo;
 import com.logistics.userservice.application.dto.UserSlackInfo;
+import com.logistics.userservice.config.test.AbstractControllerTest;
 import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.error.UserErrorCode;
 import java.time.LocalDateTime;

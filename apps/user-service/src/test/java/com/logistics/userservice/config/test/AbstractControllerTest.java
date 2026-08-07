@@ -1,4 +1,4 @@
-package com.logistics.infrastructure.config.test;
+package com.logistics.userservice.config.test;
 
 import com.logistics.common.web.GlobalExceptionHandler;
 import com.logistics.userservice.infrastructure.security.JwtProperties;

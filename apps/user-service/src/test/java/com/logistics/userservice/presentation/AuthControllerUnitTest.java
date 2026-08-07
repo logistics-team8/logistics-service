@@ -6,11 +6,11 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.logistics.infrastructure.config.test.AbstractControllerTest;
 import com.logistics.userservice.application.AuthService;
 import com.logistics.userservice.application.dto.UserLoginCommand;
 import com.logistics.userservice.application.token.TokenProvider;
 import com.logistics.userservice.application.token.TokenResult;
+import com.logistics.userservice.config.test.AbstractControllerTest;
 import com.logistics.userservice.error.AuthErrorCode;
 import com.logistics.userservice.presentation.dto.auth.LoginRequest;
 import jakarta.servlet.http.Cookie;
