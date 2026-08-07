@@ -11,6 +11,8 @@ public interface UserRepository {
 
     Optional<User> findById(UUID userId);
 
+    Optional<User> findByIdAndDeletedAtIsNull(UUID userId);
+
     Optional<User> findByUsername(String username);
 
     Optional<User> findByUsernameAndDeletedAtIsNull(String username);
@@ -18,4 +20,8 @@ public interface UserRepository {
     List<User> findByUsernameOrSlackId(String username, String slackId);
 
     void deleteAllInBatch();
+
+    Optional<Role> findRoleById(UUID userId);
+
+    Optional<String> findSlackIdById(UUID userId);
 }

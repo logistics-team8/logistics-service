@@ -25,7 +25,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String password;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, length = 50)
     private String name;
 
     @Column(nullable = false, unique = true, length = 50)
@@ -66,10 +66,13 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
-    /** 승인 대기중인 사용자 검증 */
+    /** 사용자 검증 */
     public void validateActive() {
         if (this.userStatus == UserStatus.PENDING) {
             throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
+        }
+        if (this.userStatus == UserStatus.REJECTED) {
+            throw new BusinessException(AuthErrorCode.APPROVAL_REJECTED);
         }
     }
 

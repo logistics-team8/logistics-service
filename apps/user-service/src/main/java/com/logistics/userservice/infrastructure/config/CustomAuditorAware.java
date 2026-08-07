@@ -1,8 +1,8 @@
 package com.logistics.userservice.infrastructure.config;
 
-import com.logistics.common.security.CustomUserDetails;
 import java.util.Optional;
 import java.util.UUID;
+import com.logistics.common.security.principal.CustomUserDetails;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;

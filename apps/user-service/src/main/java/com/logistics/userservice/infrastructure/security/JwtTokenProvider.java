@@ -1,6 +1,6 @@
 package com.logistics.userservice.infrastructure.security;
 
-import com.logistics.userservice.domain.User;
+import com.logistics.userservice.application.dto.TokenClaims;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
 
 @Slf4j
 @Component
@@ -26,34 +25,32 @@ import org.springframework.web.server.ServerWebExchange;
 public class JwtTokenProvider {
     private final JwtProperties jwtProperties;
 
-    @PostConstruct
-    public void checkSecret() {
-        log.debug("Access Secret: {}", jwtProperties.accessSecret());
-        log.debug("Refresh Secret: {}", jwtProperties.refreshSecret());
-    }
-
     /**
      * JWT 토큰 생성
      *
-     * @param user 사용자 정보
+     * @param tokenClaims 클레임에 담을 사용자 정보
      * @param sessionId Random UUID
      * @param signingKey
      * @param validity
      * @return Access Token || Refresh Token
      */
-    private String generateToken(User user, UUID sessionId, Key signingKey, long validity) {
+    private String generateToken(
+            TokenClaims tokenClaims, UUID sessionId, Key signingKey, long validity) {
         Map<String, Object> claims = new HashMap<>();
         Date date = new Date();
 
         claims.put("sessionId", sessionId.toString());
-        claims.put("hubId", user.getHubId() != null ? user.getHubId().toString() : null); // null 주의
+        claims.put(
+                "hubId",
+                tokenClaims.hubId() != null ? tokenClaims.hubId().toString() : null); // null 주의
         claims.put(
                 "companyId",
-                user.getCompanyId() != null ? user.getCompanyId().toString() : null); // null 주의
-        claims.put("role", user.getRole());
+                tokenClaims.companyId() != null
+                        ? tokenClaims.companyId().toString()
+                        : null); // null 주의
 
         return Jwts.builder()
-                .subject(user.getId().toString())
+                .subject(tokenClaims.userId().toString())
                 .claims(claims)
                 .issuedAt(date)
                 .expiration(new Date(date.getTime() + validity))
@@ -61,14 +58,14 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String generateAccessToken(User user, UUID sessionId, long validity) {
+    public String generateAccessToken(TokenClaims tokenClaims, UUID sessionId, long validity) {
         SecretKey signingKey = createSigningKey(jwtProperties.accessSecret());
-        return generateToken(user, sessionId, signingKey, validity);
+        return generateToken(tokenClaims, sessionId, signingKey, validity);
     }
 
-    public String generateRefreshToken(User user, UUID sessionId, long validity) {
+    public String generateRefreshToken(TokenClaims tokenClaims, UUID sessionId, long validity) {
         SecretKey signingKey = createSigningKey(jwtProperties.refreshSecret());
-        return generateToken(user, sessionId, signingKey, validity);
+        return generateToken(tokenClaims, sessionId, signingKey, validity);
     }
 
     /**
@@ -147,12 +144,6 @@ public class JwtTokenProvider {
     // Access Token 접두사 제거 - Service
     public String resolveAccessToken(HttpServletRequest request) {
         String bearerToken = request.getHeader(HttpHeaders.AUTHORIZATION);
-        return resolveBearerToken(bearerToken);
-    }
-
-    // Access Token 접두사 제거 - Gateway
-    public String resolveAccessToken(ServerWebExchange exchange) {
-        String bearerToken = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         return resolveBearerToken(bearerToken);
     }
 
