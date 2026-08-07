@@ -80,32 +80,6 @@ public class UserService {
     }
 
     /**
-     * 회원 Role 조회(내부통신 전용)
-     *
-     * @param userId
-     * @return UserRoleInfo
-     */
-    public UserRoleInfo getUserRole(UUID userId) {
-        return new UserRoleInfo(
-                userRepository
-                        .findRoleByIdDeletedAtIsNull(userId)
-                        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
-    }
-
-    /**
-     * 회원 Slack ID 조회
-     *
-     * @param userId
-     * @return UserSlackInfo
-     */
-    public UserSlackInfo getUserSlackId(UUID userId) {
-        return new UserSlackInfo(
-                userRepository
-                        .findSlackIdByIdDeletedAtIsNull(userId)
-                        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
-    }
-
-    /**
      * 회원 탈퇴 탈퇴 처리 시 Redis에서 사용자 인증 정보 삭제
      *
      * @param userId
@@ -141,9 +115,35 @@ public class UserService {
         updatedUser.update(command.name(), command.slackId());
 
         try {
-            userRepository.saveAndFlush(updatedUser);
+            userRepository.flush();
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID);
         }
+    }
+
+    /**
+     * 회원 Role 조회(내부통신 전용)
+     *
+     * @param userId
+     * @return UserRoleInfo
+     */
+    public UserRoleInfo getUserRole(UUID userId) {
+        return new UserRoleInfo(
+                userRepository
+                        .findRoleByIdDeletedAtIsNull(userId)
+                        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
+    }
+
+    /**
+     * 회원 Slack ID 조회(내부통신 전용)
+     *
+     * @param userId
+     * @return UserSlackInfo
+     */
+    public UserSlackInfo getUserSlackId(UUID userId) {
+        return new UserSlackInfo(
+                userRepository
+                        .findSlackIdByIdDeletedAtIsNull(userId)
+                        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
     }
 }

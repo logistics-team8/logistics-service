@@ -22,6 +22,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -94,8 +95,8 @@ public class AuthService {
             String savedRefreshToken;
 
             try {
-                savedRefreshToken = refreshTokenRepository.findByUserId(tokenPayload.userId());
-
+                savedRefreshToken =
+                        refreshTokenRepository.findByUserId(tokenPayload.userId()).orElse(null);
             } catch (DataAccessException e) {
                 log.error("[ERROR] Refresh Token 조회 실패 userId = {}", userId, e);
                 throw new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR);
@@ -161,6 +162,10 @@ public class AuthService {
      * @param savedToken
      */
     private void validateRefreshToken(String refreshToken, String savedToken) {
+        if (!StringUtils.hasText(savedToken)) {
+            return;
+        }
+
         if (!refreshToken.equals(savedToken)) {
             throw new BusinessException(AuthErrorCode.TOKEN_INVALID);
         }
