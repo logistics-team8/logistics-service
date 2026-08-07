@@ -2,8 +2,8 @@ package com.logistics.orderservice.presentation.dto.request;
 
 import com.logistics.orderservice.application.command.CreateOrderCommand;
 import com.logistics.orderservice.application.command.CreateOrderItemCommand;
+import com.logistics.orderservice.presentation.validation.AtLeastDaysInFuture;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -24,7 +24,8 @@ public record CreateOrderRequest(
         String requestMessage,
 
         @NotNull(message = "희망 납품 일시는 필수입니다.")
-        @Future(message = "희망 납품 일시는 현재로부터 최소 1일 이후여야 합니다.")
+        //희망 납품 일시는 현재로부터 최소 1일 이후로 지정한다.
+        @AtLeastDaysInFuture(days = 1)
         LocalDateTime requestedDeliveryAt,
 
         @NotEmpty(message = "주문상품은 1개 이상이어야 합니다.")

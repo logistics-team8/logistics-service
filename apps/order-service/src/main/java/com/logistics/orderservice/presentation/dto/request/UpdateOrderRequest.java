@@ -1,7 +1,7 @@
 package com.logistics.orderservice.presentation.dto.request;
 
 import com.logistics.orderservice.application.command.UpdateOrderCommand;
-import jakarta.validation.constraints.Future;
+import com.logistics.orderservice.presentation.validation.AtLeastDaysInFuture;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
@@ -13,7 +13,8 @@ public record UpdateOrderRequest(
         )
         String requestMessage,
 
-        @Future(message = "희망 납품 일시는 현재로부터 최소 1일 이후여야 합니다.")
+        //희망 납품 일시는 현재로부터 최소 1일 이후로 지정한다.
+        @AtLeastDaysInFuture(days = 1)
         LocalDateTime requestedDeliveryAt
 ) {
     public UpdateOrderCommand toCommand() {
