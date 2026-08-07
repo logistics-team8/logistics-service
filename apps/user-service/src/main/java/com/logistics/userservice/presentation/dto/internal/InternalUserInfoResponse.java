@@ -14,7 +14,6 @@ public record InternalUserInfoResponse(
         UUID companyId,
         Role role,
         LocalDateTime createdAt) {
-
     public static InternalUserInfoResponse from(UserInfo userInfo) {
         return new InternalUserInfoResponse(
                 userInfo.userId(),
