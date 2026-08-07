@@ -1,0 +1,48 @@
+name: CI - Company Product Service
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/company-product-service/**"
+      - "libs/common/**"
+      - "config-repo/company-product-service.yml"
+      - "config-repo/application*.yml"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradlew"
+      - "gradlew.bat"
+      - "gradle/**"
+      - ".github/workflows/ci-module.yml"
+      - ".github/workflows/ci-company-product-service.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/company-product-service/**"
+      - "libs/common/**"
+      - "config-repo/company-product-service.yml"
+      - "config-repo/application*.yml"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradlew"
+      - "gradlew.bat"
+      - "gradle/**"
+      - ".github/workflows/ci-module.yml"
+      - ".github/workflows/ci-company-product-service.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-company-product-service-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci-module.yml
+    with:
+      module-name: company-product-service
+      gradle-task: ":apps:company-product-service:build"
+      test-report-path: apps/company-product-service/build/reports/tests/
+      use-postgres: true

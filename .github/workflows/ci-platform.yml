@@ -1,0 +1,42 @@
+name: CI - Platform Configuration
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".dockerignore"
+      - "infra/postgres/**"
+      - "config-repo/**"
+      - ".github/workflows/ci-platform.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".dockerignore"
+      - "infra/postgres/**"
+      - "config-repo/**"
+      - ".github/workflows/ci-platform.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-platform-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-compose:
+    name: Validate Docker Compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Validate configuration
+        run: docker compose config --quiet

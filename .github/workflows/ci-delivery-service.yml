@@ -1,0 +1,48 @@
+name: CI - Delivery Service
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/delivery-service/**"
+      - "libs/common/**"
+      - "config-repo/delivery-service.yml"
+      - "config-repo/application*.yml"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradlew"
+      - "gradlew.bat"
+      - "gradle/**"
+      - ".github/workflows/ci-module.yml"
+      - ".github/workflows/ci-delivery-service.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/delivery-service/**"
+      - "libs/common/**"
+      - "config-repo/delivery-service.yml"
+      - "config-repo/application*.yml"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradlew"
+      - "gradlew.bat"
+      - "gradle/**"
+      - ".github/workflows/ci-module.yml"
+      - ".github/workflows/ci-delivery-service.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-delivery-service-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci-module.yml
+    with:
+      module-name: delivery-service
+      gradle-task: ":apps:delivery-service:build"
+      test-report-path: apps/delivery-service/build/reports/tests/
+      use-postgres: true
