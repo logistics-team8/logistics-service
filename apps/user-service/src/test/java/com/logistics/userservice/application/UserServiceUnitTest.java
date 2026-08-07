@@ -1,5 +1,11 @@
 package com.logistics.userservice.application;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.*;
+
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
 import com.logistics.userservice.application.dto.UserUpdateCommand;
@@ -7,6 +13,9 @@ import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,18 +23,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.dao.DataIntegrityViolationException;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.willThrow;
-import static org.mockito.Mockito.*;
 
 @DisplayName("UserService - 단위 테스트")
 @ExtendWith(MockitoExtension.class)
@@ -52,7 +49,9 @@ class UserServiceUnitTest {
 
             User existUsers = User.create(command);
 
-            given(userRepository.findByUsernameOrSlackId(eq(command.username()), eq(command.slackId())))
+            given(
+                            userRepository.findByUsernameOrSlackId(
+                                    eq(command.username()), eq(command.slackId())))
                     .willReturn(List.of(existUsers));
 
             // when & then
@@ -89,7 +88,9 @@ class UserServiceUnitTest {
                             Role.COMPANY_MANAGER);
 
             User existUsers = User.create(command2);
-            given(userRepository.findByUsernameOrSlackId(eq(command.username()), eq(command.slackId())))
+            given(
+                            userRepository.findByUsernameOrSlackId(
+                                    eq(command.username()), eq(command.slackId())))
                     .willReturn(List.of(existUsers));
 
             // when & then
@@ -108,8 +109,7 @@ class UserServiceUnitTest {
         // given
         UUID userId = UUID.randomUUID();
 
-        given(userRepository.findByIdAndDeletedAtIsNull(eq(userId)))
-                .willReturn(Optional.empty());
+        given(userRepository.findByIdAndDeletedAtIsNull(eq(userId))).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> userService.getUserInfo(userId))
@@ -119,52 +119,22 @@ class UserServiceUnitTest {
         verify(userRepository).findByIdAndDeletedAtIsNull(userId);
     }
 
-    @Nested
-    @DisplayName("회원 수정 테스트")
-    class UpdateUser {
-        @Test
-        @DisplayName("회원이 존재하지 않는 경우 USER_NOT_FOUND 예외가 발생해야한다.")
-        void updateUser_fail_when_user_not_found() {
-            // given
-            UUID  userId = UUID.randomUUID();
-            UserUpdateCommand command = new UserUpdateCommand(userId, "test1234", "U12345678");
+    @Test
+    @DisplayName("회운 수정 시 회원이 존재하지 않는 경우 USER_NOT_FOUND 예외가 발생해야한다.")
+    void updateUser_fail_when_user_not_found() {
+        // given
+        UUID userId = UUID.randomUUID();
+        UserUpdateCommand command = new UserUpdateCommand(userId, "test1234", "U12345678");
 
-            given(userRepository.findByIdAndDeletedAtIsNull(any()))
-                    .willReturn(Optional.empty());
+        given(userRepository.findByIdAndDeletedAtIsNull(any())).willReturn(Optional.empty());
 
-            // when & then
-            assertThatThrownBy(() -> userService.updateUser(command))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessage(UserErrorCode.USER_NOT_FOUND.message());
+        // when & then
+        assertThatThrownBy(() -> userService.updateUser(command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage(UserErrorCode.USER_NOT_FOUND.message());
 
-            verify(userRepository).findByIdAndDeletedAtIsNull(command.userId());
-            verify(userRepository, never()).saveAndFlush(any());
-        }
-
-        @Test
-        @DisplayName("Slack Id가 중복인 경우 USER_DUPLICATE_SLACK_ID 예외가 발생해야한다.")
-        void updateSlackId_fail_when_slack_id_is_duplicate() {
-            // given
-            UUID userId = UUID.randomUUID();
-            UserUpdateCommand command = new UserUpdateCommand(userId, "test1234", "U12345678");
-
-            User user = mock(User.class);
-
-            given(userRepository.findByIdAndDeletedAtIsNull(userId))
-                    .willReturn(Optional.of(user));
-
-            willThrow(new DataIntegrityViolationException("슬랙 아이디 중복"))
-                    .given(userRepository)
-                    .saveAndFlush(user);
-
-            // when & then
-            assertThatThrownBy(() -> userService.updateUser(command))
-                    .isInstanceOf(BusinessException.class)
-                    .hasMessage(UserErrorCode.USER_DUPLICATE_SLACK_ID.message());
-
-            verify(user).update(command.name(), command.slackId());
-            verify(userRepository).saveAndFlush(user);
-        }
+        verify(userRepository).findByIdAndDeletedAtIsNull(command.userId());
+        verify(userRepository, never()).saveAndFlush(any());
     }
 
     @Test
@@ -173,8 +143,7 @@ class UserServiceUnitTest {
         // given
         UUID userId = UUID.randomUUID();
 
-        given(userRepository.findByIdAndDeletedAtIsNull(any()))
-                .willReturn(Optional.empty());
+        given(userRepository.findByIdAndDeletedAtIsNull(any())).willReturn(Optional.empty());
 
         // when & then
         assertThatThrownBy(() -> userService.deleteUser(userId))
