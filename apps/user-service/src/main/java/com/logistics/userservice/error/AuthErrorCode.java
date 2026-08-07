@@ -1,4 +1,4 @@
-package com.logistics.userservice.presentation.exception;
+package com.logistics.userservice.error;
 
 import com.logistics.common.error.ErrorCode;
 import org.springframework.http.HttpStatus;
