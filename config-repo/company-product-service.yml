@@ -4,3 +4,6 @@ server:
 spring:
   datasource:
     url: jdbc:postgresql://${app.database.host}:${app.database.port}/${app.database.name}?currentSchema=company_products
+  jpa:
+    hibernate:
+      ddl-auto: update
