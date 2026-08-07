@@ -55,18 +55,21 @@ public class SecurityConfig {
         httpSecurity.authorizeHttpRequests(
                 (requests) ->
                         // Swagger
-                        requests.requestMatchers("/v3/api-docs/**", "/swagger-ui/**")
+                        requests.requestMatchers(
+                                        "/v3/api-docs/**", "/swagger-ui/**", "/actuator/health")
                                 .permitAll()
 
-                                // 회원가입, 로그인
+                                // 회원가입, 로그인, 토큰 재발급
                                 .requestMatchers(
-                                        HttpMethod.POST, "/api/v1/users", "/api/v1/auth/login")
+                                        HttpMethod.POST,
+                                        "/api/v1/users",
+                                        "/api/v1/auth/login",
+                                        "/api/v1/auth/reissue")
                                 .permitAll()
 
                                 // 내부 API 허용
                                 .requestMatchers("/internal/**")
                                 .permitAll()
-
                                 .anyRequest()
                                 .authenticated());
 
