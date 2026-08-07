@@ -1,7 +1,7 @@
 package com.logistics.gateway.presentation.exception;
 
-import com.logistics.gateway.presentation.error.ErrorCode;
-import com.logistics.gateway.presentation.error.GatewayErrorCode;
+import com.logistics.gateway.error.ErrorCode;
+import com.logistics.gateway.error.GatewayErrorCode;
 import com.logistics.gateway.presentation.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

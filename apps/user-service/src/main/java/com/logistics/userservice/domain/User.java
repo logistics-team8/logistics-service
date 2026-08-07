@@ -3,12 +3,15 @@ package com.logistics.userservice.domain;
 import com.github.f4b6a3.uuid.UuidCreator;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.error.AuthErrorCode;
 import com.logistics.userservice.infrastructure.config.BaseEntity;
-import com.logistics.userservice.presentation.exception.AuthErrorCode;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Entity
@@ -66,13 +69,22 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
-    /** 사용자 검증 */
     public void validateActive() {
         if (this.userStatus == UserStatus.PENDING) {
             throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
         }
         if (this.userStatus == UserStatus.REJECTED) {
             throw new BusinessException(AuthErrorCode.APPROVAL_REJECTED);
+        }
+    }
+
+    /** 회원 업데이트 */
+    public void update(String name, String slackId) {
+        if (StringUtils.hasText(name)) {
+            this.name = name;
+        }
+        if (StringUtils.hasText(slackId)) {
+            this.slackId = slackId;
         }
     }
 

@@ -1,6 +1,6 @@
 package com.logistics.gateway.presentation.exception;
 
-import com.logistics.gateway.presentation.error.ErrorCode;
+import com.logistics.gateway.error.ErrorCode;
 
 public class BusinessException extends RuntimeException {
 
