@@ -112,6 +112,9 @@ springdoc:
     urls[0]:
       name: user-service
       url: /user-service/v3/api-docs
+    urls[1]:
+      name: hub-service
+      url: /hub-service/v3/api-docs
 
 path:
   whitelist:
