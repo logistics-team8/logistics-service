@@ -1,13 +1,8 @@
 package com.logistics.hubservice.infrastructure.persistence.hub;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import com.logistics.common.security.CustomUserDetails;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +10,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -118,7 +119,7 @@ class HubJpaRepositoryAdapterTest {
     }
 
     private void authenticate(UUID userId) {
-        CustomUserDetails principal = CustomUserDetails.from(userId, "MASTER");
+        CustomUserDetails principal = CustomUserDetails.from(userId, null, null, "MASTER");
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
         );

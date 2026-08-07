@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.logistics.common.security.CustomUserDetails;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import java.math.BigDecimal;
@@ -276,7 +276,7 @@ class HubControllerIntegrationTest {
     }
 
     private Hub saveHub(String name) {
-        CustomUserDetails principal = CustomUserDetails.from(MASTER_ID, "MASTER");
+        CustomUserDetails principal = CustomUserDetails.from(MASTER_ID, null, null, "MASTER");
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
         );
