@@ -1,6 +1,6 @@
 package com.logistics.userservice.infrastructure.config;
 
-import com.logistics.common.security.CustomUserDetails;
+import com.logistics.common.security.principal.CustomUserDetails;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.context.annotation.Configuration;

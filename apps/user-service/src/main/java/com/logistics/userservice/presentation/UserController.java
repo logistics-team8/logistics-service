@@ -23,13 +23,13 @@ public class UserController implements UserApi {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createUser(@Valid @RequestBody SignUpRequest request) {
+    public ResponseEntity<ApiResponse<Void>> signUp(@Valid @RequestBody SignUpRequest request) {
         userService.createUser(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED).body((ApiResponse.success(null)));
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserInfoResponse>> userInfo(
+    public ResponseEntity<ApiResponse<UserInfoResponse>> getMyInfo(
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -37,7 +37,7 @@ public class UserController implements UserApi {
     }
 
     @PatchMapping("/me")
-    public ResponseEntity<ApiResponse<Void>> updateUser(
+    public ResponseEntity<ApiResponse<Void>> updateMyInfo(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @Valid @RequestBody UpdateRequest request) {
         userService.updateUser(request.toCommand(customUserDetails.getId()));
@@ -45,7 +45,7 @@ public class UserController implements UserApi {
     }
 
     @DeleteMapping("/me")
-    public ResponseEntity<ApiResponse<Void>> deleteUser(
+    public ResponseEntity<ApiResponse<Void>> deleteMyAccount(
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         userService.deleteUser(customUserDetails.getId());
         return ResponseEntity.ok(ApiResponse.success(null));
