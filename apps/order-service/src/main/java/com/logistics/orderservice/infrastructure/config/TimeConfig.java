@@ -1,4 +1,4 @@
-package com.logistics.orderservice.config;
+package com.logistics.orderservice.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
