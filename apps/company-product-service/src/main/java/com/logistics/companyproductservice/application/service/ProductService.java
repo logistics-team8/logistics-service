@@ -50,4 +50,9 @@ public class ProductService {
 
         product.increaseStock(quantity);
     }
+    @Transactional(readOnly = true)
+    public Product getProduct(UUID id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+    }
 }
