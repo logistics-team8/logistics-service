@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class CompanyService {
@@ -30,5 +32,10 @@ public class CompanyService {
         );
 
         return companyRepository.save(company);
+    }
+    @Transactional(readOnly = true)
+    public Company getCompany(UUID id) {
+        return companyRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
     }
 }
