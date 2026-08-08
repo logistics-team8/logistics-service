@@ -1,11 +1,13 @@
 package com.logistics.notificationservice.application.slack;
 
 import com.logistics.notificationservice.domain.slack.SlackMessage;
+import com.logistics.notificationservice.domain.slack.SlackMessageRepository;
 import com.logistics.notificationservice.infrastructure.persistence.SlackMessageJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -13,54 +15,118 @@ import java.util.UUID;
 public class SlackMessageService {
 
     private final SlackClient slackClient;
-    private final SlackMessageJpaRepository slackMessageRepository;
+    private final SlackMessageRepository slackMessageRepository;
+    private final SlackMessagePersistenceService persistenceService;
 
     /**
      * 최초 Slack 메시지 전송
-     * **/
-
-    @Transactional
+     */
     public void sendMessage(
             UUID orderId,
             UUID aiRequestId,
             UUID recipientUserId,
             String recipientSlackId,
             String message
-    ){
-        SlackMessage slackMessage = SlackMessage.create(
-                orderId,
-                aiRequestId,
-                recipientUserId,
-                recipientSlackId,
-                message
-        );
+    ) {
 
-        slackMessageRepository.save(slackMessage);
-        send(slackMessage);
-    }
+        SlackMessage slackMessage =
+                persistenceService.create(
+                        orderId,
+                        aiRequestId,
+                        recipientUserId,
+                        recipientSlackId,
+                        message
+                );
 
+        try {
 
-    private void send (SlackMessage slackMessage){
-        try{
             slackClient.sendMessage(
                     slackMessage.getRecipientSlackId(),
                     slackMessage.getMessage()
             );
+
             slackMessage.markAsSent();
-        }catch (Exception e){
-            String failureReason = extractFailureReason(e);
-            slackMessage.markAsFailure(failureReason);
+
+            persistenceService.save(
+                    slackMessage
+            );
+
+        } catch (Exception e) {
+
+            String failureReason =
+                    extractFailureReason(e);
+
+            slackMessage.markAsFailure(
+                    failureReason
+            );
+
+            persistenceService.save(
+                    slackMessage
+            );
 
             throw new IllegalStateException(
-                    "Slack 메시지 전송에 실패했습니다: " + failureReason,e);
+                    "Slack 메시지 전송에 실패했습니다: "
+                            + failureReason,
+                    e
+            );
         }
     }
 
-    private String extractFailureReason(Exception e){
+
+    /**
+     * Scheduler에서 호출
+     */
+    public void retryFailedMessages() {
+
+        List<SlackMessage> messages =
+                slackMessageRepository.findRetryTargets();
+
+        for (SlackMessage message : messages) {
+
+            retry(message);
+        }
+    }
+
+
+    private void retry(
+            SlackMessage message
+    ) {
+
+        if (!message.canRetry()) {
+            return;
+        }
+
+        try {
+
+            slackClient.sendMessage(
+                    message.getRecipientSlackId(),
+                    message.getMessage()
+            );
+
+            message.markAsSent();
+
+            persistenceService.save(message);
+
+        } catch (Exception e) {
+
+            String failureReason =
+                    extractFailureReason(e);
+
+            message.markAsFailure(
+                    failureReason
+            );
+
+            persistenceService.save(message);
+        }
+    }
+
+
+    private String extractFailureReason(
+            Exception e
+    ) {
+
         return e.getMessage() != null
                 ? e.getMessage()
                 : e.getClass().getSimpleName();
     }
-
-
 }

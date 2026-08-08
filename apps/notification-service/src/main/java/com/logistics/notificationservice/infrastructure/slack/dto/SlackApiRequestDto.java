@@ -1,17 +1,17 @@
 package com.logistics.notificationservice.infrastructure.slack.dto;
 
 
-public record SlackRequest (
+public record SlackApiRequestDto(
         String slackUserId,
         String channel,
         String text
 ){
-    public static SlackRequest of(
+    public static SlackApiRequestDto of(
             String slackUserId,
             String channel,
             String text
     ){
-        return new SlackRequest(slackUserId,channel,text);
+        return new SlackApiRequestDto(slackUserId,channel,text);
     }
 
 

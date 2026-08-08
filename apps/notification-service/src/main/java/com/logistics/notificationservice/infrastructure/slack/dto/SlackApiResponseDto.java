@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 
 @Getter
-public class SlackResponse {
+public class SlackApiResponseDto {
 
     private boolean ok;
 
