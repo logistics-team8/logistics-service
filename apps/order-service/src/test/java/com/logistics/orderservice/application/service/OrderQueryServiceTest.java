@@ -38,18 +38,30 @@ class OrderQueryServiceTest {
     private OrderQueryService orderQueryService;
 
     private UUID orderId;
+    private String orderNumber;
+    private LocalDateTime fixedNow;
     private Order order;
 
     @BeforeEach
     void setUp() {
         orderId = UUID.randomUUID();
+        orderNumber = "ORD-20260805-123456";
+
+        fixedNow = LocalDateTime.of(
+                2026,
+                8,
+                5,
+                10,
+                0
+        );
 
         order = Order.create(
-                "ORD-20260805-123456",
+                orderNumber,
                 UUID.randomUUID(),
                 UUID.randomUUID(),
                 "테스트 주문입니다.",
-                LocalDateTime.of(2026, 8, 10, 10, 0)
+                fixedNow.plusDays(3),
+                fixedNow
         );
     }
 

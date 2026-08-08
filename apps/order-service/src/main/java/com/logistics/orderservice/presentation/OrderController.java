@@ -5,9 +5,8 @@ import com.logistics.orderservice.application.service.OrderCommandService;
 import com.logistics.orderservice.application.service.OrderQueryService;
 import com.logistics.orderservice.page.PageResponse;
 import com.logistics.orderservice.presentation.dto.request.CreateOrderRequest;
-import com.logistics.orderservice.presentation.dto.response.CreateOrderResponse;
-import com.logistics.orderservice.presentation.dto.response.OrderDetailResponse;
-import com.logistics.orderservice.presentation.dto.response.OrderSummaryResponse;
+import com.logistics.orderservice.presentation.dto.request.UpdateOrderRequest;
+import com.logistics.orderservice.presentation.dto.response.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -72,6 +71,34 @@ public class OrderController {
     ) {
         Page<OrderSummaryResponse> page = orderQueryService.getOrders(pageable);
         return ApiResponse.success(PageResponse.from(page));
+    }
+
+
+    /**
+     * 주문 수정
+     * 권한 추후 적용
+     */
+    @PatchMapping("/{orderId}")
+    public ApiResponse<UpdateOrderResponse> updateOrder(
+            @RequestHeader("X-User-Id") UUID userId,
+            @Valid @RequestBody UpdateOrderRequest request,
+            @PathVariable UUID orderId
+    ){
+        UpdateOrderResponse response = orderCommandService.updateOrder(userId, request.toCommand(), orderId);
+        return ApiResponse.success(response);
+    }
+
+
+    /**
+     * 주문 삭제
+     * 권한 추후 적용
+     */
+    @DeleteMapping("/{orderId}")
+    public ApiResponse<DeleteOrderResponse> deleteOrder(
+            @RequestHeader("X-User-Id") UUID userId,
+            @PathVariable UUID orderId
+    ){
+        return ApiResponse.success(orderCommandService.deleteOrder(userId, orderId));
     }
 
 }
