@@ -33,7 +33,7 @@ class HubRouteTest {
     }
 
     @Test
-    @DisplayName("출발 허브와 도착 허브가 동일하면 생성할 수 없다")
+    @DisplayName("출발 허브와 도착 허브가 동일하면 경로를 생성할 수 없다")
     void createRejectsTheSameSourceAndDestinationHub() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> HubRoute.create(SOURCE_HUB_ID, SOURCE_HUB_ID, 1L, 1L))
@@ -41,7 +41,7 @@ class HubRouteTest {
     }
 
     @Test
-    @DisplayName("이동 거리가 0 이하이면 생성할 수 없다")
+    @DisplayName("이동 거리가 0 이하이면 경로를 생성할 수 없다")
     void createRejectsNonPositiveDistance() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> HubRoute.create(SOURCE_HUB_ID, DESTINATION_HUB_ID, 0L, 1L))
@@ -49,7 +49,7 @@ class HubRouteTest {
     }
 
     @Test
-    @DisplayName("소요 시간이 0 이하이면 생성할 수 없다")
+    @DisplayName("소요 시간이 0 이하이면 경로를 생성할 수 없다")
     void createRejectsNonPositiveDuration() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> HubRoute.create(SOURCE_HUB_ID, DESTINATION_HUB_ID, 1L, 0L))
