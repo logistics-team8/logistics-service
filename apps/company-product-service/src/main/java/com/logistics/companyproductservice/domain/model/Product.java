@@ -44,4 +44,16 @@ public class Product extends BaseEntity {
     public static Product create(String name, UUID companyId, UUID hubId, BigDecimal unitPrice) {
         return new Product(name, companyId, hubId, unitPrice);
     }
+
+    public boolean hasEnoughStock(int quantity) {
+        return this.stockQuantity >= quantity;
+    }
+
+    public void decreaseStock(int quantity) {
+        this.stockQuantity -= quantity;
+    }
+
+    public void increaseStock(int quantity) {
+        this.stockQuantity += quantity;
+    }
 }
