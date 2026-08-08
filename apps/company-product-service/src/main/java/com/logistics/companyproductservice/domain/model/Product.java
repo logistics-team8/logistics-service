@@ -44,4 +44,28 @@ public class Product extends BaseEntity {
     public static Product create(String name, UUID companyId, UUID hubId, BigDecimal unitPrice) {
         return new Product(name, companyId, hubId, unitPrice);
     }
+
+    public boolean hasEnoughStock(int quantity) {
+        return this.stockQuantity >= quantity;
+    }
+
+    public void decreaseStock(int quantity) {
+        this.stockQuantity -= quantity;
+    }
+
+    public void increaseStock(int quantity) {
+        this.stockQuantity += quantity;
+    }
+
+    public void update(String name, BigDecimal unitPrice) {
+        if (this.getDeletedAt() != null) {
+            throw new IllegalStateException("삭제된 Product는 수정할 수 없습니다.");
+        }
+        if (name != null) {
+            this.name = name;
+        }
+        if (unitPrice != null) {
+            this.unitPrice = unitPrice;
+        }
+    }
 }
