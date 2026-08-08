@@ -4,14 +4,15 @@ import com.logistics.common.response.ApiResponse;
 import com.logistics.companyproductservice.application.service.CompanyService;
 import com.logistics.companyproductservice.domain.model.Company;
 import com.logistics.companyproductservice.presentation.dto.request.CompanyCreateRequest;
+import com.logistics.companyproductservice.presentation.dto.request.CompanyUpdateRequest;
 import com.logistics.companyproductservice.presentation.dto.response.CompanyResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
+
 import java.util.UUID;
 
 @RestController
@@ -30,6 +31,11 @@ public class CompanyController {
     @GetMapping("/{id}")
     public ApiResponse<CompanyResponse> getCompany(@PathVariable UUID id) {
         Company company = companyService.getCompany(id);
+        return ApiResponse.success(CompanyResponse.from(company));
+    }
+    @PatchMapping("/{id}")
+    public ApiResponse<CompanyResponse> updateCompany(@PathVariable UUID id, @RequestBody @Valid CompanyUpdateRequest request) {
+        Company company = companyService.update(id, request);
         return ApiResponse.success(CompanyResponse.from(company));
     }
 }

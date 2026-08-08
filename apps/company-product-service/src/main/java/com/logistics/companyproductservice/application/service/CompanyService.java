@@ -5,6 +5,7 @@ import com.logistics.common.exception.BusinessException;
 import com.logistics.companyproductservice.domain.model.Company;
 import com.logistics.companyproductservice.domain.repository.CompanyRepository;
 import com.logistics.companyproductservice.presentation.dto.request.CompanyCreateRequest;
+import com.logistics.companyproductservice.presentation.dto.request.CompanyUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,5 +44,19 @@ public class CompanyService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
         return com.logistics.companyproductservice.application.dto.CompanyInfo.from(company);
+    }
+    @Transactional
+    public Company update(UUID id, CompanyUpdateRequest request) {
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+        if (request.getName() != null
+                && !request.getName().equals(company.getName())
+                && companyRepository.existsByName(request.getName())) {
+            throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
+        }
+
+        company.update(request.getName(), request.getAddress());
+        return company;
     }
 }

@@ -40,6 +40,17 @@ public class Company extends BaseEntity {
     public static Company create(String name, Type type, UUID hubId, String address) {
         return new Company(name, type, hubId, address);
     }
+    public void update(String name, String address) {
+        if (this.getDeletedAt() != null) {
+            throw new IllegalStateException("삭제된 Company는 수정할 수 없습니다.");
+        }
+        if (name != null) {
+            this.name = name;
+        }
+        if (address != null) {
+            this.address = address;
+        }
+    }
 
     public enum Type {
         PRODUCER,
