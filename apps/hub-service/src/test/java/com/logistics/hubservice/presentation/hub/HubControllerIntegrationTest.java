@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.hubservice.PostgreSqlIntegrationTest;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import java.math.BigDecimal;
@@ -38,7 +39,7 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest
 @ActiveProfiles("test")
 @DisplayName("Hub API 통합 테스트")
-class HubControllerIntegrationTest {
+class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
 
     private static final UUID MASTER_ID = UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
     private static final UUID HUB_MANAGER_ID = UUID.fromString("5136e949-d047-4f31-8da2-e9654dd80f38");

@@ -353,7 +353,16 @@ class HubApplicationServiceTest {
         }
 
         @Override
+        public Page<Hub> findAllByDeletedAtIsNull(Pageable pageable) {
+            return getPage(null, pageable);
+        }
+
+        @Override
         public Page<Hub> search(String keyword, Pageable pageable) {
+            return getPage(keyword, pageable);
+        }
+
+        private Page<Hub> getPage(String keyword, Pageable pageable) {
             List<Hub> matchingHubs = new ArrayList<>(hubs.values().stream()
                     .filter(hub -> hub.getDeletedAt() == null)
                     .filter(hub -> matchesKeyword(hub, keyword))

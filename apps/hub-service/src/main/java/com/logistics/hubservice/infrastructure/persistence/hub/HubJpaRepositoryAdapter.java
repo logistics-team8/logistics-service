@@ -28,6 +28,11 @@ public class HubJpaRepositoryAdapter implements HubRepository {
     }
 
     @Override
+    public Page<Hub> findAllByDeletedAtIsNull(Pageable pageable) {
+        return repository.findAllByDeletedAtIsNull(pageable);
+    }
+
+    @Override
     public Page<Hub> search(String keyword, Pageable pageable) {
         return repository.search(keyword, pageable);
     }

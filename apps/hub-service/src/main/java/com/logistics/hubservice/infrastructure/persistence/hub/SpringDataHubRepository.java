@@ -13,15 +13,14 @@ interface SpringDataHubRepository extends JpaRepository<Hub, UUID> {
 
     Optional<Hub> findByIdAndDeletedAtIsNull(UUID id);
 
+    Page<Hub> findAllByDeletedAtIsNull(Pageable pageable);
+
     @Query("""
             SELECT h
             FROM Hub h
             WHERE h.deletedAt IS NULL
-              AND (
-                  :keyword IS NULL
-                  OR LOWER(h.name) LIKE CONCAT('%', :keyword, '%')
-                  OR LOWER(h.address) LIKE CONCAT('%', :keyword, '%')
-              )
+              AND (LOWER(h.name) LIKE CONCAT('%', :keyword, '%')
+                  OR LOWER(h.address) LIKE CONCAT('%', :keyword, '%'))
             """)
     Page<Hub> search(@Param("keyword") String keyword, Pageable pageable);
 }

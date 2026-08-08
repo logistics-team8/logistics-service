@@ -1,6 +1,7 @@
 package com.logistics.hubservice.infrastructure.persistence.hub;
 
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.hubservice.PostgreSqlIntegrationTest;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -23,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @DisplayName("Hub JPA 저장소 어댑터")
-class HubJpaRepositoryAdapterTest {
+class HubJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
 
     @Autowired
     private HubRepository hubRepository;
@@ -76,10 +77,8 @@ class HubJpaRepositoryAdapterTest {
                 .map(Hub::getId)
                 .contains(activeHub.getId());
         assertThat(hubRepository.findByIdAndDeletedAtIsNull(deletedHub.getId())).isEmpty();
-        Page<Hub> activeHubs = hubRepository.search(
-                null,
-                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
-        );
+        Page<Hub> activeHubs = hubRepository.findAllByDeletedAtIsNull(
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
         assertThat(activeHubs.getContent())
                 .extracting(Hub::getId)
                 .contains(activeHub.getId())

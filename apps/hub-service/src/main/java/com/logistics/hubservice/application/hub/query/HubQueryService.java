@@ -31,7 +31,12 @@ public class HubQueryService {
 
     public Page<HubResponse> search(String keyword, Pageable pageable) {
         Pageable normalizedPageable = PageableUtil.normalize(pageable, ALLOWED_SORT_PROPERTIES);
-        return hubRepository.search(normalizeKeyword(keyword), normalizedPageable)
+        String normalizedKeyword = normalizeKeyword(keyword);
+        Page<Hub> hubs = normalizedKeyword == null
+                ? hubRepository.findAllByDeletedAtIsNull(normalizedPageable)
+                : hubRepository.search(normalizedKeyword, normalizedPageable);
+
+        return hubs
                 .map(HubResponse::from);
     }
 
