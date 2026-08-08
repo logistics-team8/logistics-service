@@ -59,4 +59,11 @@ public class CompanyService {
         company.update(request.getName(), request.getAddress());
         return company;
     }
+    @Transactional
+    public void delete(UUID id, UUID deletedBy) {
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+        company.delete(deletedBy);
+    }
 }

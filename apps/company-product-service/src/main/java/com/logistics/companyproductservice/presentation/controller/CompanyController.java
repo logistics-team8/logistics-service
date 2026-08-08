@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.UUID;
 
@@ -37,5 +39,10 @@ public class CompanyController {
     public ApiResponse<CompanyResponse> updateCompany(@PathVariable UUID id, @RequestBody @Valid CompanyUpdateRequest request) {
         Company company = companyService.update(id, request);
         return ApiResponse.success(CompanyResponse.from(company));
+    }
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteCompany(@PathVariable UUID id, @RequestHeader("X-User-Id") UUID userId) {
+        companyService.delete(id, userId);
+        return ApiResponse.success(null);
     }
 }
