@@ -99,6 +99,48 @@ public enum OrderErrorCode implements ErrorCode {
             "ORD_016",
             HttpStatus.BAD_REQUEST,
                 "희망 납품 일시는 필수입니다."
+    ),
+
+    ORDER_NOT_CANCELABLE(
+        "ORD_017",
+        HttpStatus.CONFLICT,
+        "현재 주문 상태에서는 주문을 취소할 수 없습니다."
+    ),
+
+    ORDER_ALREADY_CANCELED(
+        "ORD_018",
+        HttpStatus.CONFLICT,
+        "이미 취소된 주문입니다."
+    ),
+
+    ORDER_CANCEL_FORBIDDEN(
+        "ORD_019",
+        HttpStatus.FORBIDDEN,
+        "해당 주문을 취소할 권한이 없습니다."
+    ),
+
+    ORDER_ITEM_NOT_FOUND(
+        "ORD_020",
+        HttpStatus.NOT_FOUND,
+        "주문상품을 찾을 수 없습니다."
+    ),
+
+    ORDER_ITEM_ALREADY_CANCELED(
+        "ORD_021",
+        HttpStatus.CONFLICT,
+        "이미 취소된 주문상품입니다."
+    ),
+
+    ORDER_AUTHENTICATION_REQUIRED(
+            "ORD_401",
+            HttpStatus.UNAUTHORIZED,
+            "로그인이 필요합니다."
+    ),
+
+    ORDER_ACCESS_DENIED(
+            "ORDER_403",
+            HttpStatus.FORBIDDEN,
+            "해당 주문에 접근할 권한이 없습니다."
     );
 
 
