@@ -6,6 +6,7 @@ import com.logistics.companyproductservice.application.error.ProductErrorCode;
 import com.logistics.companyproductservice.domain.model.Product;
 import com.logistics.companyproductservice.domain.repository.ProductRepository;
 import com.logistics.companyproductservice.presentation.dto.request.ProductCreateRequest;
+import com.logistics.companyproductservice.presentation.dto.request.ProductUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,5 +55,13 @@ public class ProductService {
     public Product getProduct(UUID id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+    }
+    @Transactional
+    public Product update(UUID id, ProductUpdateRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+        product.update(request.getName(), request.getUnitPrice());
+        return product;
     }
 }

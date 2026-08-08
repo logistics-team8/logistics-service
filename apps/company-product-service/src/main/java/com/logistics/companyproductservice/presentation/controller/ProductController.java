@@ -4,12 +4,14 @@ import com.logistics.common.response.ApiResponse;
 import com.logistics.companyproductservice.application.service.ProductService;
 import com.logistics.companyproductservice.domain.model.Product;
 import com.logistics.companyproductservice.presentation.dto.request.ProductCreateRequest;
+import com.logistics.companyproductservice.presentation.dto.request.ProductUpdateRequest;
 import com.logistics.companyproductservice.presentation.dto.response.ProductResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import java.util.UUID;
 
@@ -29,6 +31,11 @@ public class ProductController {
     @GetMapping("/{id}")
     public ApiResponse<ProductResponse> getProduct(@PathVariable UUID id) {
         Product product = productService.getProduct(id);
+        return ApiResponse.success(ProductResponse.from(product));
+    }
+    @PatchMapping("/{id}")
+    public ApiResponse<ProductResponse> updateProduct(@PathVariable UUID id, @RequestBody @Valid ProductUpdateRequest request) {
+        Product product = productService.update(id, request);
         return ApiResponse.success(ProductResponse.from(product));
     }
 }
