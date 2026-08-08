@@ -10,8 +10,7 @@ public record OrderItemResponse(
         UUID productId,
         String productName,
         Integer quantity,
-        OrderItemStatus status,
-        UUID deliveryId
+        OrderItemStatus status
 
 ) {
     public static OrderItemResponse from(OrderItem orderItem) {
@@ -20,8 +19,7 @@ public record OrderItemResponse(
                 orderItem.getProductId(),
                 orderItem.getProductName(),
                 orderItem.getQuantity(),
-                orderItem.getStatus(),
-                orderItem.getDeliveryId()
+                orderItem.getStatus()
         );
     }
 }

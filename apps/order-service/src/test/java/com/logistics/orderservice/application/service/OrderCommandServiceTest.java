@@ -1,6 +1,7 @@
 package com.logistics.orderservice.application.service;
 
 import com.logistics.common.exception.BusinessException;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.command.CreateOrderCommand;
 import com.logistics.orderservice.application.command.CreateOrderItemCommand;
 import com.logistics.orderservice.application.command.UpdateOrderCommand;
@@ -59,6 +60,7 @@ class OrderCommandServiceTest {
     private UUID orderId;
     private UUID userId;
     private String orderNumber;
+    private CustomUserDetails customUserDetails;
 
     private LocalDateTime fixedNow;
     private Clock fixedClock;
@@ -68,6 +70,12 @@ class OrderCommandServiceTest {
         orderId = UUID.randomUUID();
         userId = UUID.randomUUID();
         orderNumber = "ORD-20260806-ABCDEF123456";
+        customUserDetails = CustomUserDetails.from(
+                userId,
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "MASTER"
+        );
 
         ZoneId zoneId = ZoneId.of("Asia/Seoul");
 
@@ -98,7 +106,7 @@ class OrderCommandServiceTest {
     @DisplayName("주문 생성에 성공한다")
     void createOrder_success() {
         // given
-        UUID requesterId = UUID.randomUUID();
+        UUID requesterId = userId;
         UUID receiverCompanyId = UUID.randomUUID();
         UUID firstProductId = UUID.randomUUID();
         UUID secondProductId = UUID.randomUUID();
@@ -107,8 +115,7 @@ class OrderCommandServiceTest {
                 fixedNow.plusDays(3);
 
         CreateOrderCommand command = new CreateOrderCommand(
-                requesterId,
-                receiverCompanyId,
+                                receiverCompanyId,
                 "오후 3시까지 배송해주세요.",
                 requestedDeliveryAt,
                 List.of(
@@ -130,7 +137,7 @@ class OrderCommandServiceTest {
 
         // when
         CreateOrderResponse response =
-                orderCommandService.createOrder(command);
+                orderCommandService.createOrder(command, customUserDetails);
 
         // then
         ArgumentCaptor<Order> orderCaptor =
@@ -211,8 +218,7 @@ class OrderCommandServiceTest {
                 fixedNow.plusDays(1);
 
         CreateOrderCommand command = new CreateOrderCommand(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                                UUID.randomUUID(),
                 null,
                 requestedDeliveryAt,
                 List.of(
@@ -230,7 +236,7 @@ class OrderCommandServiceTest {
 
         // when
         CreateOrderResponse response =
-                orderCommandService.createOrder(command);
+                orderCommandService.createOrder(command, customUserDetails);
 
         // then
         assertThat(response).isNotNull();
@@ -250,8 +256,7 @@ class OrderCommandServiceTest {
                         .minusNanos(1);
 
         CreateOrderCommand command = new CreateOrderCommand(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                                UUID.randomUUID(),
                 null,
                 requestedDeliveryAt,
                 List.of(
@@ -264,7 +269,7 @@ class OrderCommandServiceTest {
 
         // when & then
         assertThatThrownBy(
-                () -> orderCommandService.createOrder(command)
+                () -> orderCommandService.createOrder(command, customUserDetails)
         )
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
@@ -286,8 +291,7 @@ class OrderCommandServiceTest {
     void createOrder_nullRequestedDeliveryAt_fail() {
         // given
         CreateOrderCommand command = new CreateOrderCommand(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                                UUID.randomUUID(),
                 null,
                 null,
                 List.of(
@@ -300,7 +304,7 @@ class OrderCommandServiceTest {
 
         // when & then
         assertThatThrownBy(
-                () -> orderCommandService.createOrder(command)
+                () -> orderCommandService.createOrder(command, customUserDetails)
         )
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
@@ -324,8 +328,7 @@ class OrderCommandServiceTest {
         UUID duplicatedProductId = UUID.randomUUID();
 
         CreateOrderCommand command = new CreateOrderCommand(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                                UUID.randomUUID(),
                 null,
                 fixedNow.plusDays(2),
                 List.of(
@@ -342,7 +345,7 @@ class OrderCommandServiceTest {
 
         // when & then
         assertThatThrownBy(
-                () -> orderCommandService.createOrder(command)
+                () -> orderCommandService.createOrder(command, customUserDetails)
         )
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
@@ -364,8 +367,7 @@ class OrderCommandServiceTest {
     void createOrder_nullQuantity_fail() {
         // given
         CreateOrderCommand command = new CreateOrderCommand(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                                UUID.randomUUID(),
                 null,
                 fixedNow.plusDays(2),
                 List.of(
@@ -378,7 +380,7 @@ class OrderCommandServiceTest {
 
         // when & then
         assertThatThrownBy(
-                () -> orderCommandService.createOrder(command)
+                () -> orderCommandService.createOrder(command, customUserDetails)
         )
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
@@ -400,8 +402,7 @@ class OrderCommandServiceTest {
     void createOrder_zeroQuantity_fail() {
         // given
         CreateOrderCommand command = new CreateOrderCommand(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                                UUID.randomUUID(),
                 null,
                 fixedNow.plusDays(2),
                 List.of(
@@ -414,7 +415,7 @@ class OrderCommandServiceTest {
 
         // when & then
         assertThatThrownBy(
-                () -> orderCommandService.createOrder(command)
+                () -> orderCommandService.createOrder(command, customUserDetails)
         )
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
@@ -436,8 +437,7 @@ class OrderCommandServiceTest {
     void createOrder_negativeQuantity_fail() {
         // given
         CreateOrderCommand command = new CreateOrderCommand(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                                UUID.randomUUID(),
                 null,
                 fixedNow.plusDays(2),
                 List.of(
@@ -450,7 +450,7 @@ class OrderCommandServiceTest {
 
         // when & then
         assertThatThrownBy(
-                () -> orderCommandService.createOrder(command)
+                () -> orderCommandService.createOrder(command, customUserDetails)
         )
                 .isInstanceOf(BusinessException.class)
                 .satisfies(exception -> {
@@ -527,7 +527,7 @@ class OrderCommandServiceTest {
         // when
         UpdateOrderResponse response =
                 orderCommandService.updateOrder(
-                        userId,
+                        customUserDetails,
                         command,
                         orderId
                 );
@@ -593,7 +593,7 @@ class OrderCommandServiceTest {
         // when & then
         assertThatThrownBy(() ->
                 orderCommandService.updateOrder(
-                        userId,
+                        customUserDetails,
                         command,
                         orderId
                 )
@@ -648,7 +648,7 @@ class OrderCommandServiceTest {
         // when & then
         assertThatThrownBy(() ->
                 orderCommandService.updateOrder(
-                        userId,
+                        customUserDetails,
                         command,
                         orderId
                 )
@@ -708,7 +708,7 @@ class OrderCommandServiceTest {
         // when & then
         assertThatThrownBy(() ->
                 orderCommandService.updateOrder(
-                        userId,
+                        customUserDetails,
                         command,
                         orderId
                 )
@@ -773,7 +773,7 @@ class OrderCommandServiceTest {
         // when
         DeleteOrderResponse response =
                 orderCommandService.deleteOrder(
-                        userId,
+                        customUserDetails,
                         orderId
                 );
 
@@ -812,7 +812,7 @@ class OrderCommandServiceTest {
         // when & then
         assertThatThrownBy(() ->
                 orderCommandService.deleteOrder(
-                        userId,
+                        customUserDetails,
                         orderId
                 )
         )
@@ -856,7 +856,7 @@ class OrderCommandServiceTest {
         // when & then
         assertThatThrownBy(() ->
                 orderCommandService.deleteOrder(
-                        userId,
+                        customUserDetails,
                         orderId
                 )
         )
