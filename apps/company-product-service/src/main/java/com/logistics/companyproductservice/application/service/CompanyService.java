@@ -2,11 +2,15 @@ package com.logistics.companyproductservice.application.service;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
+import com.logistics.companyproductservice.application.page.PageableUtil;
 import com.logistics.companyproductservice.domain.model.Company;
 import com.logistics.companyproductservice.domain.repository.CompanyRepository;
 import com.logistics.companyproductservice.presentation.dto.request.CompanyCreateRequest;
 import com.logistics.companyproductservice.presentation.dto.request.CompanyUpdateRequest;
+import com.logistics.companyproductservice.presentation.dto.response.CompanyResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,5 +69,10 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
 
         company.delete(deletedBy);
+    }
+    @Transactional(readOnly = true)
+    public Page<CompanyResponse> search(String name, Pageable pageable) {
+        Pageable normalized = PageableUtil.normalize(pageable);
+        return companyRepository.search(name, normalized).map(CompanyResponse::from);
     }
 }

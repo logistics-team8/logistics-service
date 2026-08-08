@@ -3,6 +3,8 @@ package com.logistics.companyproductservice.infrastructure.persistence;
 import com.logistics.companyproductservice.domain.model.Company;
 import com.logistics.companyproductservice.domain.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -28,4 +30,12 @@ public class CompanyRepositoryImpl implements CompanyRepository {
     public Optional<Company> findById(UUID id) {
         return companyJpaRepository.findByIdAndDeletedAtIsNull(id);
     }
-}   
+
+    @Override
+    public Page<Company> search(String name, Pageable pageable) {
+        if (name != null && !name.isBlank()) {
+            return companyJpaRepository.findAllByNameContainingAndDeletedAtIsNull(name, pageable);
+        }
+        return companyJpaRepository.findAllByDeletedAtIsNull(pageable);
+    }
+}

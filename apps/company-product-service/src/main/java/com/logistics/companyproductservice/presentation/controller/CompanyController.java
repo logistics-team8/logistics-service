@@ -1,6 +1,7 @@
 package com.logistics.companyproductservice.presentation.controller;
 
 import com.logistics.common.response.ApiResponse;
+import com.logistics.companyproductservice.application.page.PageResponse;
 import com.logistics.companyproductservice.application.service.CompanyService;
 import com.logistics.companyproductservice.domain.model.Company;
 import com.logistics.companyproductservice.presentation.dto.request.CompanyCreateRequest;
@@ -8,12 +9,14 @@ import com.logistics.companyproductservice.presentation.dto.request.CompanyUpdat
 import com.logistics.companyproductservice.presentation.dto.response.CompanyResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
 
@@ -44,5 +47,13 @@ public class CompanyController {
     public ApiResponse<Void> deleteCompany(@PathVariable UUID id, @RequestHeader("X-User-Id") UUID userId) {
         companyService.delete(id, userId);
         return ApiResponse.success(null);
+    }
+    @GetMapping
+    public ApiResponse<PageResponse<CompanyResponse>> getCompanies(
+            @RequestParam(required = false) String name,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<CompanyResponse> page = companyService.search(name, pageable);
+        return ApiResponse.success(PageResponse.from(page));
     }
 }
