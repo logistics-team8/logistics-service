@@ -38,4 +38,10 @@ public class CompanyService {
         return companyRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
     }
+    @Transactional(readOnly = true)
+    public com.logistics.companyproductservice.application.dto.CompanyInfo getCompanyInfo(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+        return com.logistics.companyproductservice.application.dto.CompanyInfo.from(company);
+    }
 }

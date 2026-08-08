@@ -5,6 +5,9 @@ import com.logistics.companyproductservice.domain.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+import java.util.UUID;
+
 @Repository
 @RequiredArgsConstructor
 public class CompanyRepositoryImpl implements CompanyRepository {
@@ -19,5 +22,10 @@ public class CompanyRepositoryImpl implements CompanyRepository {
     @Override
     public boolean existsByName(String name) {
         return companyJpaRepository.existsByName(name);
+    }
+
+    @Override
+    public Optional<Company> findById(UUID id) {
+        return companyJpaRepository.findById(id);
     }
 }
