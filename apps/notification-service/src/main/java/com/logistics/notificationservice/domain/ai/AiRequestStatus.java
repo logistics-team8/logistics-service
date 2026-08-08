@@ -1,5 +1,5 @@
 package com.logistics.notificationservice.domain.ai;
 
 public enum AiRequestStatus {
-    SUCCESS,FAILED
+    SUCCESS,FAILED,PROCESSING,
 }

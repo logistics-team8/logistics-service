@@ -35,3 +35,9 @@ slack:
   bot-token: ${SLACK_BOT_TOKEN}
   base-url: https://slack.com/api
   channel-id: ${SLACK_CHANNEL_ID}
+
+#Gemini API_KEY
+gemini:
+  api-key: ${GEMINI_API_KEY}
+  base-url: https://generativelanguage.googleapis.com
+  model: gemini-3.5-flash
