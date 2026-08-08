@@ -3,6 +3,7 @@ package com.logistics.hubservice.application.hub;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.hubservice.application.hub.command.CreateHubCommand;
 import com.logistics.hubservice.application.hub.command.HubCommandService;
@@ -15,21 +16,30 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
+@DisplayName("Hub 애플리케이션 서비스")
 class HubApplicationServiceTest {
 
     private static final UUID DELETED_BY = UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
@@ -125,7 +135,8 @@ class HubApplicationServiceTest {
     }
 
     @Test
-    void getAllReturnsOnlyActiveHubsInCreatedAtDescendingOrder() {
+    @DisplayName("공백 검색어는 전체 활성 허브로 처리하고 생성일 역순으로 반환한다")
+    void searchReturnsOnlyActiveHubsInCreatedAtDescendingOrder() {
         InMemoryHubRepository repository = new InMemoryHubRepository();
         Hub olderHub = repository.save(Hub.create(
                 "서울 허브",
@@ -149,11 +160,79 @@ class HubApplicationServiceTest {
         repository.save(deletedHub);
         HubQueryService service = new HubQueryService(repository);
 
-        List<HubResponse> responses = service.getAll();
+        Page<HubResponse> responses = service.search(
+                "   ",
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
 
-        assertThat(responses)
+        assertThat(responses.getContent())
                 .extracting(HubResponse::hubId)
                 .containsExactly(newerHub.getId(), olderHub.getId());
+    }
+
+    @Test
+    @DisplayName("검색어의 공백과 대소문자를 무시해 허브 이름 또는 주소를 검색한다")
+    void searchNormalizesKeywordAndMatchesNameOrAddressIgnoringCase() {
+        InMemoryHubRepository repository = new InMemoryHubRepository();
+        Hub nameMatch = repository.save(Hub.create(
+                "SEOUL Hub",
+                "Korea",
+                new BigDecimal("37.5145751"),
+                new BigDecimal("127.1122451")
+        ));
+        Hub addressMatch = repository.save(Hub.create(
+                "Busan Hub",
+                "SeOuL Road 55",
+                new BigDecimal("35.1795540"),
+                new BigDecimal("129.0756420")
+        ));
+        repository.save(Hub.create(
+                "Daegu Hub",
+                "Daegu Road 1",
+                new BigDecimal("35.8714354"),
+                new BigDecimal("128.6014450")
+        ));
+        HubQueryService service = new HubQueryService(repository);
+
+        Page<HubResponse> responses = service.search(
+                "  seOuL  ",
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
+        assertThat(responses.getContent())
+                .extracting(HubResponse::hubId)
+                .containsExactly(addressMatch.getId(), nameMatch.getId());
+    }
+
+    @Test
+    @DisplayName("허용하지 않는 페이지 크기는 10으로 보정한다")
+    void searchFallsBackToPageSizeTen() {
+        InMemoryHubRepository repository = new InMemoryHubRepository();
+        repository.save(Hub.create(
+                "서울 허브",
+                "서울특별시 송파구 송파대로 55",
+                new BigDecimal("37.5145751"),
+                new BigDecimal("127.1122451")
+        ));
+        HubQueryService service = new HubQueryService(repository);
+
+        Page<HubResponse> responses = service.search(
+                null,
+                PageRequest.of(0, 25, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
+        assertThat(responses.getSize()).isEqualTo(10);
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 정렬 필드는 잘못된 요청으로 거절한다")
+    void searchRejectsUnsupportedSortProperty() {
+        HubQueryService service = new HubQueryService(new InMemoryHubRepository());
+
+        assertThatThrownBy(() -> service.search(null, PageRequest.of(0, 10, Sort.by("name"))))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).getErrorCode())
+                        .isEqualTo(CommonErrorCode.INVALID_INPUT));
     }
 
     @Test
@@ -274,11 +353,41 @@ class HubApplicationServiceTest {
         }
 
         @Override
-        public List<Hub> findAllByDeletedAtIsNullOrderByCreatedAtDesc() {
-            return hubs.values().stream()
+        public Page<Hub> search(String keyword, Pageable pageable) {
+            List<Hub> matchingHubs = new ArrayList<>(hubs.values().stream()
                     .filter(hub -> hub.getDeletedAt() == null)
-                    .sorted(Comparator.comparing(Hub::getCreatedAt).reversed())
-                    .toList();
+                    .filter(hub -> matchesKeyword(hub, keyword))
+                    .toList());
+
+            Comparator<Hub> comparator = null;
+            for (Sort.Order order : pageable.getSort()) {
+                Comparator<Hub> nextComparator = comparatorFor(order);
+                comparator = comparator == null ? nextComparator : comparator.thenComparing(nextComparator);
+            }
+            if (comparator != null) {
+                matchingHubs.sort(comparator);
+            }
+
+            int start = (int) Math.min(pageable.getOffset(), matchingHubs.size());
+            int end = Math.min(start + pageable.getPageSize(), matchingHubs.size());
+            return new PageImpl<>(matchingHubs.subList(start, end), pageable, matchingHubs.size());
+        }
+
+        private boolean matchesKeyword(Hub hub, String keyword) {
+            if (keyword == null) {
+                return true;
+            }
+            return hub.getName().toLowerCase(Locale.ROOT).contains(keyword)
+                    || hub.getAddress().toLowerCase(Locale.ROOT).contains(keyword);
+        }
+
+        private Comparator<Hub> comparatorFor(Sort.Order order) {
+            Comparator<Hub> comparator = switch (order.getProperty()) {
+                case "createdAt" -> Comparator.comparing(Hub::getCreatedAt);
+                case "updatedAt" -> Comparator.comparing(Hub::getUpdatedAt);
+                default -> throw new IllegalArgumentException("지원하지 않는 정렬 필드입니다.");
+            };
+            return order.isDescending() ? comparator.reversed() : comparator;
         }
     }
 }

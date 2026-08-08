@@ -1,14 +1,18 @@
 package com.logistics.hubservice.application.hub.query;
 
 import com.logistics.common.exception.BusinessException;
+import com.logistics.common.response.PageableUtil;
 import com.logistics.hubservice.application.hub.HubErrorCode;
 import com.logistics.hubservice.application.hub.dto.HubResponse;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
-import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,20 +21,31 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class HubQueryService {
 
+    private static final Set<String> ALLOWED_SORT_PROPERTIES = Set.of("createdAt", "updatedAt");
+
     private final HubRepository hubRepository;
 
     public HubResponse getOne(UUID hubId) {
         return HubResponse.from(findActiveHub(hubId));
     }
 
-    public List<HubResponse> getAll() {
-        return hubRepository.findAllByDeletedAtIsNullOrderByCreatedAtDesc().stream()
-                .map(HubResponse::from)
-                .toList();
+    public Page<HubResponse> search(String keyword, Pageable pageable) {
+        Pageable normalizedPageable = PageableUtil.normalize(pageable, ALLOWED_SORT_PROPERTIES);
+        return hubRepository.search(normalizeKeyword(keyword), normalizedPageable)
+                .map(HubResponse::from);
     }
 
     private Hub findActiveHub(UUID hubId) {
         return hubRepository.findByIdAndDeletedAtIsNull(hubId)
                 .orElseThrow(() -> new BusinessException(HubErrorCode.HUB_NOT_FOUND));
+    }
+
+    private String normalizeKeyword(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+
+        String normalizedKeyword = keyword.strip().toLowerCase(Locale.ROOT);
+        return normalizedKeyword.isEmpty() ? null : normalizedKeyword;
     }
 }

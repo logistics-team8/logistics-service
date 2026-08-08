@@ -1,6 +1,8 @@
 package com.logistics.hubservice.presentation.hub;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -13,9 +15,11 @@ import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,6 +37,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@DisplayName("Hub API 통합 테스트")
 class HubControllerIntegrationTest {
 
     private static final UUID MASTER_ID = UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
@@ -153,14 +158,81 @@ class HubControllerIntegrationTest {
     }
 
     @Test
-    void authenticatedUserCanGetAllActiveHubs() throws Exception {
-        saveHub("서울 허브");
-        saveHub("부산 허브");
+    @DisplayName("인증 사용자는 기본 페이징 조건으로 활성 허브를 조회한다")
+    void authenticatedUserCanSearchActiveHubsWithDefaultPaging() throws Exception {
+        Hub olderHub = saveHub("서울 허브");
+        Hub newerHub = saveHub("부산 허브");
+        updateCreatedAt(olderHub, LocalDateTime.of(2026, 8, 8, 9, 0));
+        updateCreatedAt(newerHub, LocalDateTime.of(2026, 8, 8, 10, 0));
 
         mockMvc.perform(authenticated(get("/api/v1/hubs"), USER_ID, "CUSTOMER"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data.content.length()").value(2))
+                .andExpect(jsonPath("$.data.content[0].hubId").value(newerHub.getId().toString()))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(2))
+                .andExpect(jsonPath("$.data.totalPages").value(1))
+                .andExpect(jsonPath("$.data.hasNext").value(false))
                 .andExpect(jsonPath("$.error").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("검색어의 공백과 대소문자를 무시해 허브 이름 또는 주소를 검색한다")
+    void authenticatedUserCanSearchByTrimmedKeywordInNameOrAddress() throws Exception {
+        saveHub("SEOUL Hub", "Korea");
+        saveHub("Busan Hub", "SeOuL Road 55");
+        saveHub("Daegu Hub", "Daegu Road 1");
+
+        mockMvc.perform(authenticated(get("/api/v1/hubs"), USER_ID, "CUSTOMER")
+                        .param("keyword", "  seOuL  "))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(2))
+                .andExpect(jsonPath("$.data.content[*].name", containsInAnyOrder("SEOUL Hub", "Busan Hub")))
+                .andExpect(jsonPath("$.data.totalElements").value(2));
+    }
+
+    @Test
+    @DisplayName("허용하지 않는 페이지 크기는 10으로 보정한다")
+    void unsupportedPageSizeFallsBackToTen() throws Exception {
+        for (int index = 0; index < 12; index++) {
+            saveHub("허브 " + index);
+        }
+
+        mockMvc.perform(authenticated(get("/api/v1/hubs"), USER_ID, "CUSTOMER")
+                        .param("size", "25"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content.length()").value(10))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(12))
+                .andExpect(jsonPath("$.data.totalPages").value(2))
+                .andExpect(jsonPath("$.data.hasNext").value(true));
+    }
+
+    @Test
+    @DisplayName("생성일과 수정일을 오름차순 또는 내림차순으로 정렬한다")
+    void searchSupportsCreatedAtAndUpdatedAtInBothDirections() throws Exception {
+        Hub olderHub = saveHub("서울 허브");
+        Hub newerHub = saveHub("부산 허브");
+        updateCreatedAt(olderHub, LocalDateTime.of(2026, 8, 8, 9, 0));
+        updateCreatedAt(newerHub, LocalDateTime.of(2026, 8, 8, 10, 0));
+        updateUpdatedAt(olderHub, LocalDateTime.of(2026, 8, 8, 9, 0));
+        updateUpdatedAt(newerHub, LocalDateTime.of(2026, 8, 8, 10, 0));
+
+        assertFirstHubForSort("createdAt,asc", olderHub);
+        assertFirstHubForSort("createdAt,desc", newerHub);
+        assertFirstHubForSort("updatedAt,asc", olderHub);
+        assertFirstHubForSort("updatedAt,desc", newerHub);
+    }
+
+    @Test
+    @DisplayName("지원하지 않는 정렬 필드는 COMMON_001 응답으로 거절한다")
+    void searchRejectsUnsupportedSortProperty() throws Exception {
+        mockMvc.perform(authenticated(get("/api/v1/hubs"), USER_ID, "CUSTOMER")
+                        .param("sort", "name,asc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.data").value(nullValue()))
+                .andExpect(jsonPath("$.error.code").value("COMMON_001"));
     }
 
     @Test
@@ -252,10 +324,13 @@ class HubControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("Swagger에 허브 검색 파라미터와 오류 응답을 공개한다")
     void openApiDocumentIsPubliclyAvailable() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hubs'].get.parameters[*].name", hasItem("keyword")))
+                .andExpect(jsonPath("$.paths['/api/v1/hubs'].get.responses['400']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}'].patch.responses['401']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}'].delete.responses['401']").exists());
@@ -276,18 +351,37 @@ class HubControllerIntegrationTest {
     }
 
     private Hub saveHub(String name) {
+        return saveHub(name, "서울특별시 송파구 송파대로 55");
+    }
+
+    private Hub saveHub(String name, String address) {
         CustomUserDetails principal = CustomUserDetails.from(MASTER_ID, null, null, "MASTER");
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
         );
         Hub hub = hubRepository.save(Hub.create(
                 name,
-                "서울특별시 송파구 송파대로 55",
+                address,
                 new BigDecimal("37.5145751"),
                 new BigDecimal("127.1122451")
         ));
         SecurityContextHolder.clearContext();
         return hub;
+    }
+
+    private void updateCreatedAt(Hub hub, LocalDateTime createdAt) {
+        jdbcTemplate.update("update p_hubs set created_at = ? where id = ?", createdAt, hub.getId());
+    }
+
+    private void updateUpdatedAt(Hub hub, LocalDateTime updatedAt) {
+        jdbcTemplate.update("update p_hubs set updated_at = ? where id = ?", updatedAt, hub.getId());
+    }
+
+    private void assertFirstHubForSort(String sort, Hub expectedHub) throws Exception {
+        mockMvc.perform(authenticated(get("/api/v1/hubs"), USER_ID, "CUSTOMER")
+                        .param("sort", sort))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].hubId").value(expectedHub.getId().toString()));
     }
 
     private MockHttpServletRequestBuilder master(MockHttpServletRequestBuilder request) {
