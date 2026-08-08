@@ -7,6 +7,8 @@ import com.logistics.companyproductservice.presentation.dto.request.CompanyCreat
 import com.logistics.companyproductservice.presentation.dto.response.CompanyResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,9 +22,9 @@ public class CompanyController {
     private final CompanyService companyService;
 
     @PostMapping
-    public ApiResponse<CompanyResponse> createCompany(@RequestBody @Valid CompanyCreateRequest request) {
+    public ResponseEntity<ApiResponse<CompanyResponse>> createCompany(@RequestBody @Valid CompanyCreateRequest request) {
         Company company = companyService.create(request);
         CompanyResponse response = CompanyResponse.from(company);
-        return ApiResponse.success(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 }
