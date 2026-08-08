@@ -21,11 +21,11 @@ public class CompanyRepositoryImpl implements CompanyRepository {
 
     @Override
     public boolean existsByName(String name) {
-        return companyJpaRepository.existsByName(name);
+        return companyJpaRepository.existsByNameAndDeletedAtIsNull(name);
     }
 
     @Override
     public Optional<Company> findById(UUID id) {
-        return companyJpaRepository.findById(id);
+        return companyJpaRepository.findByIdAndDeletedAtIsNull(id);
     }
-}
+}   
