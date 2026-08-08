@@ -99,7 +99,7 @@ class CreateOrderRequestTest {
         assertViolation(
                 violations,
                 "requestedDeliveryAt",
-                "희망 납품 일시는 현재로부터 최소 1일 이후여야 합니다."
+                "일시는 현재로부터 최소 1일 이후여야 합니다."
         );
     }
 
