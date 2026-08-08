@@ -2,12 +2,19 @@ package com.logistics.companyproductservice.application.service;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
+import com.logistics.companyproductservice.application.page.PageableUtil;
 import com.logistics.companyproductservice.domain.model.Company;
 import com.logistics.companyproductservice.domain.repository.CompanyRepository;
 import com.logistics.companyproductservice.presentation.dto.request.CompanyCreateRequest;
+import com.logistics.companyproductservice.presentation.dto.request.CompanyUpdateRequest;
+import com.logistics.companyproductservice.presentation.dto.response.CompanyResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -30,5 +37,42 @@ public class CompanyService {
         );
 
         return companyRepository.save(company);
+    }
+    @Transactional(readOnly = true)
+    public Company getCompany(UUID id) {
+        return companyRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+    }
+    @Transactional(readOnly = true)
+    public com.logistics.companyproductservice.application.dto.CompanyInfo getCompanyInfo(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+        return com.logistics.companyproductservice.application.dto.CompanyInfo.from(company);
+    }
+    @Transactional
+    public Company update(UUID id, CompanyUpdateRequest request) {
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+        if (request.getName() != null
+                && !request.getName().equals(company.getName())
+                && companyRepository.existsByName(request.getName())) {
+            throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
+        }
+
+        company.update(request.getName(), request.getAddress());
+        return company;
+    }
+    @Transactional
+    public void delete(UUID id, UUID deletedBy) {
+        Company company = companyRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+        company.delete(deletedBy);
+    }
+    @Transactional(readOnly = true)
+    public Page<CompanyResponse> search(String name, Pageable pageable) {
+        Pageable normalized = PageableUtil.normalize(pageable);
+        return companyRepository.search(name, normalized).map(CompanyResponse::from);
     }
 }
