@@ -21,7 +21,7 @@ dependencies {
     implementation 'org.springframework.security:spring-security-web'
 
     // Jackson
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'tools.jackson.core:jackson-databind'
 
     implementation 'jakarta.validation:jakarta.validation-api'
     compileOnly 'jakarta.servlet:jakarta.servlet-api'

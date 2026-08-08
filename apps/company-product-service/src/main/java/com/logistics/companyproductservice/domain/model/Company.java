@@ -2,7 +2,6 @@ package com.logistics.companyproductservice.domain.model;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -11,13 +10,12 @@ import java.util.UUID;
 @Getter
 @Entity
 @Table(name = "p_companies")
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Company extends BaseEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -29,13 +27,18 @@ public class Company extends BaseEntity {
     @Column(nullable = false)
     private UUID hubId;
 
-
     @Column(nullable = false, length = 255)
     private String address;
 
+    private Company(String name, Type type, UUID hubId, String address) {
+        this.name = name;
+        this.type = type;
+        this.hubId = hubId;
+        this.address = address;
+    }
+
     public static Company create(String name, Type type, UUID hubId, String address) {
-        UUID id = UUID.randomUUID();
-        return new Company(id, name, type, hubId, address);
+        return new Company(name, type, hubId, address);
     }
 
     public enum Type {

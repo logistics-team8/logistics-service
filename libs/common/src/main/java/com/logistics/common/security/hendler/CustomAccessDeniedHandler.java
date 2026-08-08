@@ -1,7 +1,5 @@
 package com.logistics.common.security.hendler;
 
-
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.error.ErrorCode;
 import com.logistics.common.response.ApiResponse;
@@ -14,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import tools.jackson.databind.json.JsonMapper;
 
 
 import java.io.IOException;
