@@ -12,6 +12,9 @@ dependencyManagement {
 dependencies {
     api 'org.springframework:spring-web'
 
+    // 공통 페이징 타입
+    api 'org.springframework.data:spring-data-commons'
+
     implementation 'org.slf4j:slf4j-api'
     implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'org.springframework:spring-webmvc'
