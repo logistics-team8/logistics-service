@@ -1,7 +1,7 @@
 package com.logistics.hubservice.presentation.hub;
 
 import com.logistics.common.response.ApiResponse;
-import com.logistics.common.security.CustomUserDetails;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.presentation.hub.dto.CreateHubRequest;
 import com.logistics.hubservice.presentation.hub.dto.HubResponseDto;
 import com.logistics.hubservice.presentation.hub.dto.UpdateHubRequest;
@@ -9,8 +9,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import java.util.List;
-import java.util.UUID;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +19,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.util.List;
+import java.util.UUID;
 
 @Tag(name = "Hub", description = "허브 관리 API")
 @RequestMapping("/api/v1/hubs")

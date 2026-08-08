@@ -1,6 +1,5 @@
 package com.logistics.hubservice.infrastructure.security;
 
-import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.logistics.common.security.filter.UserContextFilter;
 import com.logistics.common.security.hendler.CustomAccessDeniedHandler;
 import com.logistics.common.security.hendler.CustomAuthenticationEntryPoint;
@@ -14,6 +13,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @EnableWebSecurity

@@ -1,20 +1,21 @@
 package com.logistics.hubservice.presentation.hub;
 
 import com.logistics.common.response.ApiResponse;
-import com.logistics.common.security.CustomUserDetails;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.application.hub.command.HubCommandService;
 import com.logistics.hubservice.application.hub.query.HubQueryService;
 import com.logistics.hubservice.presentation.hub.dto.CreateHubRequest;
 import com.logistics.hubservice.presentation.hub.dto.HubResponseDto;
 import com.logistics.hubservice.presentation.hub.dto.UpdateHubRequest;
 import jakarta.validation.Valid;
-import java.util.List;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
 
 @RestController
 public class HubController implements HubApi {
@@ -57,7 +58,7 @@ public class HubController implements HubApi {
     @Override
     public ResponseEntity<ApiResponse<Void>> delete(
             UUID hubId, @AuthenticationPrincipal CustomUserDetails userDetails) {
-        hubCommandService.delete(hubId, userDetails.getUserId());
+        hubCommandService.delete(hubId, userDetails.getId());
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

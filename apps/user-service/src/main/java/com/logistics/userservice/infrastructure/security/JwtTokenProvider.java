@@ -1,56 +1,123 @@
 package com.logistics.userservice.infrastructure.security;
 
-import com.logistics.userservice.application.dto.TokenClaims;
+import com.logistics.userservice.application.token.TokenClaims;
+import com.logistics.userservice.application.token.TokenPayload;
+import com.logistics.userservice.application.token.TokenProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import jakarta.annotation.PostConstruct;
-import jakarta.servlet.http.HttpServletRequest;
-import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
 import javax.crypto.SecretKey;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
-public class JwtTokenProvider {
+public class JwtTokenProvider implements TokenProvider {
     private final JwtProperties jwtProperties;
 
+    private static final String SESSION_ID = "sessionId";
+    private static final String HUB_ID = "hubId";
+    private static final String COMPANY_ID = "companyId";
+
     /**
-     * JWT 토큰 생성
+     * Access Token 생성
      *
-     * @param tokenClaims 클레임에 담을 사용자 정보
-     * @param sessionId Random UUID
+     * @param tokenClaims
+     * @param sessionId
+     * @return String Access Token
+     */
+    @Override
+    public String generateAccessToken(TokenClaims tokenClaims, UUID sessionId) {
+        SecretKey signingKey = createSigningKey(jwtProperties.accessSecret());
+        long validity = jwtProperties.accessTokenExpirationInMillis();
+
+        return generateToken(tokenClaims, sessionId, signingKey, validity);
+    }
+
+    /**
+     * Refresh Token 생성
+     *
+     * @param tokenClaims
+     * @param sessionId
+     * @return String Refresh Token
+     */
+    @Override
+    public String generateRefreshToken(TokenClaims tokenClaims, UUID sessionId) {
+        SecretKey signingKey = createSigningKey(jwtProperties.refreshSecret());
+        long validity = jwtProperties.refreshTokenExpirationInMillis();
+
+        return generateToken(tokenClaims, sessionId, signingKey, validity);
+    }
+
+    /**
+     * Access Token Claims 파싱
+     *
+     * @param accessToken
+     * @return TokenPayload DTO
+     */
+    @Override
+    public TokenPayload getAllClaimsFromAccessToken(String accessToken) {
+        Claims claims = parseToken(accessToken, createSigningKey(jwtProperties.accessSecret()));
+
+        return toTokenPayload(claims);
+    }
+
+    /**
+     * Refresh Token Claims 파싱
+     *
+     * @param refreshToken
+     * @return TokenPayload DTO
+     */
+    @Override
+    public TokenPayload getAllClaimsFromRefreshToken(String refreshToken) {
+        Claims claims = parseToken(refreshToken, createSigningKey(jwtProperties.refreshSecret()));
+
+        return toTokenPayload(claims);
+    }
+
+    /**
+     * Access Token 만료기간 확인
+     *
+     * @param accessToken
+     * @return 만료기간
+     */
+    @Override
+    public Date getExpirationFromAccessToken(String accessToken) {
+        Claims claims = parseToken(accessToken, createSigningKey(jwtProperties.accessSecret()));
+
+        return claims.getExpiration();
+    }
+
+    /**
+     * Token 생성
+     *
+     * @param tokenClaims
+     * @param sessionId
      * @param signingKey
      * @param validity
-     * @return Access Token || Refresh Token
+     * @return Jwt Token
      */
     private String generateToken(
-            TokenClaims tokenClaims, UUID sessionId, Key signingKey, long validity) {
+            TokenClaims tokenClaims, UUID sessionId, SecretKey signingKey, long validity) {
+        UUID userId = tokenClaims.userId();
+        UUID hubId = tokenClaims.hubId();
+        UUID companyId = tokenClaims.companyId();
+
         Map<String, Object> claims = new HashMap<>();
         Date date = new Date();
 
-        claims.put("sessionId", sessionId.toString());
-        claims.put(
-                "hubId",
-                tokenClaims.hubId() != null ? tokenClaims.hubId().toString() : null); // null 주의
-        claims.put(
-                "companyId",
-                tokenClaims.companyId() != null
-                        ? tokenClaims.companyId().toString()
-                        : null); // null 주의
+        claims.put(SESSION_ID, sessionId.toString());
+        claims.put(HUB_ID, hubId != null ? hubId.toString() : null); // null 주의
+        claims.put(COMPANY_ID, companyId != null ? companyId.toString() : null); // null 주의
 
         return Jwts.builder()
-                .subject(tokenClaims.userId().toString())
+                .subject(userId.toString())
                 .claims(claims)
                 .issuedAt(date)
                 .expiration(new Date(date.getTime() + validity))
@@ -58,104 +125,41 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String generateAccessToken(TokenClaims tokenClaims, UUID sessionId, long validity) {
-        SecretKey signingKey = createSigningKey(jwtProperties.accessSecret());
-        return generateToken(tokenClaims, sessionId, signingKey, validity);
-    }
-
-    public String generateRefreshToken(TokenClaims tokenClaims, UUID sessionId, long validity) {
-        SecretKey signingKey = createSigningKey(jwtProperties.refreshSecret());
-        return generateToken(tokenClaims, sessionId, signingKey, validity);
-    }
-
     /**
-     * JWT 토큰에서 UserId 파싱
-     *
-     * @param token JWT 토큰
-     * @return sub 값 반환 - User PK
-     */
-    public UUID getUserIdFromToken(String token) {
-        return UUID.fromString(getClaimFromToken(token, Claims::getSubject));
-    }
-
-    // Session ID 파싱 - Access Token
-    public UUID getSessionIdFromAccessToken(String accessToken) {
-        Claims claims = getAllClaimsFromToken(accessToken);
-        return UUID.fromString(claims.get("sessionId", String.class));
-    }
-
-    // Session ID 파싱 - Refresh Token
-    public UUID getSessionIdFromRefreshToken(String refreshToken) {
-        Claims claims = getAllClaimsFromRefreshToken(refreshToken);
-        return UUID.fromString(claims.get("sessionId", String.class));
-    }
-
-    // Access Token 유효기간 검증
-    public Date getExpirationDateFromToken(String token) {
-        return getClaimFromToken(token, Claims::getExpiration);
-    }
-
-    /**
-     * JWT TOKEN에서 특정 Claims 추출
-     *
-     * @param token JWT 토큰
-     * @param claimsResolver 람다식
-     * @return 추출 값
-     * @param <T>
-     */
-    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
-        Claims claims = getAllClaimsFromToken(token);
-        return claimsResolver.apply(claims);
-    }
-
-    /**
-     * Access Token 모든 Claims 파싱 후 반환
+     * Token 파싱
      *
      * @param token
-     * @return Claims 값
+     * @param signingKey
+     * @return Claims
      */
-    public Claims getAllClaimsFromToken(String token) {
-        SecretKey signingKey = createSigningKey(jwtProperties.accessSecret());
-        return getAllClaimsFromToken(token, signingKey);
-    }
-
-    /**
-     * Refresh Token 모든 Claims 파싱 후 반환
-     *
-     * @param token
-     * @return Claims 값
-     */
-    public Claims getAllClaimsFromRefreshToken(String token) {
-        SecretKey signingKey = createSigningKey(jwtProperties.refreshSecret());
-        return getAllClaimsFromToken(token, signingKey);
-    }
-
-    /**
-     * 토큰 검증 후 Claims 추출
-     *
-     * @param token JWT 토큰
-     * @param signingKey SecretKey
-     * @return Claims 값
-     */
-    public Claims getAllClaimsFromToken(String token, SecretKey signingKey) {
+    private Claims parseToken(String token, SecretKey signingKey) {
         return Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
     }
 
-    // Access Token 접두사 제거 - Service
-    public String resolveAccessToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader(HttpHeaders.AUTHORIZATION);
-        return resolveBearerToken(bearerToken);
+    /**
+     * DTO 객체 변환
+     *
+     * @param claims
+     * @return TokenPayload
+     */
+    private TokenPayload toTokenPayload(Claims claims) {
+        String hubId = claims.get(HUB_ID, String.class);
+        String companyId = claims.get(COMPANY_ID, String.class);
+
+        return new TokenPayload(
+                UUID.fromString(claims.getSubject()),
+                UUID.fromString(claims.get(SESSION_ID, String.class)),
+                StringUtils.hasText(hubId) ? UUID.fromString(hubId) : null,
+                StringUtils.hasText(companyId) ? UUID.fromString(companyId) : null);
     }
 
-    private String resolveBearerToken(String bearerToken) {
-        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
-        }
-        return null;
-    }
-
+    /**
+     * JWT 시크릿 키 생성
+     *
+     * @param secret
+     * @return SecretKey
+     */
     private SecretKey createSigningKey(String secret) {
-
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
     }
 }
