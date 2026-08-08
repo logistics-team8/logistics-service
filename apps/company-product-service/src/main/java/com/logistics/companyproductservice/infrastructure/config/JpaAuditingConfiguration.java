@@ -1,6 +1,6 @@
 package com.logistics.companyproductservice.infrastructure.config;
 
-import com.logistics.common.security.CustomUserDetails;
+import com.logistics.common.security.principal.CustomUserDetails;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,6 +23,6 @@ public class JpaAuditingConfiguration {
                 .map(Authentication::getPrincipal)
                 .filter(CustomUserDetails.class::isInstance)
                 .map(CustomUserDetails.class::cast)
-                .map(CustomUserDetails::getUserId);
+                .map(CustomUserDetails::getId);
     }
 }
