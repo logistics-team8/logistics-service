@@ -2,13 +2,13 @@ package com.logistics.userservice.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.logistics.infrastructure.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
 import com.logistics.userservice.application.token.TokenResult;
+import com.logistics.userservice.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
-import com.logistics.userservice.presentation.dto.request.LoginRequest;
+import com.logistics.userservice.presentation.dto.auth.LoginRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

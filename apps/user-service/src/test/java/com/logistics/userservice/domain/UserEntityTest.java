@@ -4,7 +4,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
-import com.logistics.userservice.presentation.exception.AuthErrorCode;
+import com.logistics.userservice.error.AuthErrorCode;
 import org.junit.jupiter.api.Test;
 
 class UserEntityTest {
