@@ -1,0 +1,90 @@
+package com.logistics.orderservice.error;
+
+import com.logistics.common.error.ErrorCode;
+import org.springframework.http.HttpStatus;
+
+public enum OrderErrorCode implements ErrorCode {
+
+    ORDER_NOT_FOUND(
+            "ORD_001",
+            HttpStatus.NOT_FOUND,
+            "주문을 찾을 수 없습니다."
+    ),
+
+    ORDER_ITEM_REQUIRED(
+            "ORD_002",
+            HttpStatus.BAD_REQUEST,
+            "주문상품은 1개 이상이어야 합니다."
+    ),
+
+    INVALID_ORDER_QUANTITY(
+            "ORD_003",
+            HttpStatus.BAD_REQUEST,
+            "주문 수량은 1개 이상이어야 합니다."
+    ),
+
+    INVALID_ORDER_STATUS(
+            "ORD_004",
+            HttpStatus.CONFLICT,
+            "현재 주문 상태에서는 해당 작업을 수행할 수 없습니다."
+    ),
+
+    DUPLICATE_ORDER_NUMBER(
+            "ORD_005",
+            HttpStatus.CONFLICT,
+            "이미 사용 중인 주문번호입니다."
+    ),
+
+    PRODUCT_NOT_ASSIGNED(
+            "ORD_006",
+            HttpStatus.CONFLICT,
+            "주문상품 정보가 연결되지 않았습니다."
+    ),
+
+    DELIVERY_NOT_ASSIGNED(
+            "ORD_007",
+            HttpStatus.CONFLICT,
+            "배송 정보가 연결되지 않았습니다."
+    ),
+
+    PRODUCT_ID_REQUIRED(
+            "ORD_008",
+            HttpStatus.BAD_REQUEST,
+            "상품 ID는 필수입니다."
+    ),
+
+    DUPLICATE_ORDER_PRODUCT(
+            "ORD_009",
+            HttpStatus.CONFLICT,
+            "동일한 상품을 중복으로 주문할 수 없습니다."
+    );
+
+    private final String code;
+    private final HttpStatus status;
+    private final String message;
+
+    OrderErrorCode(
+            String code,
+            HttpStatus status,
+            String message
+    ) {
+        this.code = code;
+        this.status = status;
+        this.message = message;
+    }
+
+    @Override
+    public String code() {
+        return code;
+    }
+
+    @Override
+    public HttpStatus status() {
+        return status;
+    }
+
+    @Override
+    public String message() {
+        return message;
+    }
+}
