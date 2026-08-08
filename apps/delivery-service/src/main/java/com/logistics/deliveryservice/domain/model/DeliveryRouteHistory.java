@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.util.UUID;
 import lombok.AccessLevel;
@@ -23,7 +24,13 @@ import lombok.NoArgsConstructor;
  */
 @Getter
 @Entity
-@Table(name = "p_delivery_route_histories")
+@Table(
+        name = "p_delivery_route_histories",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_delivery_route_histories_delivery_sequence",
+                columnNames = {"delivery_id", "route_sequence"}
+        )
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryRouteHistory extends BaseEntity {
 

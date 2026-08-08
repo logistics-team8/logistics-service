@@ -9,8 +9,10 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +27,22 @@ import lombok.NoArgsConstructor;
  */
 @Getter
 @Entity
-@Table(name = "p_deliveries")
+@Table(
+        name = "p_deliveries",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_deliveries_order_id",
+                columnNames = "order_id"
+        ),
+        indexes = {
+                @Index(name = "idx_deliveries_status", columnList = "status"),
+                @Index(name = "idx_deliveries_departure_hub_id", columnList = "departure_hub_id"),
+                @Index(name = "idx_deliveries_arrival_hub_id", columnList = "arrival_hub_id"),
+                @Index(
+                        name = "idx_deliveries_company_delivery_manager_id",
+                        columnList = "company_delivery_manager_id"
+                )
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Delivery extends BaseEntity {
 
