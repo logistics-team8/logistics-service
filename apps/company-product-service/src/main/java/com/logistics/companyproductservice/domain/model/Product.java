@@ -1,11 +1,7 @@
 package com.logistics.companyproductservice.domain.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -16,10 +12,10 @@ import java.util.UUID;
 @Entity
 @Table(name = "p_products")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Product extends BaseEntity {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(nullable = false, length = 100)
@@ -37,9 +33,15 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private Integer stockQuantity;
 
+    private Product(String name, UUID companyId, UUID hubId, BigDecimal unitPrice) {
+        this.name = name;
+        this.companyId = companyId;
+        this.hubId = hubId;
+        this.unitPrice = unitPrice;
+        this.stockQuantity = 0;
+    }
+
     public static Product create(String name, UUID companyId, UUID hubId, BigDecimal unitPrice) {
-        UUID id = UUID.randomUUID();
-        Integer stockQuantity = 0;
-        return new Product(id, name, companyId, hubId, unitPrice, stockQuantity);
+        return new Product(name, companyId, hubId, unitPrice);
     }
 }

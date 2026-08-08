@@ -7,6 +7,8 @@ import com.logistics.companyproductservice.presentation.dto.request.ProductCreat
 import com.logistics.companyproductservice.presentation.dto.response.ProductResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,9 +22,9 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ApiResponse<ProductResponse> createProduct(@RequestBody @Valid ProductCreateRequest request) {
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@RequestBody @Valid ProductCreateRequest request) {
         Product product = productService.create(request);
         ProductResponse response = ProductResponse.from(product);
-        return ApiResponse.success(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
 }
