@@ -64,4 +64,11 @@ public class ProductService {
         product.update(request.getName(), request.getUnitPrice());
         return product;
     }
+    @Transactional
+    public void delete(UUID id, UUID deletedBy) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+        product.delete(deletedBy);
+    }
 }

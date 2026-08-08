@@ -12,6 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.UUID;
 
@@ -37,5 +39,10 @@ public class ProductController {
     public ApiResponse<ProductResponse> updateProduct(@PathVariable UUID id, @RequestBody @Valid ProductUpdateRequest request) {
         Product product = productService.update(id, request);
         return ApiResponse.success(ProductResponse.from(product));
+    }
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteProduct(@PathVariable UUID id, @RequestHeader("X-User-Id") UUID userId) {
+        productService.delete(id, userId);
+        return ApiResponse.success(null);
     }
 }
