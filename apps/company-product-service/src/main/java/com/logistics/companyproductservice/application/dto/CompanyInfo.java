@@ -6,9 +6,16 @@ import java.util.UUID;
 
 public record CompanyInfo(
         UUID id,
-        UUID hubId
+        UUID hubId,
+        String name,
+        String address
 ) {
     public static CompanyInfo from(Company company) {
-        return new CompanyInfo(company.getId(), company.getHubId());
+        return new CompanyInfo(
+                company.getId(),
+                company.getHubId(),
+                company.getName(),
+                company.getAddress()
+        );
     }
 }
