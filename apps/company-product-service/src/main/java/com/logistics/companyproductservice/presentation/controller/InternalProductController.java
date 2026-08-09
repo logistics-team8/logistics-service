@@ -1,15 +1,13 @@
 package com.logistics.companyproductservice.presentation.controller;
 
 import com.logistics.common.response.ApiResponse;
+import com.logistics.companyproductservice.application.dto.ProductInfo;
 import com.logistics.companyproductservice.application.service.ProductService;
 import com.logistics.companyproductservice.presentation.dto.request.StockAdjustRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.UUID;
 
@@ -30,5 +28,9 @@ public class InternalProductController {
     public ApiResponse<Void> restoreStock(@PathVariable UUID id, @RequestBody @Valid StockAdjustRequest request) {
         productService.restoreStock(id, request.getQuantity());
         return ApiResponse.success(null);
+    }
+    @GetMapping("/{productId}")
+    public ProductInfo getProductInfo(@PathVariable UUID productId) {
+        return productService.getProductInfo(productId);
     }
 }

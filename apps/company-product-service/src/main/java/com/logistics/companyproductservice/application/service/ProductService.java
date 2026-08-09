@@ -2,6 +2,7 @@ package com.logistics.companyproductservice.application.service;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
+import com.logistics.companyproductservice.application.dto.ProductInfo;
 import com.logistics.companyproductservice.application.error.ProductErrorCode;
 import com.logistics.companyproductservice.application.page.PageableUtil;
 import com.logistics.companyproductservice.domain.model.Product;
@@ -79,5 +80,11 @@ public class ProductService {
     public Page<ProductResponse> search(String name, Pageable pageable) {
         Pageable normalized = PageableUtil.normalize(pageable);
         return productRepository.search(name, normalized).map(ProductResponse::from);
+    }
+    @Transactional(readOnly = true)
+    public ProductInfo getProductInfo(UUID productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+        return ProductInfo.from(product);
     }
 }
