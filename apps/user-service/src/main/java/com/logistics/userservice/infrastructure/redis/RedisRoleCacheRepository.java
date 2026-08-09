@@ -2,6 +2,7 @@ package com.logistics.userservice.infrastructure.redis;
 
 import com.logistics.userservice.domain.redis.RoleCacheRepository;
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -22,6 +23,11 @@ public class RedisRoleCacheRepository implements RoleCacheRepository {
     @Override
     public void delete(UUID userId) {
         redisTemplate.delete(generateKey(userId));
+    }
+
+    @Override
+    public Optional<String> findByUserId(UUID userId) {
+        return Optional.ofNullable(redisTemplate.opsForValue().get(generateKey(userId)));
     }
 
     private String generateKey(UUID userId) {

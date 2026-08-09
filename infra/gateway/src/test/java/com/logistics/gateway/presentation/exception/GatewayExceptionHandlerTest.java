@@ -2,7 +2,7 @@ package com.logistics.gateway.presentation.exception;
 
 import com.logistics.gateway.config.TestFilterConfig;
 import com.logistics.gateway.config.TestRouteConfig;
-import com.logistics.gateway.presentation.error.GatewayErrorCode;
+import com.logistics.gateway.error.GatewayErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

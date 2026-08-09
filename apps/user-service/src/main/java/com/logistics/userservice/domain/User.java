@@ -3,12 +3,15 @@ package com.logistics.userservice.domain;
 import com.github.f4b6a3.uuid.UuidCreator;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.error.AuthErrorCode;
 import com.logistics.userservice.infrastructure.config.BaseEntity;
-import com.logistics.userservice.presentation.exception.AuthErrorCode;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Entity
@@ -39,7 +42,7 @@ public class User extends BaseEntity {
 
     @Column private UUID companyId;
 
-    @Column
+    @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private Role role;
 
@@ -47,7 +50,8 @@ public class User extends BaseEntity {
 
     @Column private LocalDateTime approvedAt;
 
-    @Column private String rejectionReason;
+    @Column(length = 255)
+    private String rejectionReason;
 
     public static User create(UserSignUpCommand command) {
         User user = new User();
@@ -66,7 +70,6 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
-    /** 사용자 검증 */
     public void validateActive() {
         if (this.userStatus == UserStatus.PENDING) {
             throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
@@ -76,7 +79,24 @@ public class User extends BaseEntity {
         }
     }
 
-    /** UUID v7 삽입 */
+    /** 회원 업데이트 */
+    public void update(String name, String slackId) {
+        if (StringUtils.hasText(name)) {
+            this.name = name;
+        }
+        if (StringUtils.hasText(slackId)) {
+            this.slackId = slackId;
+        }
+    }
+
+    /** 회원 삭제 */
+    public void delete(UUID deletedBy) {
+        super.delete(deletedBy);
+        this.username = this.username + "_" + this.id;
+        this.slackId = this.slackId + "_" + this.id;
+    }
+
+    /** UUID 삽입 */
     @PrePersist
     protected void onCreate() {
         if (this.id == null) {

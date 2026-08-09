@@ -1,7 +1,7 @@
 package com.logistics.gateway;
 
-import com.logistics.gateway.infrastructure.config.PathProperties;
-import com.logistics.gateway.infrastructure.security.JwtProperties;
+import com.logistics.gateway.config.PathProperties;
+import com.logistics.gateway.security.JwtProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
