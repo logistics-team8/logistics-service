@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -44,5 +45,9 @@ public class InternalProductController {
     public ApiResponse<Void> restoreStockBatch(@RequestBody @Valid StockBatchAdjustRequest request) {
         productService.restoreStockBatch(request);
         return ApiResponse.success(null);
+    }
+    @GetMapping("/batch")
+    public List<ProductInfo> getProductInfos(@RequestParam List<UUID> ids) {
+        return productService.getProductInfos(ids);
     }
 }

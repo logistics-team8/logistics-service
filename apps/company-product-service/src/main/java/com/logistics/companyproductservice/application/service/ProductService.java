@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -111,5 +112,11 @@ public class ProductService {
 
             product.increaseStock(item.getQuantity());
         }
+    }
+    @Transactional(readOnly = true)
+    public List<ProductInfo> getProductInfos(List<UUID> productIds) {
+        return productRepository.findAllByIds(productIds).stream()
+                .map(ProductInfo::from)
+                .toList();
     }
 }
