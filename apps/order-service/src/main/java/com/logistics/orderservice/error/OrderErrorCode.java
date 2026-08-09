@@ -57,7 +57,50 @@ public enum OrderErrorCode implements ErrorCode {
             "ORD_009",
             HttpStatus.CONFLICT,
             "동일한 상품을 중복으로 주문할 수 없습니다."
+    ),
+
+    ORDER_NOT_UPDATABLE(
+            "ORD_010",
+            HttpStatus.CONFLICT,
+            "현재 주문 상태에서는 주문을 수정할 수 없습니다."
+    ),
+
+    ORDER_NOT_DELETABLE(
+            "ORD_011",
+            HttpStatus.CONFLICT,
+            "현재 주문 상태에서는 주문을 삭제할 수 없습니다."
+    ),
+
+    ORDER_ALREADY_DELETED(
+            "ORD_012",
+            HttpStatus.CONFLICT,
+            "이미 삭제된 주문입니다."
+    ),
+
+    ORDER_UPDATE_FORBIDDEN(
+            "ORD_013",
+            HttpStatus.FORBIDDEN,
+            "해당 주문을 수정할 권한이 없습니다."
+    ),
+
+    ORDER_DELETE_FORBIDDEN(
+            "ORD_014",
+            HttpStatus.FORBIDDEN,
+            "해당 주문을 삭제할 권한이 없습니다."
+    ),
+
+    INVALID_REQUESTED_DELIVERY_AT(
+            "ORD_015",
+            HttpStatus.BAD_REQUEST,
+            "희망 납품 일시는 현재 시각으로부터 최소 1일 이후여야 합니다."
+    ),
+
+    REQUESTED_DELIVERY_AT_REQUIRED(
+            "ORD_016",
+            HttpStatus.BAD_REQUEST,
+                "희망 납품 일시는 필수입니다."
     );
+
 
     private final String code;
     private final HttpStatus status;

@@ -1,7 +1,6 @@
 package com.logistics.orderservice.domain.model;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.orderservice.config.BaseEntity;
 import com.logistics.orderservice.error.OrderErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -76,6 +75,11 @@ public class OrderItem extends BaseEntity {
                 productId,
                 quantity
         );
+    }
+
+
+    public void delete(UUID deleteBy){
+        softDelete(deleteBy);
     }
 
 
