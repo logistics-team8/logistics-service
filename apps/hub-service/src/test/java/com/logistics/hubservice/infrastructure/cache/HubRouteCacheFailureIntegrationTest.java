@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.PostgreSqlIntegrationTest;
+import com.logistics.hubservice.application.hubroute.command.HubRouteCommandService;
+import com.logistics.hubservice.application.hubroute.command.UpdateHubRouteCommand;
 import com.logistics.hubservice.application.hubroute.dto.HubRouteResponse;
 import com.logistics.hubservice.application.hubroute.query.HubRouteQueryService;
 import com.logistics.hubservice.domain.hub.Hub;
@@ -49,6 +51,9 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
     private HubRouteQueryService hubRouteQueryService;
 
     @Autowired
+    private HubRouteCommandService hubRouteCommandService;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
@@ -81,6 +86,30 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(response.distanceMeters()).isEqualTo(123_400L);
     }
 
+    @Test
+    @DisplayName("캐시 제거에 실패해도 허브 경로 수정은 완료한다")
+    void updatePersistsRouteWhenCacheEvictionFails() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                123_400L,
+                7_200L
+        ));
+
+        HubRouteResponse response = hubRouteCommandService.update(
+                route.getId(),
+                new UpdateHubRouteCommand(130_000L, null));
+
+        assertThat(response.distanceMeters()).isEqualTo(130_000L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select distance_meters from p_hub_routes where id = ?",
+                Long.class,
+                route.getId()))
+                .isEqualTo(130_000L);
+    }
+
     private Hub saveHub(String name) {
         return hubRepository.save(Hub.create(
                 name,
@@ -107,6 +136,16 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
             cacheManager.setCaches(List.of(new ConcurrentMapCache("hubRouteById") {
                 @Override
                 protected Object lookup(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+
+                @Override
+                public void evict(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+            }, new ConcurrentMapCache("hubRoutePath") {
+                @Override
+                public void clear() {
                     throw new IllegalStateException("Redis unavailable");
                 }
             }));
