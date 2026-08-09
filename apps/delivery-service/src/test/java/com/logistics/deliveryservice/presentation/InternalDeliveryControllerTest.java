@@ -3,6 +3,7 @@ package com.logistics.deliveryservice.presentation;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -11,7 +12,9 @@ import com.logistics.common.web.GlobalExceptionHandler;
 import com.logistics.deliveryservice.application.command.CreateDeliveryCommand;
 import com.logistics.deliveryservice.application.dto.CreateDeliveryResponse;
 import com.logistics.deliveryservice.application.dto.CreateDeliveryResult;
+import com.logistics.deliveryservice.application.dto.GetDeliveryByOrderResponse;
 import com.logistics.deliveryservice.application.service.CreateDeliveryService;
+import com.logistics.deliveryservice.application.service.GetDeliveryByOrderService;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.DeliveryStatus;
@@ -50,6 +53,9 @@ class InternalDeliveryControllerTest {
     @MockitoBean
     private CreateDeliveryService createDeliveryService;
 
+    @MockitoBean
+    private GetDeliveryByOrderService getDeliveryByOrderService;
+
     @Test
     void returnsCreatedForFirstRequest() throws Exception {
         when(createDeliveryService.create(any(CreateDeliveryCommand.class)))
@@ -79,6 +85,34 @@ class InternalDeliveryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orderId").value(ORDER_ID.toString()))
                 .andExpect(jsonPath("$.error").doesNotExist());
+    }
+
+    @Test
+    void returnsDeliveryForOrder() throws Exception {
+        when(getDeliveryByOrderService.getByOrderId(ORDER_ID)).thenReturn(queryResponse());
+
+        mockMvc.perform(get("/internal/v1/deliveries/by-order/{orderId}", ORDER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.deliveryId").value(DELIVERY_ID.toString()))
+                .andExpect(jsonPath("$.data.orderId").value(ORDER_ID.toString()))
+                .andExpect(jsonPath("$.data.status").value("HUB_WAITING"))
+                .andExpect(jsonPath("$.data.routes[0].sequence").value(1))
+                .andExpect(jsonPath("$.error").doesNotExist());
+
+        verify(getDeliveryByOrderService).getByOrderId(ORDER_ID);
+    }
+
+    @Test
+    void returnsNotFoundWhenDeliveryForOrderDoesNotExist() throws Exception {
+        when(getDeliveryByOrderService.getByOrderId(ORDER_ID))
+                .thenThrow(new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        mockMvc.perform(get("/internal/v1/deliveries/by-order/{orderId}", ORDER_ID))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.error.code").value("DEL_001"))
+                .andExpect(jsonPath("$.error.message")
+                        .value(DeliveryErrorCode.DELIVERY_NOT_FOUND.message()));
     }
 
     @Test
@@ -158,6 +192,33 @@ class InternalDeliveryControllerTest {
                 null,
                 null,
                 List.of(new CreateDeliveryResponse.RouteResponse(
+                        ROUTE_ID,
+                        1,
+                        DEPARTURE_HUB_ID,
+                        ARRIVAL_HUB_ID,
+                        new BigDecimal("12.5"),
+                        30,
+                        RouteStatus.WAITING,
+                        HUB_MANAGER_ID
+                ))
+        );
+    }
+
+    private GetDeliveryByOrderResponse queryResponse() {
+        return new GetDeliveryByOrderResponse(
+                DELIVERY_ID,
+                ORDER_ID,
+                REQUESTER_ID,
+                DeliveryStatus.HUB_WAITING,
+                DEPARTURE_HUB_ID,
+                ARRIVAL_HUB_ID,
+                "서울시 중구 세종대로 1",
+                "홍길동",
+                "receiver",
+                COMPANY_MANAGER_ID,
+                null,
+                null,
+                List.of(new GetDeliveryByOrderResponse.RouteResponse(
                         ROUTE_ID,
                         1,
                         DEPARTURE_HUB_ID,
