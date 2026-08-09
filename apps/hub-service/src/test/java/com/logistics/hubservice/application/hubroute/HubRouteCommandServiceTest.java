@@ -35,6 +35,8 @@ class HubRouteCommandServiceTest {
             UUID.fromString("01b6e9a4-5d93-4c22-b7ce-cb2f60c403d6");
     private static final UUID DESTINATION_HUB_ID =
             UUID.fromString("b44a6de8-51ae-4f34-b3ad-a484ae85583c");
+    private static final UUID DELETED_BY =
+            UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
@@ -166,6 +168,44 @@ class HubRouteCommandServiceTest {
                 .containsExactly("수정할 이동 거리나 소요 시간을 하나 이상 입력해야 합니다.");
         assertThat(validator.validate(new UpdateHubRouteCommand(1L, null))).isEmpty();
         assertThat(validator.validate(new UpdateHubRouteCommand(null, 1L))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("활성 허브 경로를 삭제하면 요청자와 삭제 시각을 기록하고 활성 조회에서 제외한다")
+    void deleteSoftDeletesActiveRoute() {
+        HubRouteResponse createdRoute = service.create(new CreateHubRouteCommand(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        ));
+
+        service.delete(createdRoute.hubRouteId(), DELETED_BY);
+
+        HubRoute deletedRoute = hubRouteRepository.routes.get(createdRoute.hubRouteId());
+        assertThat(deletedRoute.getDeletedAt()).isNotNull();
+        assertThat(deletedRoute.getDeletedBy()).isEqualTo(DELETED_BY);
+        assertThat(hubRouteRepository.findByIdAndDeletedAtIsNull(createdRoute.hubRouteId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("존재하지 않거나 이미 삭제된 허브 경로는 삭제할 수 없다")
+    void deleteRejectsMissingOrDeletedRoute() {
+        assertBusinessException(
+                () -> service.delete(UUID.randomUUID(), DELETED_BY),
+                HubErrorCode.HUB_ROUTE_NOT_FOUND);
+
+        HubRouteResponse createdRoute = service.create(new CreateHubRouteCommand(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        ));
+        service.delete(createdRoute.hubRouteId(), DELETED_BY);
+
+        assertBusinessException(
+                () -> service.delete(createdRoute.hubRouteId(), UUID.randomUUID()),
+                HubErrorCode.HUB_ROUTE_NOT_FOUND);
     }
 
     private static void assertBusinessException(Runnable action, HubErrorCode expectedErrorCode) {

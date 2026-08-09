@@ -2,6 +2,7 @@ package com.logistics.hubservice.presentation.hubroute;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -314,6 +315,103 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    @DisplayName("MASTER는 활성 허브 경로를 논리 삭제하고 요청자 UUID를 기록할 수 있다")
+    void masterCanSoftDeleteActiveHubRoute() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        mockMvc.perform(master(delete("/api/v1/hub-routes/{hubRouteId}", route.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(nullValue()))
+                .andExpect(jsonPath("$.error").value(nullValue()));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hub_routes where id = ?",
+                Boolean.class,
+                route.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_by from p_hub_routes where id = ?",
+                UUID.class,
+                route.getId()))
+                .isEqualTo(MASTER_ID);
+
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", route.getId()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_002"));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 허브 경로는 삭제할 수 없다")
+    void deleteRejectsMissingRoute() throws Exception {
+        mockMvc.perform(master(delete("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_002"));
+    }
+
+    @Test
+    @DisplayName("이미 논리 삭제된 허브 경로는 다시 삭제할 수 없다")
+    void deleteRejectsAlreadyDeletedRoute() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        mockMvc.perform(master(delete("/api/v1/hub-routes/{hubRouteId}", route.getId())))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(master(delete("/api/v1/hub-routes/{hubRouteId}", route.getId())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_002"));
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 허브 경로를 삭제할 수 없다")
+    void nonMasterCannotDeleteHubRoute() throws Exception {
+        mockMvc.perform(authenticated(
+                        delete("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("COMMON_102"));
+    }
+
+    @Test
+    @DisplayName("인증되지 않은 사용자는 허브 경로를 삭제할 수 없다")
+    void unauthenticatedUserCannotDeleteHubRoute() throws Exception {
+        mockMvc.perform(delete("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("COMMON_101"));
+    }
+
+    @Test
+    @DisplayName("허브 경로를 삭제하면 단건 조회 캐시와 모든 최단 경로 캐시를 제거한다")
+    void deleteEvictsOneRouteCacheAndAllShortestPathCaches() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", route.getId()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isOk());
+        redisTemplate.opsForValue().set("hubRoutePath::seoul-busan", "{}");
+        redisTemplate.opsForValue().set("hubRoutePath::incheon-daegu", "{}");
+        assertThat(redisTemplate.keys("hubRouteById::*")).hasSize(1);
+        assertThat(redisTemplate.keys("hubRoutePath::*")).hasSize(2);
+
+        mockMvc.perform(master(delete("/api/v1/hub-routes/{hubRouteId}", route.getId())))
+                .andExpect(status().isOk());
+
+        assertThat(redisTemplate.keys("hubRouteById::*")).isEmpty();
+        assertThat(redisTemplate.keys("hubRoutePath::*")).isEmpty();
+    }
+
+    @Test
     @DisplayName("출발 허브와 도착 허브 조건을 조합하면 활성 경로만 검색한다")
     void searchCombinesHubConditionsAndExcludesDeletedRoutes() throws Exception {
         Hub sourceHub = saveHub("서울 허브");
@@ -525,8 +623,8 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("Swagger 문서에 허브 경로 생성과 조회 및 수정 API를 포함한다")
-    void openApiDocumentsTheHubRouteCreateEndpoint() throws Exception {
+    @DisplayName("Swagger 문서에 허브 경로 생성, 조회, 수정, 삭제 API를 포함한다")
+    void openApiDocumentsHubRouteEndpoints() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post").exists())
@@ -549,7 +647,12 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['400']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['401']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['403']").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['404']").exists());
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['404']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].delete").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].delete.responses['200']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].delete.responses['401']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].delete.responses['403']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].delete.responses['404']").exists());
     }
 
     private Hub saveHub(String name) {

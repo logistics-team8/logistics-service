@@ -2,7 +2,9 @@ package com.logistics.hubservice.domain.hubroute;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -120,5 +122,46 @@ class HubRouteTest {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> hubRoute.update(null, 0L))
                 .withMessage("소요 시간은 0보다 커야 합니다.");
+    }
+
+    @Test
+    @DisplayName("활성 허브 경로를 삭제하면 삭제 시각과 요청자를 기록한다")
+    void deleteRecordsDeletionTimeAndActor() {
+        HubRoute hubRoute = HubRoute.create(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        );
+        UUID deletedBy = UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
+
+        hubRoute.delete(deletedBy);
+
+        assertThat(hubRoute.getDeletedAt()).isNotNull();
+        assertThat(hubRoute.getDeletedBy()).isEqualTo(deletedBy);
+    }
+
+    @Test
+    @DisplayName("논리 삭제된 허브 경로는 다시 삭제하거나 수정할 수 없다")
+    void deletedRouteRejectsFurtherDeletionAndUpdate() {
+        HubRoute hubRoute = HubRoute.create(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        );
+        UUID originalDeletedBy = UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
+        hubRoute.delete(originalDeletedBy);
+        LocalDateTime originalDeletedAt = hubRoute.getDeletedAt();
+
+        assertThatIllegalStateException()
+                .isThrownBy(() -> hubRoute.delete(UUID.randomUUID()))
+                .withMessage("삭제된 허브 경로는 변경할 수 없습니다.");
+        assertThatIllegalStateException()
+                .isThrownBy(() -> hubRoute.update(130_000L, null))
+                .withMessage("삭제된 허브 경로는 변경할 수 없습니다.");
+        assertThat(hubRoute.getDeletedAt()).isEqualTo(originalDeletedAt);
+        assertThat(hubRoute.getDeletedBy()).isEqualTo(originalDeletedBy);
+        assertThat(hubRoute.getDistanceMeters()).isEqualTo(123_400L);
     }
 }

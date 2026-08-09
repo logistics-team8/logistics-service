@@ -110,6 +110,32 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
                 .isEqualTo(130_000L);
     }
 
+    @Test
+    @DisplayName("캐시 제거에 실패해도 허브 경로 삭제는 완료한다")
+    void deletePersistsRouteWhenCacheEvictionFails() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                123_400L,
+                7_200L
+        ));
+
+        hubRouteCommandService.delete(route.getId(), MASTER_ID);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hub_routes where id = ?",
+                Boolean.class,
+                route.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_by from p_hub_routes where id = ?",
+                UUID.class,
+                route.getId()))
+                .isEqualTo(MASTER_ID);
+    }
+
     private Hub saveHub(String name) {
         return hubRepository.save(Hub.create(
                 name,
