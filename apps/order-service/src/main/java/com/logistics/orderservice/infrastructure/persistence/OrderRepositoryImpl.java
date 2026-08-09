@@ -46,5 +46,11 @@ public class OrderRepositoryImpl implements OrderRepository {
                 .findAllByRequesterIdAndDeletedAtIsNull(userId, pageable);
     }
 
+    @Override
+    public Page<Order> findAllByManagedHubIdAndDeletedAtIsNull(UUID hubId, Pageable pageable) {
+        return orderJpaRepository
+                .findAllByManagedHubIdAndDeletedAtIsNull(hubId, pageable);
+    }
+
 
 }

@@ -658,6 +658,140 @@ class OrderTest {
         }
     }
 
+    @Nested
+    @DisplayName("주문 취소")
+    class CancelOrderTest {
+
+        @Test
+        @DisplayName("PENDING 주문을 취소하면 주문과 모든 활성 주문상품이 취소된다")
+        void cancelOrder_success() {
+            Order order = createOrder();
+            UUID canceledBy = UUID.randomUUID();
+            order.addOrderItem(UUID.randomUUID(), 2);
+            order.addOrderItem(UUID.randomUUID(), 3);
+
+            order.cancel(canceledBy);
+
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
+            assertThat(order.getCanceledBy()).isEqualTo(canceledBy);
+            assertThat(order.getCanceledAt()).isNotNull();
+            assertThat(order.getOrderItems()).allSatisfy(item -> {
+                assertThat(item.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
+                assertThat(item.getCanceledBy()).isEqualTo(canceledBy);
+                assertThat(item.getCanceledAt()).isNotNull();
+            });
+        }
+
+        @Test
+        @DisplayName("이미 취소된 주문은 다시 취소할 수 없다")
+        void cancelOrder_alreadyCanceled() {
+            Order order = createOrder();
+            UUID canceledBy = UUID.randomUUID();
+            order.cancel(canceledBy);
+
+            assertThatThrownBy(() -> order.cancel(canceledBy))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(exception -> assertThat(
+                            ((BusinessException) exception).getErrorCode()
+                    ).isEqualTo(OrderErrorCode.ORDER_ALREADY_CANCELED));
+        }
+
+        @Test
+        @DisplayName("PENDING 상태가 아닌 주문은 취소할 수 없다")
+        void cancelOrder_notCancelable() {
+            Order order = createOrder();
+            changeStatus(order, OrderStatus.CONFIRMED);
+
+            assertThatThrownBy(() -> order.cancel(UUID.randomUUID()))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(exception -> assertThat(
+                            ((BusinessException) exception).getErrorCode()
+                    ).isEqualTo(OrderErrorCode.ORDER_NOT_CANCELABLE));
+        }
+    }
+
+    @Nested
+    @DisplayName("주문상품 취소")
+    class CancelOrderItemTest {
+
+        @Test
+        @DisplayName("일부 주문상품만 취소하면 주문 상태는 PENDING을 유지한다")
+        void cancelOrderItem_partial_success() {
+            Order order = createOrder();
+            UUID canceledBy = UUID.randomUUID();
+            order.addOrderItem(UUID.randomUUID(), 2);
+            order.addOrderItem(UUID.randomUUID(), 3);
+            OrderItem target = order.getOrderItems().getFirst();
+            UUID targetId = UUID.randomUUID();
+            ReflectionTestUtils.setField(target, "id", targetId);
+
+            OrderItem canceledItem = order.cancelOrderItem(targetId, canceledBy);
+
+            assertThat(canceledItem).isSameAs(target);
+            assertThat(canceledItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
+            assertThat(canceledItem.getCanceledBy()).isEqualTo(canceledBy);
+            assertThat(canceledItem.getCanceledAt()).isNotNull();
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+            assertThat(order.getCanceledAt()).isNull();
+        }
+
+        @Test
+        @DisplayName("마지막 활성 주문상품을 취소하면 주문도 취소된다")
+        void cancelOrderItem_allCanceled() {
+            Order order = createOrder();
+            UUID canceledBy = UUID.randomUUID();
+            order.addOrderItem(UUID.randomUUID(), 1);
+            OrderItem target = order.getOrderItems().getFirst();
+            UUID targetId = UUID.randomUUID();
+            ReflectionTestUtils.setField(target, "id", targetId);
+
+            order.cancelOrderItem(targetId, canceledBy);
+
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
+            assertThat(order.getCanceledBy()).isEqualTo(canceledBy);
+            assertThat(order.getCanceledAt()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("주문에 속하지 않은 주문상품은 취소할 수 없다")
+        void cancelOrderItem_notFound() {
+            Order order = createOrder();
+            order.addOrderItem(UUID.randomUUID(), 1);
+            ReflectionTestUtils.setField(
+                    order.getOrderItems().getFirst(),
+                    "id",
+                    UUID.randomUUID()
+            );
+
+            assertThatThrownBy(() ->
+                    order.cancelOrderItem(UUID.randomUUID(), UUID.randomUUID())
+            )
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(exception -> assertThat(
+                            ((BusinessException) exception).getErrorCode()
+                    ).isEqualTo(OrderErrorCode.ORDER_ITEM_NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("이미 취소된 주문상품은 다시 취소할 수 없다")
+        void cancelOrderItem_alreadyCanceled() {
+            Order order = createOrder();
+            UUID canceledBy = UUID.randomUUID();
+            order.addOrderItem(UUID.randomUUID(), 1);
+            order.addOrderItem(UUID.randomUUID(), 1);
+            OrderItem target = order.getOrderItems().getFirst();
+            UUID targetId = UUID.randomUUID();
+            ReflectionTestUtils.setField(target, "id", targetId);
+            order.cancelOrderItem(targetId, canceledBy);
+
+            assertThatThrownBy(() -> order.cancelOrderItem(targetId, canceledBy))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(exception -> assertThat(
+                            ((BusinessException) exception).getErrorCode()
+                    ).isEqualTo(OrderErrorCode.ORDER_ITEM_ALREADY_CANCELED));
+        }
+    }
+
     /**
      * 현재 Order에 상태 전환 메서드가 공개되어 있지 않기 때문에
      * 도메인 상태별 테스트를 위해서만 ReflectionTestUtils를 사용한다.

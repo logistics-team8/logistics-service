@@ -37,6 +37,39 @@ public class Order extends BaseEntity {
     @Column(name = "receiver_company_id", nullable = false)
     private UUID receiverCompanyId;
 
+    /**
+     * 수령업체의 소속 허브
+     *
+     * Company Service 연동 후 저장한다.
+     */
+    @Column(name = "destination_hub_id")
+    private UUID destinationHubId;
+
+    /**
+     * 주문 생성 당시 수령업체 주소
+     *
+     * Company Service 연동 후 저장한다.
+     */
+    @Column(name = "delivery_address", length = 255)
+    private String deliveryAddress;
+
+    /**
+     * 주문 생성 당시 수령인 이름
+     *
+     * User Service 연동 후 저장한다.
+     */
+    @Column(name = "receiver_name", length = 100)
+    private String receiverName;
+
+    /**
+     * 주문 생성 당시 수령인 Slack ID
+     *
+     * User Service 연동 후 저장한다.
+     */
+    @Column(name = "receiver_slack_id", length = 100)
+    private String receiverSlackId;
+
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     private OrderStatus status;
@@ -136,8 +169,57 @@ public class Order extends BaseEntity {
                 orderItem -> orderItem.delete(deleteBy)
         );
 
-        softDelete(deleteBy);
+        softDelete(deleteBy, LocalDateTime.now());
     }
+
+
+    public void cancel(UUID canceledBy){
+        validateCancelable();
+
+        this.orderItems.stream()
+                //제외 가능
+                .filter(orderItem ->
+                        orderItem.getDeletedAt() == null
+                )
+                .filter(orderItem ->
+                        !orderItem.isCanceled()
+                )
+                .forEach(orderItem ->
+                        orderItem.cancel(
+                                canceledBy,
+                                LocalDateTime.now()
+                        )
+                );
+        this.status = OrderStatus.CANCELED;
+        this.canceledBy = canceledBy;
+        this.canceledAt = LocalDateTime.now();
+    }
+
+
+    public OrderItem cancelOrderItem(UUID orderItemId, UUID canceledBy) {
+        validateCancelable();
+
+        OrderItem orderItem = orderItems.stream()
+                .filter(item -> item.getId().equals(orderItemId))
+                .findFirst()
+                .orElseThrow( () ->
+                            new BusinessException(OrderErrorCode.ORDER_ITEM_NOT_FOUND)
+                );
+
+        orderItem.cancel(canceledBy, LocalDateTime.now());
+
+        if(orderItems.stream().allMatch(OrderItem::isCanceled)){
+            this.status = OrderStatus.CANCELED;
+            this.canceledBy = canceledBy;
+            this.canceledAt = LocalDateTime.now();
+        }
+
+        return orderItem;
+
+    }
+
+
+
 
 
     //하나의 주문안에 같은 상품ID 중복 방지
@@ -166,4 +248,18 @@ public class Order extends BaseEntity {
             throw new BusinessException(OrderErrorCode.INVALID_REQUESTED_DELIVERY_AT);
         }
     }
+
+    private void validateCancelable(){
+        if (status == OrderStatus.CANCELED) {
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_ALREADY_CANCELED
+            );
+        }
+        if (this.status != OrderStatus.PENDING) {
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_NOT_CANCELABLE
+            );
+        }
+    }
+
 }

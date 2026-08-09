@@ -33,14 +33,13 @@ public record CreateOrderRequest(
                 @Valid CreateOrderItemRequest> items
 ) {
 
-    public CreateOrderCommand toCommand(UUID requesterId) {
+    public CreateOrderCommand toCommand() {
        List<CreateOrderItemCommand> commandItems =
                items.stream()
                        .map(CreateOrderItemRequest::toCommand)
                        .toList();
 
        return new CreateOrderCommand(
-               requesterId,
                receiverCompanyId,
                requestMessage,
                requestedDeliveryAt,
