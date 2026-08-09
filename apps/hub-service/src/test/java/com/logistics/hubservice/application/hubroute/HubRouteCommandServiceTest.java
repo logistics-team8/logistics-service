@@ -189,6 +189,11 @@ class HubRouteCommandServiceTest {
         }
 
         @Override
+        public Page<HubRoute> search(UUID sourceHubId, UUID destinationHubId, Pageable pageable) {
+            return Page.empty(pageable);
+        }
+
+        @Override
         public boolean existsBySourceHubIdAndDestinationHubIdAndDeletedAtIsNull(
                 UUID sourceHubId, UUID destinationHubId) {
             return routes.values().stream()
