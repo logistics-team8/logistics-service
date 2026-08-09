@@ -4,10 +4,10 @@ import com.logistics.common.response.ApiResponse;
 import com.logistics.companyproductservice.application.dto.ProductInfo;
 import com.logistics.companyproductservice.application.service.ProductService;
 import com.logistics.companyproductservice.presentation.dto.request.StockAdjustRequest;
+import com.logistics.companyproductservice.presentation.dto.request.StockBatchAdjustRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.UUID;
 
@@ -32,5 +32,17 @@ public class InternalProductController {
     @GetMapping("/{productId}")
     public ProductInfo getProductInfo(@PathVariable UUID productId) {
         return productService.getProductInfo(productId);
+    }
+
+    @PatchMapping("/decrease-stock")
+    public ApiResponse<Void> decreaseStockBatch(@RequestBody @Valid StockBatchAdjustRequest request) {
+        productService.decreaseStockBatch(request);
+        return ApiResponse.success(null);
+    }
+
+    @PatchMapping("/restore-stock")
+    public ApiResponse<Void> restoreStockBatch(@RequestBody @Valid StockBatchAdjustRequest request) {
+        productService.restoreStockBatch(request);
+        return ApiResponse.success(null);
     }
 }

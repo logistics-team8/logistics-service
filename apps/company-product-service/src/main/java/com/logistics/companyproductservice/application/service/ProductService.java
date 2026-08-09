@@ -9,6 +9,7 @@ import com.logistics.companyproductservice.domain.model.Product;
 import com.logistics.companyproductservice.domain.repository.ProductRepository;
 import com.logistics.companyproductservice.presentation.dto.request.ProductCreateRequest;
 import com.logistics.companyproductservice.presentation.dto.request.ProductUpdateRequest;
+import com.logistics.companyproductservice.presentation.dto.request.StockBatchAdjustRequest;
 import com.logistics.companyproductservice.presentation.dto.response.ProductResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -86,5 +87,29 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
         return ProductInfo.from(product);
+    }
+
+    @Transactional
+    public void decreaseStockBatch(StockBatchAdjustRequest request) {
+        for (StockBatchAdjustRequest.Item item : request.getItems()) {
+            Product product = productRepository.findById(item.getProductId())
+                    .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+            if (!product.hasEnoughStock(item.getQuantity())) {
+                throw new BusinessException(ProductErrorCode.INSUFFICIENT_STOCK);
+            }
+
+            product.decreaseStock(item.getQuantity());
+        }
+    }
+
+    @Transactional
+    public void restoreStockBatch(StockBatchAdjustRequest request) {
+        for (StockBatchAdjustRequest.Item item : request.getItems()) {
+            Product product = productRepository.findById(item.getProductId())
+                    .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+            product.increaseStock(item.getQuantity());
+        }
     }
 }
