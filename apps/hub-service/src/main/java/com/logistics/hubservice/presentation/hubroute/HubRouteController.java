@@ -6,6 +6,7 @@ import com.logistics.hubservice.application.hubroute.command.HubRouteCommandServ
 import com.logistics.hubservice.application.hubroute.query.HubRouteQueryService;
 import com.logistics.hubservice.presentation.hubroute.dto.CreateHubRouteRequest;
 import com.logistics.hubservice.presentation.hubroute.dto.HubRouteResponseDto;
+import com.logistics.hubservice.presentation.hubroute.dto.UpdateHubRouteRequest;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,14 @@ public class HubRouteController implements HubRouteApi {
     public ResponseEntity<ApiResponse<HubRouteResponseDto>> getOne(UUID hubRouteId) {
         HubRouteResponseDto response = HubRouteResponseDto.from(
                 hubRouteQueryService.getOne(hubRouteId));
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<HubRouteResponseDto>> update(
+            UUID hubRouteId, @Valid @RequestBody UpdateHubRouteRequest request) {
+        HubRouteResponseDto response = HubRouteResponseDto.from(
+                hubRouteCommandService.update(hubRouteId, request.toCommand()));
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

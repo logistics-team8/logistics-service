@@ -58,6 +58,17 @@ public class HubRoute extends BaseEntity {
         return new HubRoute(sourceHubId, destinationHubId, distanceMeters, durationSeconds);
     }
 
+    public void update(Long distanceMeters, Long durationSeconds) {
+        if (distanceMeters != null) {
+            validateDistance(distanceMeters);
+            this.distanceMeters = distanceMeters;
+        }
+        if (durationSeconds != null) {
+            validateDuration(durationSeconds);
+            this.durationSeconds = durationSeconds;
+        }
+    }
+
     private static void validate(
             UUID sourceHubId,
             UUID destinationHubId,
@@ -69,9 +80,17 @@ public class HubRoute extends BaseEntity {
         if (sourceHubId.equals(destinationHubId)) {
             throw new IllegalArgumentException("출발 허브와 도착 허브는 달라야 합니다.");
         }
+        validateDistance(distanceMeters);
+        validateDuration(durationSeconds);
+    }
+
+    private static void validateDistance(long distanceMeters) {
         if (distanceMeters <= 0) {
             throw new IllegalArgumentException("이동 거리는 0보다 커야 합니다.");
         }
+    }
+
+    private static void validateDuration(long durationSeconds) {
         if (durationSeconds <= 0) {
             throw new IllegalArgumentException("소요 시간은 0보다 커야 합니다.");
         }

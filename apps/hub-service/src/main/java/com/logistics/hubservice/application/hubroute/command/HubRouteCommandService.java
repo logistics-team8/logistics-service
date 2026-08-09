@@ -9,6 +9,8 @@ import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,19 @@ public class HubRouteCommandService {
                 command.distanceMeters(),
                 command.durationSeconds()
         );
+
+        return HubRouteResponse.from(hubRouteRepository.save(hubRoute));
+    }
+
+    @PreAuthorize("hasRole('MASTER')")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "hubRouteById", key = "#hubRouteId"),
+            @CacheEvict(cacheNames = "hubRoutePath", allEntries = true)
+    })
+    public HubRouteResponse update(UUID hubRouteId, @Valid UpdateHubRouteCommand command) {
+        HubRoute hubRoute = hubRouteRepository.findByIdAndDeletedAtIsNull(hubRouteId)
+                .orElseThrow(() -> new BusinessException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
+        hubRoute.update(command.distanceMeters(), command.durationSeconds());
 
         return HubRouteResponse.from(hubRouteRepository.save(hubRoute));
     }
