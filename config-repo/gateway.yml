@@ -133,14 +133,3 @@ path:
       pattern: /swagger-ui/**
     - method: GET
       pattern: /**/v3/api-docs/**
-
-    # Test
-    - method: ALL
-      pattern: /business-exception
-    - method: ALL
-      pattern: /not-found
-    - method: ALL
-      pattern: /bad-request
-    - method: ALL
-      pattern: /internal-server-error
-
