@@ -59,6 +59,7 @@ public class HubRoute extends BaseEntity {
     }
 
     public void update(Long distanceMeters, Long durationSeconds) {
+        ensureActive();
         if (distanceMeters != null) {
             validateDistance(distanceMeters);
             this.distanceMeters = distanceMeters;
@@ -67,6 +68,12 @@ public class HubRoute extends BaseEntity {
             validateDuration(durationSeconds);
             this.durationSeconds = durationSeconds;
         }
+    }
+
+    public void delete(UUID deletedBy) {
+        ensureActive();
+        this.deletedAt = LocalDateTime.now();
+        this.deletedBy = deletedBy;
     }
 
     private static void validate(
@@ -93,6 +100,12 @@ public class HubRoute extends BaseEntity {
     private static void validateDuration(long durationSeconds) {
         if (durationSeconds <= 0) {
             throw new IllegalArgumentException("소요 시간은 0보다 커야 합니다.");
+        }
+    }
+
+    private void ensureActive() {
+        if (deletedAt != null) {
+            throw new IllegalStateException("삭제된 허브 경로는 변경할 수 없습니다.");
         }
     }
 }

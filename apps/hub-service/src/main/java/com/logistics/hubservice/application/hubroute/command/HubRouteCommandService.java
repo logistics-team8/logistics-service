@@ -48,11 +48,21 @@ public class HubRouteCommandService {
             @CacheEvict(cacheNames = "hubRoutePath", allEntries = true)
     })
     public HubRouteResponse update(UUID hubRouteId, @Valid UpdateHubRouteCommand command) {
-        HubRoute hubRoute = hubRouteRepository.findByIdAndDeletedAtIsNull(hubRouteId)
-                .orElseThrow(() -> new BusinessException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
+        HubRoute hubRoute = findActiveHubRoute(hubRouteId);
         hubRoute.update(command.distanceMeters(), command.durationSeconds());
 
         return HubRouteResponse.from(hubRouteRepository.save(hubRoute));
+    }
+
+    @PreAuthorize("hasRole('MASTER')")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "hubRouteById", key = "#hubRouteId"),
+            @CacheEvict(cacheNames = "hubRoutePath", allEntries = true)
+    })
+    public void delete(UUID hubRouteId, UUID deletedBy) {
+        HubRoute hubRoute = findActiveHubRoute(hubRouteId);
+        hubRoute.delete(deletedBy);
+        hubRouteRepository.save(hubRoute);
     }
 
     private void validateDifferentHubs(UUID sourceHubId, UUID destinationHubId) {
@@ -72,5 +82,10 @@ public class HubRouteCommandService {
                 sourceHubId, destinationHubId)) {
             throw new BusinessException(HubErrorCode.HUB_ROUTE_DUPLICATE);
         }
+    }
+
+    private HubRoute findActiveHubRoute(UUID hubRouteId) {
+        return hubRouteRepository.findByIdAndDeletedAtIsNull(hubRouteId)
+                .orElseThrow(() -> new BusinessException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
     }
 }

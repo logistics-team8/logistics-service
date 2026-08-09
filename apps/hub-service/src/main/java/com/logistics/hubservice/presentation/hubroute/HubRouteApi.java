@@ -2,6 +2,7 @@ package com.logistics.hubservice.presentation.hubroute;
 
 import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.presentation.hubroute.dto.CreateHubRouteRequest;
 import com.logistics.hubservice.presentation.hubroute.dto.HubRouteResponseDto;
 import com.logistics.hubservice.presentation.hubroute.dto.UpdateHubRouteRequest;
@@ -16,6 +17,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -87,4 +90,19 @@ public interface HubRouteApi {
     ResponseEntity<ApiResponse<HubRouteResponseDto>> update(
             @PathVariable UUID hubRouteId,
             @Valid @RequestBody UpdateHubRouteRequest request);
+
+    @Operation(
+            summary = "허브 경로 삭제",
+            description = "MASTER 권한이 필요합니다. 활성 경로를 논리 삭제하고 요청자와 삭제 시각을 기록합니다. "
+                    + "존재하지 않거나 이미 삭제된 경로는 HUB_002로 응답합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "MASTER 권한 필요"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "허브 경로 없음")
+    })
+    @DeleteMapping("/{hubRouteId}")
+    ResponseEntity<ApiResponse<Void>> delete(
+            @PathVariable UUID hubRouteId,
+            @AuthenticationPrincipal CustomUserDetails userDetails);
 }
