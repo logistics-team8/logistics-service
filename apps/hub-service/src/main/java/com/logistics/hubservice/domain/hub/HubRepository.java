@@ -1,8 +1,9 @@
 package com.logistics.hubservice.domain.hub;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface HubRepository {
 
@@ -10,5 +11,7 @@ public interface HubRepository {
 
     Optional<Hub> findByIdAndDeletedAtIsNull(UUID id);
 
-    List<Hub> findAllByDeletedAtIsNullOrderByCreatedAtDesc();
+    Page<Hub> findAllByDeletedAtIsNull(Pageable pageable);
+
+    Page<Hub> search(String keyword, Pageable pageable);
 }
