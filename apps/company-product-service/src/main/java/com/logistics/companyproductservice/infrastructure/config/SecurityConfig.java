@@ -6,6 +6,7 @@ import com.logistics.common.security.hendler.CustomAuthenticationEntryPoint;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -32,7 +33,21 @@ public class SecurityConfig {
                         .accessDeniedHandler(new CustomAccessDeniedHandler(jsonMapper)))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/actuator/health").permitAll()
-                        .anyRequest().permitAll())
+                        .requestMatchers("/internal/**").permitAll()
+
+                        // Company
+                        .requestMatchers(HttpMethod.POST, "/api/v1/companies").hasAnyRole("MASTER", "HUB_MANAGER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/companies/**").hasAnyRole("MASTER", "HUB_MANAGER", "COMPANY_MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/companies/**").hasAnyRole("MASTER", "HUB_MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/companies/**").authenticated()
+
+                        // Product
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products").hasAnyRole("MASTER", "HUB_MANAGER", "COMPANY_MANAGER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyRole("MASTER", "HUB_MANAGER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyRole("MASTER", "HUB_MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").authenticated()
+
+                        .anyRequest().authenticated())
                 .addFilterBefore(new UserContextFilter(), UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
