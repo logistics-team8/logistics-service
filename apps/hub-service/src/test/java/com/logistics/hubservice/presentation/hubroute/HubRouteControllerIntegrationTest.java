@@ -1,5 +1,6 @@
 package com.logistics.hubservice.presentation.hubroute;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,8 +11,12 @@ import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.PostgreSqlIntegrationTest;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
+import com.logistics.hubservice.domain.hubroute.HubRoute;
+import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.math.BigDecimal;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +24,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -32,7 +39,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@DisplayName("HubRoute 생성 API 통합 테스트")
+@DisplayName("HubRoute API 통합 테스트")
 class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
 
     private static final UUID MASTER_ID =
@@ -53,6 +60,15 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
     private HubRepository hubRepository;
 
     @Autowired
+    private HubRouteRepository hubRouteRepository;
+
+    @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
@@ -62,6 +78,7 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .build();
         jdbcTemplate.update("delete from p_hub_routes");
         jdbcTemplate.update("delete from p_hubs");
+        cacheManager.getCache("hubRouteById").clear();
         SecurityContextHolder.clearContext();
     }
 
@@ -125,7 +142,7 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("출발 또는 도착 허브가 존재하지 않으면 허브를 찾을 수 없다")
+    @DisplayName("출발 또는 도착 허브가 존재하지 않으면 경로를 생성할 수 없다")
     void createRejectsMissingHubWithHub001() throws Exception {
         Hub sourceHub = saveHub("서울 허브");
 
@@ -168,7 +185,97 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("Swagger 문서에 허브 경로 생성 API와 오류 응답을 포함한다")
+    @DisplayName("인증된 사용자는 활성 허브 경로를 단건 조회할 수 있다")
+    void authenticatedUserCanGetOneActiveHubRoute() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", route.getId()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.hubRouteId").value(route.getId().toString()))
+                .andExpect(jsonPath("$.data.sourceHubId").value(sourceHub.getId().toString()))
+                .andExpect(jsonPath("$.data.destinationHubId").value(destinationHub.getId().toString()))
+                .andExpect(jsonPath("$.data.distanceMeters").value(123_400L))
+                .andExpect(jsonPath("$.data.durationSeconds").value(7_200L))
+                .andExpect(jsonPath("$.error").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 허브 경로를 조회하면 404를 반환한다")
+    void getOneRejectsMissingRouteWithHub002() throws Exception {
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_002"));
+    }
+
+    @Test
+    @DisplayName("논리 삭제된 허브 경로를 조회하면 404를 반환한다")
+    void getOneRejectsDeletedRouteWithHub002() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                route.getId());
+
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", route.getId()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_002"));
+    }
+
+    @Test
+    @DisplayName("단건 조회 결과를 Redis에 JSON으로 1시간 캐싱한다")
+    void getOneCachesJsonResponseForOneHour() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+        MockHttpServletRequestBuilder request = authenticated(
+                get("/api/v1/hub-routes/{hubRouteId}", route.getId()),
+                HUB_MANAGER_ID,
+                "HUB_MANAGER");
+
+        mockMvc.perform(request)
+                .andExpect(status().isOk());
+
+        Set<String> cacheKeys = redisTemplate.keys("hubRouteById::*");
+        assertThat(cacheKeys).hasSize(1);
+        String cacheKey = cacheKeys.iterator().next();
+        assertThat(redisTemplate.opsForValue().get(cacheKey))
+                .startsWith("{")
+                .contains("\"hubRouteId\"");
+        assertThat(redisTemplate.getExpire(cacheKey, TimeUnit.SECONDS))
+                .isBetween(1L, 3_600L);
+
+        jdbcTemplate.update("delete from p_hub_routes where id = ?", route.getId());
+
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", route.getId()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.hubRouteId").value(route.getId().toString()));
+    }
+
+    @Test
+    @DisplayName("인증되지 않은 사용자는 허브 경로를 단건 조회할 수 없다")
+    void unauthenticatedUserCannotGetOneHubRoute() throws Exception {
+        mockMvc.perform(get("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("COMMON_101"));
+    }
+
+    @Test
+    @DisplayName("Swagger 문서에 허브 경로 생성과 단건 조회 API를 포함한다")
     void openApiDocumentsTheHubRouteCreateEndpoint() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -178,7 +285,11 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post.responses['401']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post.responses['403']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post.responses['404']").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post.responses['409']").exists());
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post.responses['409']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['200']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['401']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['404']").exists());
     }
 
     private Hub saveHub(String name) {
@@ -191,6 +302,18 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
         ));
         SecurityContextHolder.clearContext();
         return hub;
+    }
+
+    private HubRoute saveRoute(UUID sourceHubId, UUID destinationHubId) {
+        authenticate(MASTER_ID, "MASTER");
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHubId,
+                destinationHubId,
+                123_400L,
+                7_200L
+        ));
+        SecurityContextHolder.clearContext();
+        return route;
     }
 
     private String createRequest(

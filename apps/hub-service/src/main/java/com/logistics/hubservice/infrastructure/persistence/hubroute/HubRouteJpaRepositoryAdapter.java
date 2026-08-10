@@ -2,6 +2,7 @@ package com.logistics.hubservice.infrastructure.persistence.hubroute;
 
 import com.logistics.hubservice.domain.hubroute.HubRoute;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -15,6 +16,11 @@ public class HubRouteJpaRepositoryAdapter implements HubRouteRepository {
     @Override
     public HubRoute save(HubRoute hubRoute) {
         return repository.save(hubRoute);
+    }
+
+    @Override
+    public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
+        return repository.findByIdAndDeletedAtIsNull(id);
     }
 
     @Override

@@ -7,7 +7,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,4 +33,16 @@ public interface HubRouteApi {
     @PostMapping
     ResponseEntity<ApiResponse<HubRouteResponseDto>> create(
             @Valid @RequestBody CreateHubRouteRequest request);
+
+    @Operation(
+            summary = "허브 경로 단건 조회",
+            description = "인증이 필요합니다. 삭제되었거나 존재하지 않는 경로는 HUB_002로 응답합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "허브 경로 없음")
+    })
+    @GetMapping("/{hubRouteId}")
+    ResponseEntity<ApiResponse<HubRouteResponseDto>> getOne(
+            @PathVariable UUID hubRouteId);
 }

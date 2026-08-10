@@ -1,14 +1,17 @@
-package com.logistics.hubservice.infrastructure.persistence.hubroute;
+package com.logistics.hubservice.infrastructure.cache;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.PostgreSqlIntegrationTest;
+import com.logistics.hubservice.application.hubroute.dto.HubRouteResponse;
+import com.logistics.hubservice.application.hubroute.query.HubRouteQueryService;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import com.logistics.hubservice.domain.hubroute.HubRoute;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +19,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
+import org.springframework.cache.support.SimpleCacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,7 +33,8 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
+@Import(HubRouteCacheFailureIntegrationTest.FailingCacheManagerConfiguration.class)
+class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
 
     private static final UUID MASTER_ID =
             UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
@@ -35,13 +46,16 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
     private HubRouteRepository hubRouteRepository;
 
     @Autowired
+    private HubRouteQueryService hubRouteQueryService;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void clearTables() {
+    void setUp() {
         jdbcTemplate.update("delete from p_hub_routes");
         jdbcTemplate.update("delete from p_hubs");
-        authenticate(MASTER_ID);
+        authenticate();
     }
 
     @AfterEach
@@ -50,52 +64,21 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("경로를 저장하면 감사 필드를 기록하고 활성 방향성 중복을 조회한다")
-    void savePersistsRouteAndFindsTheActiveDirectionalDuplicate() {
+    @DisplayName("캐시 조회에 실패하면 DB에서 허브 경로를 조회한다")
+    void getOneFallsBackToDatabaseWhenCacheGetFails() {
         Hub sourceHub = saveHub("서울 허브");
         Hub destinationHub = saveHub("대전 허브");
-
-        HubRoute savedRoute = hubRouteRepository.save(HubRoute.create(
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
                 sourceHub.getId(),
                 destinationHub.getId(),
                 123_400L,
                 7_200L
         ));
 
-        assertThat(savedRoute.getId()).isNotNull();
-        assertThat(savedRoute.getCreatedAt()).isNotNull();
-        assertThat(savedRoute.getUpdatedAt()).isNotNull();
-        assertThat(savedRoute.getCreatedBy()).isEqualTo(MASTER_ID);
-        assertThat(savedRoute.getUpdatedBy()).isEqualTo(MASTER_ID);
-        assertThat(hubRouteRepository.existsBySourceHubIdAndDestinationHubIdAndDeletedAtIsNull(
-                sourceHub.getId(), destinationHub.getId()))
-                .isTrue();
-        assertThat(hubRouteRepository.existsBySourceHubIdAndDestinationHubIdAndDeletedAtIsNull(
-                destinationHub.getId(), sourceHub.getId()))
-                .isFalse();
-    }
+        HubRouteResponse response = hubRouteQueryService.getOne(route.getId());
 
-    @Test
-    @DisplayName("ID 조회에서 논리 삭제된 허브 경로를 제외한다")
-    void findByIdReturnsOnlyActiveRoute() {
-        Hub sourceHub = saveHub("서울 허브");
-        Hub destinationHub = saveHub("대전 허브");
-        HubRoute savedRoute = hubRouteRepository.save(HubRoute.create(
-                sourceHub.getId(),
-                destinationHub.getId(),
-                123_400L,
-                7_200L
-        ));
-
-        assertThat(hubRouteRepository.findByIdAndDeletedAtIsNull(savedRoute.getId()))
-                .map(HubRoute::getId)
-                .contains(savedRoute.getId());
-
-        jdbcTemplate.update(
-                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
-                savedRoute.getId());
-
-        assertThat(hubRouteRepository.findByIdAndDeletedAtIsNull(savedRoute.getId())).isEmpty();
+        assertThat(response.hubRouteId()).isEqualTo(route.getId());
+        assertThat(response.distanceMeters()).isEqualTo(123_400L);
     }
 
     private Hub saveHub(String name) {
@@ -107,10 +90,27 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
         ));
     }
 
-    private void authenticate(UUID userId) {
-        CustomUserDetails principal = CustomUserDetails.from(userId, null, null, "MASTER");
+    private void authenticate() {
+        CustomUserDetails principal = CustomUserDetails.from(MASTER_ID, null, null, "MASTER");
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
         );
+    }
+
+    @TestConfiguration(proxyBeanMethods = false)
+    static class FailingCacheManagerConfiguration {
+
+        @Bean
+        @Primary
+        CacheManager failingCacheManager() {
+            SimpleCacheManager cacheManager = new SimpleCacheManager();
+            cacheManager.setCaches(List.of(new ConcurrentMapCache("hubRouteById") {
+                @Override
+                protected Object lookup(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+            }));
+            return cacheManager;
+        }
     }
 }

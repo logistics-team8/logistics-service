@@ -79,7 +79,7 @@ class HubRouteCommandServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않거나 삭제된 허브를 지정하면 허브를 찾을 수 없다")
+    @DisplayName("존재하지 않거나 삭제된 허브를 지정하면 경로를 생성할 수 없다")
     void createRejectsAMissingOrDeletedHubWithHub001() {
         Hub deletedDestination = activeHub(DESTINATION_HUB_ID, "대전 허브");
         deletedDestination.delete(UUID.randomUUID());
@@ -180,6 +180,12 @@ class HubRouteCommandServiceTest {
                     hubRoute, "updatedAt", LocalDateTime.of(2026, 8, 9, 10, 0).plusMinutes(sequence.get()));
             routes.put(hubRoute.getId(), hubRoute);
             return hubRoute;
+        }
+
+        @Override
+        public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
+            return Optional.ofNullable(routes.get(id))
+                    .filter(route -> route.getDeletedAt() == null);
         }
 
         @Override
