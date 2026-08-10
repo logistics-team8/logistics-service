@@ -1,25 +1,30 @@
 package com.logistics.hubservice.infrastructure.persistence.hub;
 
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.hubservice.PostgreSqlIntegrationTest;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class HubJpaRepositoryAdapterTest {
+@DisplayName("Hub JPA 저장소 어댑터")
+class HubJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
 
     @Autowired
     private HubRepository hubRepository;
@@ -49,6 +54,7 @@ class HubJpaRepositoryAdapterTest {
     }
 
     @Test
+    @DisplayName("단일 조회와 검색에서 논리 삭제된 허브를 제외한다")
     void activeQueriesExcludeSoftDeletedHubs() {
         UUID userId = UUID.fromString("c69b113d-0991-4d8c-b7d0-87bdfadd18ae");
         authenticate(userId);
@@ -71,11 +77,49 @@ class HubJpaRepositoryAdapterTest {
                 .map(Hub::getId)
                 .contains(activeHub.getId());
         assertThat(hubRepository.findByIdAndDeletedAtIsNull(deletedHub.getId())).isEmpty();
-        List<Hub> activeHubs = hubRepository.findAllByDeletedAtIsNullOrderByCreatedAtDesc();
-        assertThat(activeHubs)
+        Page<Hub> activeHubs = hubRepository.findAllByDeletedAtIsNull(
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
+        assertThat(activeHubs.getContent())
                 .extracting(Hub::getId)
                 .contains(activeHub.getId())
                 .doesNotContain(deletedHub.getId());
+    }
+
+    @Test
+    @DisplayName("이름 또는 주소를 대소문자 구분 없이 검색하고 삭제된 허브를 제외한다")
+    void searchMatchesNameOrAddressIgnoringCaseAndExcludesDeletedHubs() {
+        UUID userId = UUID.fromString("5136e949-d047-4f31-8da2-e9654dd80f38");
+        authenticate(userId);
+        Hub nameMatch = hubRepository.save(Hub.create(
+                "SEOUL Hub",
+                "Korea",
+                new BigDecimal("37.5145751"),
+                new BigDecimal("127.1122451")
+        ));
+        Hub addressMatch = hubRepository.save(Hub.create(
+                "Busan Hub",
+                "SeOuL Road 55",
+                new BigDecimal("35.1795540"),
+                new BigDecimal("129.0756420")
+        ));
+        Hub deletedMatch = hubRepository.save(Hub.create(
+                "Seoul Deleted Hub",
+                "Korea",
+                new BigDecimal("37.5000000"),
+                new BigDecimal("127.1000000")
+        ));
+        deletedMatch.delete(userId);
+        hubRepository.save(deletedMatch);
+
+        Page<Hub> result = hubRepository.search(
+                "seoul",
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
+        assertThat(result.getContent())
+                .extracting(Hub::getId)
+                .containsExactlyInAnyOrder(addressMatch.getId(), nameMatch.getId())
+                .doesNotContain(deletedMatch.getId());
     }
 
     @Test

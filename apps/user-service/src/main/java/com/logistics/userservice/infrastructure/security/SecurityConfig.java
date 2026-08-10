@@ -55,18 +55,35 @@ public class SecurityConfig {
         httpSecurity.authorizeHttpRequests(
                 (requests) ->
                         // Swagger
-                        requests.requestMatchers("/v3/api-docs/**", "/swagger-ui/**")
+                        requests.requestMatchers(
+                                        "/v3/api-docs/**", "/swagger-ui/**", "/actuator/health")
                                 .permitAll()
 
-                                // 회원가입, 로그인
+                                // 회원가입, 로그인, 토큰 재발급
                                 .requestMatchers(
-                                        HttpMethod.POST, "/api/v1/users", "/api/v1/auth/login")
+                                        HttpMethod.POST,
+                                        "/api/v1/users",
+                                        "/api/v1/auth/login",
+                                        "/api/v1/auth/reissue")
                                 .permitAll()
+
+                                // Hub_Manager
+                                .requestMatchers(
+                                        HttpMethod.PATCH,
+                                        "/api/v1/admin/users/{userId}/approve",
+                                        "/api/v1/admin/users/{userId}/reject")
+                                .hasRole("HUB_MANAGER")
+                                .requestMatchers(
+                                        HttpMethod.GET, "/api/v1/admin/users/pending-approvals")
+                                .hasRole("HUB_MANAGER")
+
+                                // Master
+                                .requestMatchers("/api/v1/admin/**")
+                                .hasRole("MASTER")
 
                                 // 내부 API 허용
                                 .requestMatchers("/internal/**")
                                 .permitAll()
-
                                 .anyRequest()
                                 .authenticated());
 

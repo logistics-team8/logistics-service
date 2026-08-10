@@ -1,19 +1,17 @@
 package com.logistics.userservice.presentation;
 
 import com.logistics.userservice.application.UserService;
-import com.logistics.userservice.application.dto.UserInfo;
-import com.logistics.userservice.application.dto.UserRoleInfo;
-import com.logistics.userservice.application.dto.UserSlackInfo;
+import com.logistics.userservice.presentation.dto.internal.InternalUserInfoResponse;
+import com.logistics.userservice.presentation.dto.internal.InternalUserRoleResponse;
+import com.logistics.userservice.presentation.dto.internal.InternalUserSlackResponse;
 import io.swagger.v3.oas.annotations.Hidden;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Slf4j
 @Hidden
 @RestController
 @RequiredArgsConstructor
@@ -22,17 +20,17 @@ public class InternalUserController {
     private final UserService userService;
 
     @GetMapping("/{userId}")
-    public UserInfo getUserInfo(@PathVariable UUID userId) {
-        return userService.getUserInfo(userId);
+    public InternalUserInfoResponse getUserInfo(@PathVariable UUID userId) {
+        return InternalUserInfoResponse.from(userService.getUserInfo(userId));
     }
 
     @GetMapping("/{userId}/role")
-    public UserRoleInfo getUserRole(@PathVariable UUID userId) {
-        return userService.getUserRole(userId);
+    public InternalUserRoleResponse getUserRole(@PathVariable UUID userId) {
+        return InternalUserRoleResponse.from(userService.getUserRole(userId));
     }
 
     @GetMapping("/{userId}/slack")
-    public UserSlackInfo getUserSlackId(@PathVariable UUID userId) {
-        return userService.getUserSlackId(userId);
+    public InternalUserSlackResponse getUserSlackId(@PathVariable UUID userId) {
+        return InternalUserSlackResponse.from(userService.getUserSlackId(userId));
     }
 }

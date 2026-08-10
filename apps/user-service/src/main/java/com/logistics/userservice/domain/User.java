@@ -2,13 +2,17 @@ package com.logistics.userservice.domain;
 
 import com.github.f4b6a3.uuid.UuidCreator;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
+import com.logistics.userservice.error.AuthErrorCode;
 import com.logistics.userservice.infrastructure.config.BaseEntity;
-import com.logistics.userservice.presentation.exception.AuthErrorCode;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 @Getter
 @Entity
@@ -39,7 +43,7 @@ public class User extends BaseEntity {
 
     @Column private UUID companyId;
 
-    @Column
+    @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private Role role;
 
@@ -47,9 +51,20 @@ public class User extends BaseEntity {
 
     @Column private LocalDateTime approvedAt;
 
-    @Column private String rejectionReason;
+    @Column(length = 255)
+    private String rejectionReason;
 
-    public static User create(UserSignUpCommand command) {
+    public static User create(UserCreateCommand command) {
+        return createBaseUser(command);
+    }
+
+    public static User createByAdmin(UUID approvedBy, UserCreateCommand command) {
+        User user = createBaseUser(command);
+        user.approve(approvedBy);
+        return user;
+    }
+
+    private static User createBaseUser(UserCreateCommand command) {
         User user = new User();
         user.username = command.username();
         user.password = command.password();
@@ -66,7 +81,6 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
-    /** 사용자 검증 */
     public void validateActive() {
         if (this.userStatus == UserStatus.PENDING) {
             throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
@@ -76,7 +90,58 @@ public class User extends BaseEntity {
         }
     }
 
-    /** UUID v7 삽입 */
+    /** 회원 업데이트 */
+    public void update(String name, String slackId) {
+        if (StringUtils.hasText(name)) {
+            this.name = name;
+        }
+        if (StringUtils.hasText(slackId)) {
+            this.slackId = slackId;
+        }
+    }
+
+    /** 회원 삭제 */
+    public void delete(UUID deletedBy) {
+        super.delete(deletedBy);
+        this.username = this.username + "_" + this.id;
+        this.slackId = this.slackId + "_" + this.id;
+    }
+
+    /**
+     * 회원 가입 요청 승인
+     *
+     * @param approvedBy 승인자 UUID
+     */
+    public void approve(UUID approvedBy) {
+        this.userStatus = UserStatus.APPROVED;
+        this.approvedBy = approvedBy;
+        this.approvedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 회원가입 요청 거절
+     *
+     * @param approvedBy 거부자 UUID
+     * @param rejectionReason 거절 사유
+     */
+    public void reject(UUID approvedBy, String rejectionReason) {
+        this.userStatus = UserStatus.REJECTED;
+        this.approvedBy = approvedBy;
+        this.approvedAt = LocalDateTime.now();
+        this.rejectionReason = rejectionReason;
+    }
+
+    /**
+     * 허브 직원 확인
+     *
+     * @param hubId 승인자 허브 ID
+     * @return 결과 boolean
+     */
+    public boolean isManagedByHub(UUID hubId) {
+        return Objects.equals(this.hubId, hubId);
+    }
+
+    /** UUID 삽입 */
     @PrePersist
     protected void onCreate() {
         if (this.id == null) {
