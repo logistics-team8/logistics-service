@@ -15,9 +15,12 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AiRequestLog extends BaseEntity {
 
+     private static final UUID SYSTEM_USER_ID =
+             UUID.fromString("00000000-0000-0000-0000-000000000001");
+
      @Id
      @GeneratedValue(strategy = GenerationType.UUID)
-     @Column
+     @Column(name = "ai_request_id")
      private UUID aiRequestId;
 
      @Column(name = "order_id", nullable = false)
@@ -36,7 +39,7 @@ public class AiRequestLog extends BaseEntity {
      private String modelName;
 
      @Column(name = "response_time_ms")
-     private Integer responseTimeMs;
+     private Long responseTimeMs;
 
      @Enumerated(EnumType.STRING)
      @Column(nullable = false, length = 20)
@@ -50,5 +53,44 @@ public class AiRequestLog extends BaseEntity {
 
      @Column(name = "responded_at")
      private LocalDateTime respondedAt;
+
+     private AiRequestLog(
+             UUID orderId,
+             String prompt
+     ) {
+          this.orderId = orderId;
+          this.prompt = prompt;
+          this.requestedAt = LocalDateTime.now();
+          this.status = AiRequestStatus.PROCESSING;
+          setCreatedBy(SYSTEM_USER_ID);
+     }
+
+     public static AiRequestLog create(
+             UUID orderId,
+             String prompt
+     ) {
+          return new AiRequestLog(orderId, prompt);
+     }
+
+     public void success(
+          String response,
+          LocalDateTime finalDispatchDeadline,
+          String modelName,
+          Long responseTimeMs
+     ){
+
+          this.response = response;
+          this.finalDispatchDeadline = finalDispatchDeadline;
+          this.modelName = modelName;
+          this.responseTimeMs = (long) Math.toIntExact(responseTimeMs);
+          this.status = AiRequestStatus.SUCCESS;
+          this.respondedAt = LocalDateTime.now();
+     }
+
+     public void fail(String failureReason) {
+          this.status = AiRequestStatus.FAILED;
+          this.failureReason = failureReason;
+          this.respondedAt = LocalDateTime.now();
+     }
 
 }

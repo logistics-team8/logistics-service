@@ -1,5 +1,7 @@
 package com.logistics.common.response;
 
+import com.logistics.common.error.CommonErrorCode;
+import com.logistics.common.exception.BusinessException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
@@ -48,5 +50,17 @@ public final class PageableUtil {
                 normalizedSize,
                 pageable.getSort()
         );
+    }
+
+    public static Pageable normalize(Pageable pageable, Set<String> allowedSortProperties) {
+        Pageable normalizedPageable = normalize(pageable);
+        boolean containsUnsupportedSort = normalizedPageable.getSort().stream()
+                .anyMatch(order -> !allowedSortProperties.contains(order.getProperty()));
+
+        if (containsUnsupportedSort) {
+            throw new BusinessException(CommonErrorCode.INVALID_INPUT);
+        }
+
+        return normalizedPageable;
     }
 }

@@ -3,6 +3,7 @@ package com.logistics.userservice.infrastructure.security;
 import com.logistics.userservice.application.token.TokenClaims;
 import com.logistics.userservice.application.token.TokenPayload;
 import com.logistics.userservice.application.token.TokenProvider;
+import com.logistics.userservice.infrastructure.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -35,7 +36,7 @@ public class JwtTokenProvider implements TokenProvider {
     @Override
     public String generateAccessToken(TokenClaims tokenClaims, UUID sessionId) {
         SecretKey signingKey = createSigningKey(jwtProperties.accessSecret());
-        long validity = jwtProperties.accessTokenExpirationInMillis();
+        long validity = jwtProperties.accessTokenExpiration().toMillis();
 
         return generateToken(tokenClaims, sessionId, signingKey, validity);
     }
@@ -50,7 +51,7 @@ public class JwtTokenProvider implements TokenProvider {
     @Override
     public String generateRefreshToken(TokenClaims tokenClaims, UUID sessionId) {
         SecretKey signingKey = createSigningKey(jwtProperties.refreshSecret());
-        long validity = jwtProperties.refreshTokenExpirationInMillis();
+        long validity = jwtProperties.refreshTokenExpiration().toMillis();
 
         return generateToken(tokenClaims, sessionId, signingKey, validity);
     }

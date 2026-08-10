@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 public class AiRequestLogRepositoryImpl implements AiRequestLogRepository {
     private final AiRequestLogJpaRepository jpaRepository;
 
-
+    @Override
     public AiRequestLog save(AiRequestLog aiRequestLog) {
         //리포지토리 구현체
         return jpaRepository.save(aiRequestLog);
