@@ -18,6 +18,6 @@ hub-route:
 
 naver:
   maps:
-    base-url: ${NAVER_MAPS_BASE_URL:https://naveropenapi.apigw.ntruss.com}
+    base-url: ${NAVER_MAPS_BASE_URL:https://maps.apigw.ntruss.com}
     api-key-id: ${NAVER_MAPS_API_KEY_ID:}
     api-key: ${NAVER_MAPS_API_KEY:}
