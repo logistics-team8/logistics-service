@@ -3,7 +3,7 @@ package com.logistics.userservice.domain;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.error.AuthErrorCode;
 import org.junit.jupiter.api.Test;
 
@@ -13,8 +13,8 @@ class UserEntityTest {
     @Test
     void validateActive_success() {
         // given
-        UserSignUpCommand command =
-                new UserSignUpCommand(
+        UserCreateCommand command =
+                new UserCreateCommand(
                         "test1234",
                         "Testtest123!",
                         "김철수",
