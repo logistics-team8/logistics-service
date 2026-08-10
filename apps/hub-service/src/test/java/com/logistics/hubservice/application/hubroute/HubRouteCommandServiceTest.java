@@ -246,6 +246,11 @@ class HubRouteCommandServiceTest {
         }
 
         @Override
+        public boolean existsByIdAndDeletedAtIsNull(UUID id) {
+            return findByIdAndDeletedAtIsNull(id).isPresent();
+        }
+
+        @Override
         public Page<Hub> findAllByDeletedAtIsNull(Pageable pageable) {
             return Page.empty(pageable);
         }

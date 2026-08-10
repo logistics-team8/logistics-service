@@ -11,6 +11,8 @@ public interface HubRepository {
 
     Optional<Hub> findByIdAndDeletedAtIsNull(UUID id);
 
+    boolean existsByIdAndDeletedAtIsNull(UUID id);
+
     Page<Hub> findAllByDeletedAtIsNull(Pageable pageable);
 
     Page<Hub> search(String keyword, Pageable pageable);

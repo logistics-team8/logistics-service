@@ -135,6 +135,31 @@ class HubApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("활성 허브만 존재하는 것으로 확인한다")
+    void existsReturnsTrueOnlyForActiveHub() {
+        InMemoryHubRepository repository = new InMemoryHubRepository();
+        Hub activeHub = repository.save(Hub.create(
+                "서울 허브",
+                "서울특별시 송파구 송파대로 55",
+                new BigDecimal("37.5145751"),
+                new BigDecimal("127.1122451")
+        ));
+        Hub deletedHub = repository.save(Hub.create(
+                "부산 허브",
+                "부산광역시 동구 중앙대로 206",
+                new BigDecimal("35.1795540"),
+                new BigDecimal("129.0756420")
+        ));
+        deletedHub.delete(DELETED_BY);
+        repository.save(deletedHub);
+        HubQueryService service = new HubQueryService(repository);
+
+        assertThat(service.exists(activeHub.getId())).isTrue();
+        assertThat(service.exists(deletedHub.getId())).isFalse();
+        assertThat(service.exists(UUID.randomUUID())).isFalse();
+    }
+
+    @Test
     @DisplayName("공백 검색어는 전체 활성 허브로 처리하고 생성일 역순으로 반환한다")
     void searchReturnsOnlyActiveHubsInCreatedAtDescendingOrder() {
         InMemoryHubRepository repository = new InMemoryHubRepository();
@@ -350,6 +375,11 @@ class HubApplicationServiceTest {
         @Override
         public Optional<Hub> findByIdAndDeletedAtIsNull(UUID id) {
             return Optional.ofNullable(hubs.get(id)).filter(hub -> hub.getDeletedAt() == null);
+        }
+
+        @Override
+        public boolean existsByIdAndDeletedAtIsNull(UUID id) {
+            return findByIdAndDeletedAtIsNull(id).isPresent();
         }
 
         @Override
