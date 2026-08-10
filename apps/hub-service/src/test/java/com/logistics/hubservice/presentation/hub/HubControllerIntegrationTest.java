@@ -2,6 +2,7 @@ package com.logistics.hubservice.presentation.hub;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -15,6 +16,8 @@ import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.PostgreSqlIntegrationTest;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
+import com.logistics.hubservice.domain.hubroute.HubRoute;
+import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -63,6 +66,9 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     private HubRepository hubRepository;
 
     @Autowired
+    private HubRouteRepository hubRouteRepository;
+
+    @Autowired
     private CacheManager cacheManager;
 
     @Autowired
@@ -72,12 +78,14 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
-    void clearHubs() {
+    void clearHubsAndRoutes() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .addFilters(springSecurityFilterChain)
                 .build();
+        jdbcTemplate.update("delete from p_hub_routes");
         jdbcTemplate.update("delete from p_hubs");
-        cacheManager.getCache(HUB_BY_ID_CACHE).clear();
+        cacheManager.getCache("hubRouteById").clear();
+        cacheManager.getCache("hubRoutePath").clear();
         SecurityContextHolder.clearContext();
     }
 
@@ -351,13 +359,28 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    void masterCanDeleteHubWithNullSuccessEnvelopeAndDeletedHubReturnsHub001() throws Exception {
+    @DisplayName("MASTER가 허브를 삭제하면 연결된 활성 경로에도 같은 삭제 정보를 기록한다")
+    void masterCanDeleteHubAndItsActiveRoutes() throws Exception {
         Hub hub = saveHub("서울 허브");
+        Hub otherHub = saveHub("대전 허브");
+        Hub thirdHub = saveHub("부산 허브");
+        HubRoute outgoingRoute = saveRoute(hub.getId(), otherHub.getId());
+        HubRoute incomingRoute = saveRoute(thirdHub.getId(), hub.getId());
+        HubRoute unrelatedRoute = saveRoute(otherHub.getId(), thirdHub.getId());
 
         mockMvc.perform(master(delete("/api/v1/hubs/{hubId}", hub.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(nullValue()))
                 .andExpect(jsonPath("$.error").value(nullValue()));
+
+        assertDeletedBy("p_hubs", hub.getId(), MASTER_ID);
+        assertDeletedBy("p_hub_routes", outgoingRoute.getId(), MASTER_ID);
+        assertDeletedBy("p_hub_routes", incomingRoute.getId(), MASTER_ID);
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is null from p_hub_routes where id = ?",
+                Boolean.class,
+                unrelatedRoute.getId()))
+                .isTrue();
 
         mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
                 .andExpect(status().isNotFound())
@@ -366,20 +389,33 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("허브를 논리 삭제하면 단건 조회 캐시를 제거한다")
-    void deleteEvictsHubCache() throws Exception {
+    @DisplayName("허브를 삭제하면 연결 경로의 단건 캐시만 제거하고 모든 최단 경로 캐시를 제거한다")
+    void deleteHubEvictsConnectedRouteCachesAndAllPathCaches() throws Exception {
         Hub hub = saveHub("서울 허브");
-        mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+        Hub otherHub = saveHub("대전 허브");
+        Hub thirdHub = saveHub("부산 허브");
+        HubRoute connectedRoute = saveRoute(hub.getId(), otherHub.getId());
+        HubRoute unrelatedRoute = saveRoute(otherHub.getId(), thirdHub.getId());
+
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", connectedRoute.getId()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
                 .andExpect(status().isOk());
-        assertThat(redisTemplate.hasKey(hubCacheKey(hub.getId()))).isTrue();
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", unrelatedRoute.getId()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isOk());
+        redisTemplate.opsForValue().set("hubRoutePath::seoul-busan", "{}");
+        redisTemplate.opsForValue().set("hubRoutePath::incheon-daegu", "{}");
 
         mockMvc.perform(master(delete("/api/v1/hubs/{hubId}", hub.getId())))
                 .andExpect(status().isOk());
 
-        assertThat(redisTemplate.hasKey(hubCacheKey(hub.getId()))).isFalse();
-        mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error.code").value("HUB_001"));
+        assertThat(redisTemplate.hasKey("hubRouteById::" + connectedRoute.getId())).isFalse();
+        assertThat(redisTemplate.hasKey("hubRouteById::" + unrelatedRoute.getId())).isTrue();
+        assertThat(redisTemplate.keys("hubRoutePath::*")).isEmpty();
     }
 
     @Test
@@ -413,7 +449,7 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("Swagger에 허브 검색 파라미터와 오류 응답을 공개한다")
+    @DisplayName("Swagger에 허브 삭제 시 연결된 활성 경로도 삭제한다는 설명을 공개한다")
     void openApiDocumentIsPubliclyAvailable() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -422,7 +458,9 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/v1/hubs'].get.responses['400']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}'].patch.responses['401']").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}'].delete.responses['401']").exists());
+                .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}'].delete.responses['401']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hubs/{hubId}'].delete.description")
+                        .value(containsString("연결된 활성 경로")));
     }
 
     @Test
@@ -458,8 +496,32 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
         return hub;
     }
 
-    private String hubCacheKey(UUID hubId) {
-        return HUB_BY_ID_CACHE + "::" + hubId;
+    private HubRoute saveRoute(UUID sourceHubId, UUID destinationHubId) {
+        CustomUserDetails principal = CustomUserDetails.from(MASTER_ID, null, null, "MASTER");
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities())
+        );
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHubId,
+                destinationHubId,
+                123_400L,
+                7_200L
+        ));
+        SecurityContextHolder.clearContext();
+        return route;
+    }
+
+    private void assertDeletedBy(String tableName, UUID id, UUID deletedBy) {
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from " + tableName + " where id = ?",
+                Boolean.class,
+                id))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_by from " + tableName + " where id = ?",
+                UUID.class,
+                id))
+                .isEqualTo(deletedBy);
     }
 
     private void updateCreatedAt(Hub hub, LocalDateTime createdAt) {

@@ -10,8 +10,11 @@ import com.logistics.hubservice.application.hub.command.HubCommandService;
 import com.logistics.hubservice.application.hub.command.UpdateHubCommand;
 import com.logistics.hubservice.application.hub.query.HubQueryService;
 import com.logistics.hubservice.application.hub.dto.HubResponse;
+import com.logistics.hubservice.application.hubroute.HubRouteCacheEvictor;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
+import com.logistics.hubservice.domain.hubroute.HubRoute;
+import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
@@ -49,7 +52,8 @@ class HubApplicationServiceTest {
     @Test
     void createReturnsResponseReadyHubProjection() {
         InMemoryHubRepository repository = new InMemoryHubRepository();
-        HubCommandService service = new HubCommandService(repository);
+        HubCommandService service = new HubCommandService(
+                repository, new InMemoryHubRouteRepository(), new HubRouteCacheEvictor());
 
         HubResponse response = service.create(new CreateHubCommand(
                 "서울 허브",
@@ -76,7 +80,8 @@ class HubApplicationServiceTest {
                 new BigDecimal("37.5145751"),
                 new BigDecimal("127.1122451")
         ));
-        HubCommandService service = new HubCommandService(repository);
+        HubCommandService service = new HubCommandService(
+                repository, new InMemoryHubRouteRepository(), new HubRouteCacheEvictor());
 
         HubResponse response = service.update(existingHub.getId(), new UpdateHubCommand(
                 "동서울 허브",
@@ -95,21 +100,54 @@ class HubApplicationServiceTest {
     }
 
     @Test
-    void deleteSoftDeletesAnActiveHub() {
+    @DisplayName("허브를 삭제하면 연결된 활성 경로만 같은 요청자로 논리 삭제한다")
+    void deleteSoftDeletesHubAndOnlyItsActiveRoutes() {
         InMemoryHubRepository repository = new InMemoryHubRepository();
+        InMemoryHubRouteRepository hubRouteRepository = new InMemoryHubRouteRepository();
         Hub existingHub = repository.save(Hub.create(
                 "서울 허브",
                 "서울특별시 송파구 송파대로 55",
                 new BigDecimal("37.5145751"),
                 new BigDecimal("127.1122451")
         ));
-        HubCommandService service = new HubCommandService(repository);
+        Hub otherHub = repository.save(Hub.create(
+                "대전 허브",
+                "대전광역시 유성구 대학로 99",
+                new BigDecimal("36.3504119"),
+                new BigDecimal("127.3845475")
+        ));
+        Hub thirdHub = repository.save(Hub.create(
+                "부산 허브",
+                "부산광역시 동구 중앙대로 206",
+                new BigDecimal("35.1795540"),
+                new BigDecimal("129.0756420")
+        ));
+        HubRoute outgoingRoute = hubRouteRepository.save(
+                HubRoute.create(existingHub.getId(), otherHub.getId(), 123_400L, 7_200L));
+        HubRoute incomingRoute = hubRouteRepository.save(
+                HubRoute.create(thirdHub.getId(), existingHub.getId(), 234_500L, 8_300L));
+        HubRoute unrelatedRoute = hubRouteRepository.save(
+                HubRoute.create(otherHub.getId(), thirdHub.getId(), 345_600L, 9_400L));
+        HubRoute alreadyDeletedRoute = hubRouteRepository.save(
+                HubRoute.create(existingHub.getId(), thirdHub.getId(), 456_700L, 10_500L));
+        UUID previousDeleter = UUID.fromString("a8aa6649-4317-4edc-a059-d34ea7ea761c");
+        alreadyDeletedRoute.delete(previousDeleter);
+        hubRouteRepository.save(alreadyDeletedRoute);
+        HubCommandService service =
+                new HubCommandService(repository, hubRouteRepository, new HubRouteCacheEvictor());
 
         service.delete(existingHub.getId(), DELETED_BY);
 
         assertThat(existingHub.getDeletedAt()).isNotNull();
         assertThat(existingHub.getDeletedBy()).isEqualTo(DELETED_BY);
         assertThat(repository.findByIdAndDeletedAtIsNull(existingHub.getId())).isEmpty();
+        assertThat(outgoingRoute.getDeletedAt()).isNotNull();
+        assertThat(outgoingRoute.getDeletedBy()).isEqualTo(DELETED_BY);
+        assertThat(incomingRoute.getDeletedAt()).isNotNull();
+        assertThat(incomingRoute.getDeletedBy()).isEqualTo(DELETED_BY);
+        assertThat(unrelatedRoute.getDeletedAt()).isNull();
+        assertThat(unrelatedRoute.getDeletedBy()).isNull();
+        assertThat(alreadyDeletedRoute.getDeletedBy()).isEqualTo(previousDeleter);
     }
 
     @Test
@@ -246,7 +284,9 @@ class HubApplicationServiceTest {
         ));
         deletedHub.delete(DELETED_BY);
         repository.save(deletedHub);
-        HubCommandService commandService = new HubCommandService(repository);
+        HubCommandService commandService =
+                new HubCommandService(
+                        repository, new InMemoryHubRouteRepository(), new HubRouteCacheEvictor());
         HubQueryService queryService = new HubQueryService(repository);
         UUID missingHubId = UUID.fromString("6f21f2ae-d913-45db-83e5-1a5695536171");
 
@@ -397,6 +437,55 @@ class HubApplicationServiceTest {
                 default -> throw new IllegalArgumentException("지원하지 않는 정렬 필드입니다.");
             };
             return order.isDescending() ? comparator.reversed() : comparator;
+        }
+    }
+
+    private static final class InMemoryHubRouteRepository implements HubRouteRepository {
+
+        private final Map<UUID, HubRoute> routes = new LinkedHashMap<>();
+        private final AtomicInteger sequence = new AtomicInteger();
+
+        @Override
+        public HubRoute save(HubRoute hubRoute) {
+            if (hubRoute.getId() == null) {
+                ReflectionTestUtils.setField(hubRoute, "id", new UUID(1L, sequence.incrementAndGet()));
+            }
+            routes.put(hubRoute.getId(), hubRoute);
+            return hubRoute;
+        }
+
+        @Override
+        public List<HubRoute> saveAll(List<HubRoute> hubRoutes) {
+            hubRoutes.forEach(this::save);
+            return hubRoutes;
+        }
+
+        @Override
+        public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
+            return Optional.ofNullable(routes.get(id)).filter(route -> route.getDeletedAt() == null);
+        }
+
+        @Override
+        public List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId) {
+            return routes.values().stream()
+                    .filter(route -> route.getDeletedAt() == null)
+                    .filter(route -> route.getSourceHubId().equals(hubId)
+                            || route.getDestinationHubId().equals(hubId))
+                    .toList();
+        }
+
+        @Override
+        public Page<HubRoute> search(UUID sourceHubId, UUID destinationHubId, Pageable pageable) {
+            return Page.empty(pageable);
+        }
+
+        @Override
+        public boolean existsBySourceHubIdAndDestinationHubIdAndDeletedAtIsNull(
+                UUID sourceHubId, UUID destinationHubId) {
+            return routes.values().stream()
+                    .anyMatch(route -> route.getDeletedAt() == null
+                            && route.getSourceHubId().equals(sourceHubId)
+                            && route.getDestinationHubId().equals(destinationHubId));
         }
     }
 }

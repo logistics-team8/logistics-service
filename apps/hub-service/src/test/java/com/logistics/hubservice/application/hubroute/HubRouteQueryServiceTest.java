@@ -157,9 +157,24 @@ class HubRouteQueryServiceTest {
         }
 
         @Override
+        public List<HubRoute> saveAll(List<HubRoute> hubRoutes) {
+            hubRoutes.forEach(this::save);
+            return hubRoutes;
+        }
+
+        @Override
         public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
             return Optional.ofNullable(routes.get(id))
                     .filter(route -> route.getDeletedAt() == null);
+        }
+
+        @Override
+        public List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId) {
+            return routes.values().stream()
+                    .filter(route -> route.getDeletedAt() == null)
+                    .filter(route -> route.getSourceHubId().equals(hubId)
+                            || route.getDestinationHubId().equals(hubId))
+                    .toList();
         }
 
         @Override
