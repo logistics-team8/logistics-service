@@ -55,4 +55,70 @@ class HubRouteTest {
                 .isThrownBy(() -> HubRoute.create(SOURCE_HUB_ID, DESTINATION_HUB_ID, 1L, 0L))
                 .withMessage("소요 시간은 0보다 커야 합니다.");
     }
+
+    @Test
+    @DisplayName("이동 거리만 수정하면 소요 시간과 출발 및 도착 허브는 유지한다")
+    void updateDistancePreservesDurationAndDirectionalHubs() {
+        HubRoute hubRoute = HubRoute.create(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        );
+
+        hubRoute.update(130_000L, null);
+
+        assertThat(hubRoute.getSourceHubId()).isEqualTo(SOURCE_HUB_ID);
+        assertThat(hubRoute.getDestinationHubId()).isEqualTo(DESTINATION_HUB_ID);
+        assertThat(hubRoute.getDistanceMeters()).isEqualTo(130_000L);
+        assertThat(hubRoute.getDurationSeconds()).isEqualTo(7_200L);
+    }
+
+    @Test
+    @DisplayName("소요 시간만 수정하면 이동 거리와 출발 및 도착 허브는 유지한다")
+    void updateDurationPreservesDistanceAndDirectionalHubs() {
+        HubRoute hubRoute = HubRoute.create(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        );
+
+        hubRoute.update(null, 7_500L);
+
+        assertThat(hubRoute.getSourceHubId()).isEqualTo(SOURCE_HUB_ID);
+        assertThat(hubRoute.getDestinationHubId()).isEqualTo(DESTINATION_HUB_ID);
+        assertThat(hubRoute.getDistanceMeters()).isEqualTo(123_400L);
+        assertThat(hubRoute.getDurationSeconds()).isEqualTo(7_500L);
+    }
+
+    @Test
+    @DisplayName("이동 거리를 0 이하로 수정할 수 없다")
+    void updateRejectsNonPositiveDistance() {
+        HubRoute hubRoute = HubRoute.create(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        );
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> hubRoute.update(0L, null))
+                .withMessage("이동 거리는 0보다 커야 합니다.");
+    }
+
+    @Test
+    @DisplayName("소요 시간을 0 이하로 수정할 수 없다")
+    void updateRejectsNonPositiveDuration() {
+        HubRoute hubRoute = HubRoute.create(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        );
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> hubRoute.update(null, 0L))
+                .withMessage("소요 시간은 0보다 커야 합니다.");
+    }
 }

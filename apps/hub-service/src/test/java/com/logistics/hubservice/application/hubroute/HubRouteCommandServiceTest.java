@@ -7,6 +7,7 @@ import com.logistics.common.exception.BusinessException;
 import com.logistics.hubservice.application.hub.HubErrorCode;
 import com.logistics.hubservice.application.hubroute.command.CreateHubRouteCommand;
 import com.logistics.hubservice.application.hubroute.command.HubRouteCommandService;
+import com.logistics.hubservice.application.hubroute.command.UpdateHubRouteCommand;
 import com.logistics.hubservice.application.hubroute.dto.HubRouteResponse;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
@@ -113,6 +114,58 @@ class HubRouteCommandServiceTest {
         assertThat(validator.validate(new CreateHubRouteCommand(
                 null, DESTINATION_HUB_ID, 0L, -1L)))
                 .hasSize(3);
+    }
+
+    @Test
+    @DisplayName("활성 허브 경로의 입력된 이동 거리만 수정한다")
+    void updateChangesOnlyTheSuppliedDistance() {
+        HubRouteResponse createdRoute = service.create(new CreateHubRouteCommand(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        ));
+
+        HubRouteResponse response = service.update(
+                createdRoute.hubRouteId(),
+                new UpdateHubRouteCommand(130_000L, null));
+
+        assertThat(response.hubRouteId()).isEqualTo(createdRoute.hubRouteId());
+        assertThat(response.sourceHubId()).isEqualTo(SOURCE_HUB_ID);
+        assertThat(response.destinationHubId()).isEqualTo(DESTINATION_HUB_ID);
+        assertThat(response.distanceMeters()).isEqualTo(130_000L);
+        assertThat(response.durationSeconds()).isEqualTo(7_200L);
+    }
+
+    @Test
+    @DisplayName("존재하지 않거나 논리 삭제된 허브 경로는 수정할 수 없다")
+    void updateRejectsMissingOrDeletedRoute() {
+        assertBusinessException(
+                () -> service.update(UUID.randomUUID(), new UpdateHubRouteCommand(1L, null)),
+                HubErrorCode.HUB_ROUTE_NOT_FOUND);
+
+        HubRouteResponse createdRoute = service.create(new CreateHubRouteCommand(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID,
+                123_400L,
+                7_200L
+        ));
+        HubRoute deletedRoute = hubRouteRepository.routes.get(createdRoute.hubRouteId());
+        ReflectionTestUtils.setField(deletedRoute, "deletedAt", LocalDateTime.now());
+
+        assertBusinessException(
+                () -> service.update(createdRoute.hubRouteId(), new UpdateHubRouteCommand(1L, null)),
+                HubErrorCode.HUB_ROUTE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("수정할 이동 거리와 소요 시간이 모두 없으면 수정 명령을 검증할 수 없다")
+    void updateCommandRequiresAtLeastOneSuppliedField() {
+        assertThat(validator.validate(new UpdateHubRouteCommand(null, null)))
+                .extracting(violation -> violation.getMessage())
+                .containsExactly("수정할 이동 거리나 소요 시간을 하나 이상 입력해야 합니다.");
+        assertThat(validator.validate(new UpdateHubRouteCommand(1L, null))).isEmpty();
+        assertThat(validator.validate(new UpdateHubRouteCommand(null, 1L))).isEmpty();
     }
 
     private static void assertBusinessException(Runnable action, HubErrorCode expectedErrorCode) {

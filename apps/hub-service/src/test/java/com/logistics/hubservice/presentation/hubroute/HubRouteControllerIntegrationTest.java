@@ -3,6 +3,7 @@ package com.logistics.hubservice.presentation.hubroute;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -82,6 +83,7 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
         jdbcTemplate.update("delete from p_hub_routes");
         jdbcTemplate.update("delete from p_hubs");
         cacheManager.getCache("hubRouteById").clear();
+        cacheManager.getCache("hubRoutePath").clear();
         SecurityContextHolder.clearContext();
     }
 
@@ -185,6 +187,130 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
                         .content(request))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("HUB_003"));
+    }
+
+    @Test
+    @DisplayName("MASTER는 허브 경로의 이동 거리를 부분 수정할 수 있다")
+    void masterCanPartiallyUpdateHubRouteDistance() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        mockMvc.perform(master(patch("/api/v1/hub-routes/{hubRouteId}", route.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "distanceMeters": 130000
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.hubRouteId").value(route.getId().toString()))
+                .andExpect(jsonPath("$.data.sourceHubId").value(sourceHub.getId().toString()))
+                .andExpect(jsonPath("$.data.destinationHubId").value(destinationHub.getId().toString()))
+                .andExpect(jsonPath("$.data.distanceMeters").value(130_000L))
+                .andExpect(jsonPath("$.data.durationSeconds").value(7_200L))
+                .andExpect(jsonPath("$.error").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("수정할 이동 거리와 소요 시간이 모두 없으면 허브 경로를 수정할 수 없다")
+    void updateRejectsRequestWithoutDistanceAndDuration() throws Exception {
+        mockMvc.perform(master(patch("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("COMMON_002"));
+    }
+
+    @Test
+    @DisplayName("이동 거리나 소요 시간을 0 이하로 수정할 수 없다")
+    void updateRejectsNonPositiveDistanceAndDuration() throws Exception {
+        mockMvc.perform(master(patch("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "distanceMeters": 0,
+                                  "durationSeconds": -1
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("COMMON_002"));
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 허브 경로는 수정할 수 없다")
+    void updateRejectsMissingRoute() throws Exception {
+        mockMvc.perform(master(patch("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"distanceMeters\": 1}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_002"));
+    }
+
+    @Test
+    @DisplayName("논리 삭제된 허브 경로는 수정할 수 없다")
+    void updateRejectsDeletedRoute() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                route.getId());
+
+        mockMvc.perform(master(patch("/api/v1/hub-routes/{hubRouteId}", route.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"durationSeconds\": 1}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_002"));
+    }
+
+    @Test
+    @DisplayName("MASTER가 아닌 사용자는 허브 경로를 수정할 수 없다")
+    void nonMasterCannotUpdateHubRoute() throws Exception {
+        mockMvc.perform(authenticated(
+                        patch("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"distanceMeters\": 1}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("COMMON_102"));
+    }
+
+    @Test
+    @DisplayName("인증되지 않은 사용자는 허브 경로를 수정할 수 없다")
+    void unauthenticatedUserCannotUpdateHubRoute() throws Exception {
+        mockMvc.perform(patch("/api/v1/hub-routes/{hubRouteId}", UUID.randomUUID())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"distanceMeters\": 1}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("COMMON_101"));
+    }
+
+    @Test
+    @DisplayName("허브 경로를 수정하면 단건 조회 캐시와 모든 최단 경로 캐시를 제거한다")
+    void updateEvictsOneRouteCacheAndAllShortestPathCaches() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        mockMvc.perform(authenticated(
+                        get("/api/v1/hub-routes/{hubRouteId}", route.getId()),
+                        HUB_MANAGER_ID,
+                        "HUB_MANAGER"))
+                .andExpect(status().isOk());
+        redisTemplate.opsForValue().set("hubRoutePath::seoul-busan", "{}");
+        redisTemplate.opsForValue().set("hubRoutePath::incheon-daegu", "{}");
+        assertThat(redisTemplate.keys("hubRouteById::*")).hasSize(1);
+        assertThat(redisTemplate.keys("hubRoutePath::*")).hasSize(2);
+
+        mockMvc.perform(master(patch("/api/v1/hub-routes/{hubRouteId}", route.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"distanceMeters\": 130000}"))
+                .andExpect(status().isOk());
+
+        assertThat(redisTemplate.keys("hubRouteById::*")).isEmpty();
+        assertThat(redisTemplate.keys("hubRoutePath::*")).isEmpty();
     }
 
     @Test
@@ -399,7 +525,7 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("Swagger 문서에 허브 경로 생성과 조회 API를 포함한다")
+    @DisplayName("Swagger 문서에 허브 경로 생성과 조회 및 수정 API를 포함한다")
     void openApiDocumentsTheHubRouteCreateEndpoint() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -417,7 +543,13 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['200']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['401']").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['404']").exists());
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['404']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['200']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['400']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['401']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['403']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].patch.responses['404']").exists());
     }
 
     private Hub saveHub(String name) {

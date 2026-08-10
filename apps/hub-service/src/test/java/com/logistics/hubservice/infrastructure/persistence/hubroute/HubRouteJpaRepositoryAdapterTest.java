@@ -30,6 +30,8 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
 
     private static final UUID MASTER_ID =
             UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
+    private static final UUID MODIFIER_ID =
+            UUID.fromString("c69b113d-0991-4d8c-b7d0-87bdfadd18ae");
 
     @Autowired
     private HubRepository hubRepository;
@@ -124,6 +126,30 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
         assertThat(result.getContent())
                 .extracting(HubRoute::getId)
                 .containsExactly(matchingRoute.getId());
+    }
+
+    @Test
+    @DisplayName("허브 경로를 수정하면 변경값과 수정 감사 정보를 저장한다")
+    void updatePersistsChangedValuesAndAuditMetadata() throws InterruptedException {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute savedRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+        var originalUpdatedAt = savedRoute.getUpdatedAt();
+
+        Thread.sleep(10);
+        authenticate(MODIFIER_ID);
+        savedRoute.update(130_000L, null);
+        hubRouteRepository.save(savedRoute);
+
+        HubRoute updatedRoute = hubRouteRepository
+                .findByIdAndDeletedAtIsNull(savedRoute.getId())
+                .orElseThrow();
+        assertThat(updatedRoute.getSourceHubId()).isEqualTo(sourceHub.getId());
+        assertThat(updatedRoute.getDestinationHubId()).isEqualTo(destinationHub.getId());
+        assertThat(updatedRoute.getDistanceMeters()).isEqualTo(130_000L);
+        assertThat(updatedRoute.getDurationSeconds()).isEqualTo(7_200L);
+        assertThat(updatedRoute.getUpdatedAt()).isAfter(originalUpdatedAt);
+        assertThat(updatedRoute.getUpdatedBy()).isEqualTo(MODIFIER_ID);
     }
 
     private Hub saveHub(String name) {
