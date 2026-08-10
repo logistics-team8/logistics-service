@@ -7,11 +7,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.logistics.userservice.application.AuthService;
-import com.logistics.userservice.application.dto.UserLoginCommand;
-import com.logistics.userservice.application.token.TokenProvider;
+import com.logistics.userservice.application.dto.auth.UserLoginCommand;
 import com.logistics.userservice.application.token.TokenResult;
 import com.logistics.userservice.config.test.AbstractControllerTest;
 import com.logistics.userservice.error.AuthErrorCode;
+import com.logistics.userservice.presentation.cookie.CookieProvider;
 import com.logistics.userservice.presentation.dto.auth.LoginRequest;
 import jakarta.servlet.http.Cookie;
 import java.util.stream.Stream;
@@ -22,6 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -29,7 +30,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @WebMvcTest(controllers = AuthController.class)
 class AuthControllerUnitTest extends AbstractControllerTest {
     @MockitoBean private AuthService authService;
-    @MockitoBean private TokenProvider tokenProvider;
+    @MockitoBean private CookieProvider cookieProvider;
 
     @Nested
     @DisplayName("로그인 테스트")
@@ -39,9 +40,19 @@ class AuthControllerUnitTest extends AbstractControllerTest {
         void login_success() throws Exception {
             // given
             LoginRequest loginRequest = new LoginRequest("test1234", "Testtest123");
-            TokenResult tokenResult = new TokenResult("accessToken", "refreshToken");
+            String refreshToken = "refreshToken";
+            TokenResult tokenResult = new TokenResult("accessToken", refreshToken);
+
+            ResponseCookie cookie =
+                    ResponseCookie.from("refreshToken", refreshToken)
+                            .maxAge(0)
+                            .path("/")
+                            .sameSite("Strict")
+                            .httpOnly(true)
+                            .build();
 
             given(authService.login(any(UserLoginCommand.class))).willReturn(tokenResult);
+            given(cookieProvider.createRefreshToken(refreshToken)).willReturn(cookie);
 
             // when & then
             mockMvc.perform(
@@ -88,6 +99,11 @@ class AuthControllerUnitTest extends AbstractControllerTest {
             // given
             String accessToken = "accessToken";
 
+            ResponseCookie refreshToken =
+                    ResponseCookie.from("refreshToken", "").maxAge(0).path("/").build();
+
+            given(cookieProvider.deleteRefreshToken()).willReturn(refreshToken);
+
             // when & then
             mockMvc.perform(
                             post("/api/v1/auth/logout")
@@ -131,7 +147,16 @@ class AuthControllerUnitTest extends AbstractControllerTest {
             String refreshToken = "refreshToken";
             TokenResult tokenResult = new TokenResult("accessToken", "refreshToken");
 
+            ResponseCookie cookie =
+                    ResponseCookie.from("refreshToken", refreshToken)
+                            .maxAge(0)
+                            .path("/")
+                            .sameSite("Strict")
+                            .httpOnly(true)
+                            .build();
+
             given(authService.reissue(any())).willReturn(tokenResult);
+            given(cookieProvider.createRefreshToken(refreshToken)).willReturn(cookie);
 
             // when & then
             mockMvc.perform(

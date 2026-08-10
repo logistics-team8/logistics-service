@@ -1,6 +1,6 @@
 package com.logistics.userservice.presentation.dto.user;
 
-import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.domain.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
-public record SignUpRequest(
+public record UserCreateRequest(
         @NotBlank(message = "아이디를 입력해주세요.")
                 @Size(min = 4, max = 10, message = "아이디는 4자 이상 10자 이하로 입력해야 합니다.")
                 @Pattern(regexp = "^[a-z0-9]+$", message = "아이디는 영문 소문자와 숫자만 사용 가능합니다.")
@@ -44,7 +44,7 @@ public record SignUpRequest(
                 @Schema(description = "회원 권한", example = "COMPANY_MANAGER")
                 Role role) {
 
-    public UserSignUpCommand toCommand() {
-        return new UserSignUpCommand(username, password, name, slackId, hubId, companyId, role);
+    public UserCreateCommand toCommand() {
+        return new UserCreateCommand(username, password, name, slackId, hubId, companyId, role);
     }
 }

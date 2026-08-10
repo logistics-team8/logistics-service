@@ -1,6 +1,6 @@
 package com.logistics.userservice.presentation.dto.auth;
 
-import com.logistics.userservice.application.dto.UserLoginCommand;
+import com.logistics.userservice.application.dto.auth.UserLoginCommand;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 

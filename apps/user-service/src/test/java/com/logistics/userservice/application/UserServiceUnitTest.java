@@ -7,13 +7,12 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.UserSignUpCommand;
-import com.logistics.userservice.application.dto.UserUpdateCommand;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
+import com.logistics.userservice.application.dto.user.UserUpdateCommand;
+import com.logistics.userservice.application.validator.UserValidator;
 import com.logistics.userservice.domain.Role;
-import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -23,11 +22,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @DisplayName("UserService - 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class UserServiceUnitTest {
     @Mock private UserRepository userRepository;
+    @Mock private UserValidator userValidator;
+    @Mock private PasswordEncoder passwordEncoder;
     @InjectMocks private UserService userService;
 
     @Nested
@@ -37,8 +39,8 @@ class UserServiceUnitTest {
         @DisplayName("이미 존재하는 아이디일 시 USER_DUPLICATE_USERNAME 예외가 발생해야한다.")
         void createMember_fail_when_username_is_duplicate() {
             // given
-            UserSignUpCommand command =
-                    new UserSignUpCommand(
+            UserCreateCommand command =
+                    new UserCreateCommand(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -47,19 +49,16 @@ class UserServiceUnitTest {
                             UUID.randomUUID(),
                             Role.COMPANY_MANAGER);
 
-            User existUsers = User.create(command);
-
-            given(
-                            userRepository.findByUsernameOrSlackId(
-                                    eq(command.username()), eq(command.slackId())))
-                    .willReturn(List.of(existUsers));
+            doThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME))
+                    .when(userValidator)
+                    .validateDuplicate(command);
 
             // when & then
             assertThatThrownBy(() -> userService.createUser(command))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage(UserErrorCode.USER_DUPLICATE_USERNAME.message());
 
-            verify(userRepository).findByUsernameOrSlackId(command.username(), command.slackId());
+            verify(userValidator).validateDuplicate(command);
             verify(userRepository, never()).saveAndFlush(any());
         }
 
@@ -67,8 +66,8 @@ class UserServiceUnitTest {
         @DisplayName("이미 존재하는 Slack 아이디일 시 USER_DUPLICATE_SLACK_ID 예외가 발생해야한다.")
         void createMember_fail_when_slack_id_is_duplicate() {
             // given
-            UserSignUpCommand command =
-                    new UserSignUpCommand(
+            UserCreateCommand command =
+                    new UserCreateCommand(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -77,28 +76,16 @@ class UserServiceUnitTest {
                             UUID.randomUUID(),
                             Role.COMPANY_MANAGER);
 
-            UserSignUpCommand command2 =
-                    new UserSignUpCommand(
-                            "test12345",
-                            "Testtest123!",
-                            "김철수",
-                            "U123456789",
-                            UUID.randomUUID(),
-                            UUID.randomUUID(),
-                            Role.COMPANY_MANAGER);
-
-            User existUsers = User.create(command2);
-            given(
-                            userRepository.findByUsernameOrSlackId(
-                                    eq(command.username()), eq(command.slackId())))
-                    .willReturn(List.of(existUsers));
+            doThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID))
+                    .when(userValidator)
+                    .validateDuplicate(command);
 
             // when & then
             assertThatThrownBy(() -> userService.createUser(command))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage(UserErrorCode.USER_DUPLICATE_SLACK_ID.message());
 
-            verify(userRepository).findByUsernameOrSlackId(command.username(), command.slackId());
+            verify(userValidator).validateDuplicate(command);
             verify(userRepository, never()).saveAndFlush(any());
         }
     }

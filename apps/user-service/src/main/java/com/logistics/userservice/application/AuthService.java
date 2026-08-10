@@ -2,7 +2,7 @@ package com.logistics.userservice.application;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.UserLoginCommand;
+import com.logistics.userservice.application.dto.auth.UserLoginCommand;
 import com.logistics.userservice.application.token.TokenClaims;
 import com.logistics.userservice.application.token.TokenPayload;
 import com.logistics.userservice.application.token.TokenProvider;
@@ -15,6 +15,7 @@ import com.logistics.userservice.error.AuthErrorCode;
 import com.logistics.userservice.error.UserErrorCode;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -87,7 +88,6 @@ public class AuthService {
      * @param refreshToken
      * @return Token값이 담긴 TokenResult DTO 반환
      */
-    @Transactional(readOnly = true)
     public TokenResult reissue(String refreshToken) {
         try {
             TokenPayload tokenPayload = tokenProvider.getAllClaimsFromRefreshToken(refreshToken);
@@ -95,8 +95,7 @@ public class AuthService {
             String savedRefreshToken;
 
             try {
-                savedRefreshToken =
-                        refreshTokenRepository.findByUserId(tokenPayload.userId()).orElse(null);
+                savedRefreshToken = refreshTokenRepository.findByUserId(userId).orElse(null);
             } catch (DataAccessException e) {
                 log.error("[ERROR] Refresh Token 조회 실패 userId = {}", userId, e);
                 throw new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR);
@@ -112,7 +111,7 @@ public class AuthService {
             TokenClaims tokenClaims =
                     new TokenClaims(user.getId(), user.getHubId(), user.getCompanyId());
 
-            // TODO : 새로운 세션이 아닌 기존 사용자가 재발급 하므로 세션 ID 유지
+            // 새로운 세션이 아닌 기존 사용자가 재발급 하므로 세션 ID 유지
             UUID sessionId = tokenPayload.sessionId();
 
             return createAuthResponse(tokenClaims, sessionId, user.getRole().name());
@@ -137,7 +136,6 @@ public class AuthService {
         UUID userId = tokenClaims.userId();
 
         String accessToken = tokenProvider.generateAccessToken(tokenClaims, sessionId);
-
         String refreshToken = tokenProvider.generateRefreshToken(tokenClaims, sessionId);
 
         try {
@@ -162,15 +160,16 @@ public class AuthService {
      * @param savedToken
      */
     private void validateRefreshToken(String refreshToken, String savedToken) {
-        if (!StringUtils.hasText(savedToken)) {
-            return;
-        }
-
-        if (!refreshToken.equals(savedToken)) {
+        if (!StringUtils.hasText(savedToken) || !Objects.equals(refreshToken, savedToken)) {
             throw new BusinessException(AuthErrorCode.TOKEN_INVALID);
         }
     }
 
+    /**
+     * Redis에서 User 인증 정보 삭제
+     *
+     * @param userId
+     */
     private void deleteUserDataFromRedis(UUID userId) {
         try {
             refreshTokenRepository.delete(userId);
