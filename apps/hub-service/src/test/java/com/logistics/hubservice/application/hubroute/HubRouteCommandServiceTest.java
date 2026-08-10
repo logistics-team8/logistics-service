@@ -18,6 +18,7 @@ import jakarta.validation.Validator;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -279,6 +280,13 @@ class HubRouteCommandServiceTest {
         public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
             return Optional.ofNullable(routes.get(id))
                     .filter(route -> route.getDeletedAt() == null);
+        }
+
+        @Override
+        public List<HubRoute> findAllByDeletedAtIsNull() {
+            return routes.values().stream()
+                    .filter(route -> route.getDeletedAt() == null)
+                    .toList();
         }
 
         @Override

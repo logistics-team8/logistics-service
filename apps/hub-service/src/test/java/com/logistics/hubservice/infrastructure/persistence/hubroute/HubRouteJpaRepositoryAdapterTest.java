@@ -9,6 +9,7 @@ import com.logistics.hubservice.domain.hub.HubRepository;
 import com.logistics.hubservice.domain.hubroute.HubRoute;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -128,6 +129,26 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
         assertThat(result.getContent())
                 .extracting(HubRoute::getId)
                 .containsExactly(matchingRoute.getId());
+    }
+
+    @Test
+    @DisplayName("활성 허브 경로 전체 조회에서 논리 삭제된 경로를 제외한다")
+    void findAllReturnsOnlyActiveRoutes() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        Hub otherHub = saveHub("부산 허브");
+        HubRoute firstActiveRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+        HubRoute secondActiveRoute = saveRoute(destinationHub.getId(), otherHub.getId());
+        HubRoute deletedRoute = saveRoute(otherHub.getId(), sourceHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                deletedRoute.getId());
+
+        List<HubRoute> activeRoutes = hubRouteRepository.findAllByDeletedAtIsNull();
+
+        assertThat(activeRoutes)
+                .extracting(HubRoute::getId)
+                .containsExactlyInAnyOrder(firstActiveRoute.getId(), secondActiveRoute.getId());
     }
 
     @Test
