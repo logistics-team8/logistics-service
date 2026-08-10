@@ -1,6 +1,5 @@
 package com.logistics.companyproductservice.presentation.controller;
 
-import com.logistics.common.response.ApiResponse;
 import com.logistics.companyproductservice.application.dto.CompanyInfo;
 import com.logistics.companyproductservice.application.service.CompanyService;
 import lombok.RequiredArgsConstructor;
@@ -11,18 +10,18 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/internal/companies")
+@RequestMapping("/internal/v1/companies")
 public class InternalCompanyController {
 
     private final CompanyService companyService;
 
     @GetMapping("/{companyId}")
-    public ApiResponse<CompanyInfo> getCompanyInfo(@PathVariable UUID companyId) {
-        return ApiResponse.success(companyService.getCompanyInfo(companyId));
+    public CompanyInfo getCompanyInfo(@PathVariable UUID companyId) {
+        return companyService.getCompanyInfo(companyId);
     }
 
     @GetMapping("/batch")
-    public ApiResponse<List<CompanyInfo>> getCompanyInfos(@RequestParam List<UUID> ids) {
-        return ApiResponse.success(companyService.getCompanyInfos(ids));
+    public List<CompanyInfo> getCompanyInfos(@RequestParam List<UUID> ids) {
+        return companyService.getCompanyInfos(ids);
     }
 }
