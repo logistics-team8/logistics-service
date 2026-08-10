@@ -3,6 +3,7 @@ package com.logistics.companyproductservice.application.service;
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.response.PageableUtil;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.companyproductservice.application.dto.ProductInfo;
 import com.logistics.companyproductservice.application.error.ProductErrorCode;
 import com.logistics.companyproductservice.domain.model.Product;
@@ -26,12 +27,14 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class ProductService {
 
-    private static final Set<String> ALLOWED_SORT = Set.of("createdAt", "name");
+    private static final Set<String> ALLOWED_SORT = Set.of("createdAt", "updatedAt");
 
     private final ProductRepository productRepository;
 
     @Transactional
-    public Product create(ProductCreateRequest request) {
+    public Product create(ProductCreateRequest request, CustomUserDetails userDetails) {
+        validateScope(request.getCompanyId(), request.getHubId(), userDetails);
+
         // TODO: company-service에 request.getCompanyId()가 실제 존재하는 Company인지 검증 필요
         // TODO: hub-service에 request.getHubId()가 실제 존재하는 Hub인지 검증 필요
         Product product = Product.create(
@@ -69,25 +72,29 @@ public class ProductService {
     }
 
     @Transactional
-    public Product update(UUID id, ProductUpdateRequest request) {
+    public Product update(UUID id, ProductUpdateRequest request, CustomUserDetails userDetails) {
         Product product = productRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
+
+        validateScope(product.getCompanyId(), product.getHubId(), userDetails);
 
         product.update(request.getName(), request.getUnitPrice());
         return product;
     }
 
     @Transactional
-    public void delete(UUID id, UUID deletedBy) {
+    public void delete(UUID id, CustomUserDetails userDetails) {
         Product product = productRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
 
-        product.delete(deletedBy);
+        validateScope(product.getCompanyId(), product.getHubId(), userDetails);
+        product.delete(userDetails.getId());
     }
 
-    public Page<ProductResponse> search(String name, Pageable pageable) {
+    public Page<ProductResponse> search(String name, CustomUserDetails userDetails, Pageable pageable) {
         Pageable normalized = PageableUtil.normalize(pageable, ALLOWED_SORT);
-        return productRepository.search(name, normalized).map(ProductResponse::from);
+        UUID hubFilter = "HUB_MANAGER".equals(userDetails.getRole()) ? userDetails.getHubId() : null;
+        return productRepository.search(name, hubFilter, normalized).map(ProductResponse::from);
     }
 
     public ProductInfo getProductInfo(UUID productId) {
@@ -126,5 +133,19 @@ public class ProductService {
             throw new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND);
         }
         return products.stream().map(ProductInfo::from).toList();
+    }
+
+    private void validateScope(UUID companyId, UUID hubId, CustomUserDetails userDetails) {
+        String role = userDetails.getRole();
+        if ("MASTER".equals(role)) {
+            return;
+        }
+        if ("HUB_MANAGER".equals(role) && hubId.equals(userDetails.getHubId())) {
+            return;
+        }
+        if ("COMPANY_MANAGER".equals(role) && companyId.equals(userDetails.getCompanyId())) {
+            return;
+        }
+        throw new BusinessException(ProductErrorCode.NOT_OWNED_PRODUCT);
     }
 }

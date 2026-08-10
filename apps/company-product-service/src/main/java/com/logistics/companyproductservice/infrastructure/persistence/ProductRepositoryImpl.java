@@ -33,8 +33,17 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public Page<Product> search(String name, Pageable pageable) {
-        if (name != null && !name.isBlank()) {
+    public Page<Product> search(String name, UUID hubId, Pageable pageable) {
+        boolean hasName = name != null && !name.isBlank();
+        boolean hasHub = hubId != null;
+
+        if (hasName && hasHub) {
+            return productJpaRepository.findAllByNameContainingAndHubIdAndDeletedAtIsNull(name, hubId, pageable);
+        }
+        if (hasHub) {
+            return productJpaRepository.findAllByHubIdAndDeletedAtIsNull(hubId, pageable);
+        }
+        if (hasName) {
             return productJpaRepository.findAllByNameContainingAndDeletedAtIsNull(name, pageable);
         }
         return productJpaRepository.findAllByDeletedAtIsNull(pageable);

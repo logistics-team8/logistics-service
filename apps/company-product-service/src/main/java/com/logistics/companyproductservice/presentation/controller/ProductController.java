@@ -29,8 +29,10 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@RequestBody @Valid ProductCreateRequest request) {
-        Product product = productService.create(request);
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
+            @RequestBody @Valid ProductCreateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Product product = productService.create(request, userDetails);
         ProductResponse response = ProductResponse.from(product);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
@@ -42,8 +44,11 @@ public class ProductController {
     }
 
     @PatchMapping("/{id}")
-    public ApiResponse<ProductResponse> updateProduct(@PathVariable UUID id, @RequestBody @Valid ProductUpdateRequest request) {
-        Product product = productService.update(id, request);
+    public ApiResponse<ProductResponse> updateProduct(
+            @PathVariable UUID id,
+            @RequestBody @Valid ProductUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Product product = productService.update(id, request, userDetails);
         return ApiResponse.success(ProductResponse.from(product));
     }
 
@@ -51,16 +56,17 @@ public class ProductController {
     public ApiResponse<Void> deleteProduct(
             @PathVariable UUID id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        productService.delete(id, userDetails.getId());
+        productService.delete(id, userDetails);
         return ApiResponse.success(null);
     }
 
     @GetMapping
     public ApiResponse<PageResponse<ProductResponse>> getProducts(
             @RequestParam(required = false) String name,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Page<ProductResponse> page = productService.search(name, pageable);
+        Page<ProductResponse> page = productService.search(name, userDetails, pageable);
         return ApiResponse.success(PageResponse.from(page));
     }
 }

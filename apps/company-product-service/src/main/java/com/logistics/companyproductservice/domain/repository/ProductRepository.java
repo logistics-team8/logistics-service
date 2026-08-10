@@ -13,5 +13,5 @@ public interface ProductRepository {
     Optional<Product> findByIdAndDeletedAtIsNull(UUID id);
     Optional<Product> findByIdForUpdate(UUID id);
     List<Product> findAllByIds(List<UUID> ids);
-    Page<Product> search(String name, Pageable pageable);
+    Page<Product> search(String name, UUID hubId, Pageable pageable);
 }
