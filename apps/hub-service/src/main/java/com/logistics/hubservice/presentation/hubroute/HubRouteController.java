@@ -2,6 +2,7 @@ package com.logistics.hubservice.presentation.hubroute;
 
 import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.application.hubroute.command.HubRouteCommandService;
 import com.logistics.hubservice.application.hubroute.query.HubRouteQueryService;
 import com.logistics.hubservice.presentation.hubroute.dto.CreateHubRouteRequest;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -57,5 +59,12 @@ public class HubRouteController implements HubRouteApi {
         HubRouteResponseDto response = HubRouteResponseDto.from(
                 hubRouteCommandService.update(hubRouteId, request.toCommand()));
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<Void>> delete(
+            UUID hubRouteId, @AuthenticationPrincipal CustomUserDetails userDetails) {
+        hubRouteCommandService.delete(hubRouteId, userDetails.getId());
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

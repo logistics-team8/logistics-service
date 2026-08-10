@@ -32,6 +32,8 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
             UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
     private static final UUID MODIFIER_ID =
             UUID.fromString("c69b113d-0991-4d8c-b7d0-87bdfadd18ae");
+    private static final UUID DELETER_ID =
+            UUID.fromString("9e954d31-8045-49cd-a741-f186da531f8d");
 
     @Autowired
     private HubRepository hubRepository;
@@ -150,6 +152,35 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
         assertThat(updatedRoute.getDurationSeconds()).isEqualTo(7_200L);
         assertThat(updatedRoute.getUpdatedAt()).isAfter(originalUpdatedAt);
         assertThat(updatedRoute.getUpdatedBy()).isEqualTo(MODIFIER_ID);
+    }
+
+    @Test
+    @DisplayName("허브 경로를 삭제하면 삭제 시각과 요청자 UUID를 저장하고 활성 조회에서 제외한다")
+    void deletePersistsDeletionMetadataAndExcludesRouteFromActiveLookup() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute savedRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        authenticate(DELETER_ID);
+        savedRoute.delete(DELETER_ID);
+        hubRouteRepository.save(savedRoute);
+
+        assertThat(hubRouteRepository.findByIdAndDeletedAtIsNull(savedRoute.getId())).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hub_routes where id = ?",
+                Boolean.class,
+                savedRoute.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_by from p_hub_routes where id = ?",
+                UUID.class,
+                savedRoute.getId()))
+                .isEqualTo(DELETER_ID);
+        assertThat(jdbcTemplate.queryForObject(
+                "select updated_by from p_hub_routes where id = ?",
+                UUID.class,
+                savedRoute.getId()))
+                .isEqualTo(DELETER_ID);
     }
 
     private Hub saveHub(String name) {

@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair;
@@ -35,8 +36,11 @@ public class CacheConfiguration implements CachingConfigurer {
                 .disableCachingNullValues();
         RedisCacheConfiguration hubRouteConfiguration = defaultConfiguration
                 .serializeValuesWith(SerializationPair.fromSerializer(serializer));
+        RedisCacheWriter cacheWriter = RedisCacheWriter.create(
+                connectionFactory,
+                configurer -> configurer.immediateWrites());
 
-        return RedisCacheManager.builder(connectionFactory)
+        return RedisCacheManager.builder(cacheWriter)
                 .cacheDefaults(defaultConfiguration)
                 .withInitialCacheConfigurations(Map.of(
                         HUB_ROUTE_BY_ID_CACHE,
