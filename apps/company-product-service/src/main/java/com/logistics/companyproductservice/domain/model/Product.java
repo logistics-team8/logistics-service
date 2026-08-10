@@ -58,9 +58,6 @@ public class Product extends BaseEntity {
     }
 
     public void update(String name, BigDecimal unitPrice) {
-        if (this.getDeletedAt() != null) {
-            throw new IllegalStateException("삭제된 Product는 수정할 수 없습니다.");
-        }
         if (name != null) {
             this.name = name;
         }

@@ -23,8 +23,13 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
-    public Optional<Product> findById(UUID id) {
+    public Optional<Product> findByIdAndDeletedAtIsNull(UUID id) {
         return productJpaRepository.findByIdAndDeletedAtIsNull(id);
+    }
+
+    @Override
+    public Optional<Product> findByIdForUpdate(UUID id) {
+        return productJpaRepository.findByIdForUpdate(id);
     }
 
     @Override
@@ -34,6 +39,7 @@ public class ProductRepositoryImpl implements ProductRepository {
         }
         return productJpaRepository.findAllByDeletedAtIsNull(pageable);
     }
+
     @Override
     public List<Product> findAllByIds(List<UUID> ids) {
         return productJpaRepository.findAllByIdInAndDeletedAtIsNull(ids);

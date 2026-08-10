@@ -43,7 +43,7 @@ public class SecurityConfig {
 
                         // Product
                         .requestMatchers(HttpMethod.POST, "/api/v1/products").hasAnyRole("MASTER", "HUB_MANAGER", "COMPANY_MANAGER")
-                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyRole("MASTER", "HUB_MANAGER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/v1/products/**").hasAnyRole("MASTER", "HUB_MANAGER", "COMPANY_MANAGER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasAnyRole("MASTER", "HUB_MANAGER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").authenticated()
 

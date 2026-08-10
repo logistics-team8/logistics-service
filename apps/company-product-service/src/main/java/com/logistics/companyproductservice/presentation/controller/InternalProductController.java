@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/internal/products")
+@RequestMapping("/internal/v1/products")
 public class InternalProductController {
 
     private final ProductService productService;
@@ -30,9 +30,10 @@ public class InternalProductController {
         productService.restoreStock(id, request.getQuantity());
         return ApiResponse.success(null);
     }
+
     @GetMapping("/{productId}")
-    public ProductInfo getProductInfo(@PathVariable UUID productId) {
-        return productService.getProductInfo(productId);
+    public ApiResponse<ProductInfo> getProductInfo(@PathVariable UUID productId) {
+        return ApiResponse.success(productService.getProductInfo(productId));
     }
 
     @PatchMapping("/decrease-stock")
@@ -46,8 +47,9 @@ public class InternalProductController {
         productService.restoreStockBatch(request);
         return ApiResponse.success(null);
     }
+
     @GetMapping("/batch")
-    public List<ProductInfo> getProductInfos(@RequestParam List<UUID> ids) {
-        return productService.getProductInfos(ids);
+    public ApiResponse<List<ProductInfo>> getProductInfos(@RequestParam List<UUID> ids) {
+        return ApiResponse.success(productService.getProductInfos(ids));
     }
 }

@@ -10,7 +10,8 @@ import java.util.UUID;
 
 public interface ProductRepository {
     Product save(Product product);
-    Optional<Product> findById(UUID id);
+    Optional<Product> findByIdAndDeletedAtIsNull(UUID id);
+    Optional<Product> findByIdForUpdate(UUID id);
     List<Product> findAllByIds(List<UUID> ids);
     Page<Product> search(String name, Pageable pageable);
 }
