@@ -17,16 +17,20 @@ import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.CacheManager;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.FilterChainProxy;
@@ -41,6 +45,7 @@ import org.springframework.web.context.WebApplicationContext;
 @DisplayName("Hub API 통합 테스트")
 class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
 
+    private static final String HUB_BY_ID_CACHE = "hubById";
     private static final UUID MASTER_ID = UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
     private static final UUID HUB_MANAGER_ID = UUID.fromString("5136e949-d047-4f31-8da2-e9654dd80f38");
     private static final UUID USER_ID = UUID.fromString("c69b113d-0991-4d8c-b7d0-87bdfadd18ae");
@@ -58,6 +63,12 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     private HubRepository hubRepository;
 
     @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
@@ -66,6 +77,7 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .addFilters(springSecurityFilterChain)
                 .build();
         jdbcTemplate.update("delete from p_hubs");
+        cacheManager.getCache(HUB_BY_ID_CACHE).clear();
         SecurityContextHolder.clearContext();
     }
 
@@ -156,6 +168,43 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.data.hubId").value(hub.getId().toString()))
                 .andExpect(jsonPath("$.data.name").value("서울 허브"))
                 .andExpect(jsonPath("$.error").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("단건 조회 결과를 Redis에 JSON으로 1시간 캐싱한다")
+    void getOneCachesJsonResponseForOneHour() throws Exception {
+        Hub hub = saveHub("서울 허브");
+
+        mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+                .andExpect(status().isOk());
+
+        Set<String> cacheKeys = redisTemplate.keys("hubById::*");
+        assertThat(cacheKeys).containsExactly(hubCacheKey(hub.getId()));
+        String cachedResponse = redisTemplate.opsForValue().get(hubCacheKey(hub.getId()));
+        assertThat(cachedResponse)
+                .startsWith("{")
+                .contains("\"hubId\"")
+                .contains("\"name\":\"서울 허브\"");
+        assertThat(redisTemplate.getExpire(hubCacheKey(hub.getId()), TimeUnit.SECONDS))
+                .isBetween(1L, 3_600L);
+
+        jdbcTemplate.update("delete from p_hubs where id = ?", hub.getId());
+
+        mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.hubId").value(hub.getId().toString()))
+                .andExpect(jsonPath("$.data.name").value("서울 허브"));
+    }
+
+    @Test
+    @DisplayName("허브 검색 결과는 Redis에 저장하지 않는다")
+    void searchDoesNotCachePageResults() throws Exception {
+        saveHub("서울 허브");
+
+        mockMvc.perform(authenticated(get("/api/v1/hubs"), USER_ID, "CUSTOMER"))
+                .andExpect(status().isOk());
+
+        assertThat(redisTemplate.keys("hubById::*")).isEmpty();
     }
 
     @Test
@@ -268,6 +317,28 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    @DisplayName("허브를 수정하면 단건 조회 캐시를 제거하고 변경된 정보를 다시 캐싱한다")
+    void updateEvictsHubCache() throws Exception {
+        Hub hub = saveHub("서울 허브");
+        mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+                .andExpect(status().isOk());
+        assertThat(redisTemplate.hasKey(hubCacheKey(hub.getId()))).isTrue();
+
+        mockMvc.perform(master(patch("/api/v1/hubs/{hubId}", hub.getId()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "name": "동서울 허브" }
+                                """))
+                .andExpect(status().isOk());
+
+        assertThat(redisTemplate.hasKey(hubCacheKey(hub.getId()))).isFalse();
+        mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("동서울 허브"));
+        assertThat(redisTemplate.hasKey(hubCacheKey(hub.getId()))).isTrue();
+    }
+
+    @Test
     void masterCannotUpdateHubWithoutAnyFields() throws Exception {
         Hub hub = saveHub("서울 허브");
 
@@ -292,6 +363,23 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("HUB_001"))
                 .andExpect(jsonPath("$.error.message").value("허브를 찾을 수 없습니다."));
+    }
+
+    @Test
+    @DisplayName("허브를 논리 삭제하면 단건 조회 캐시를 제거한다")
+    void deleteEvictsHubCache() throws Exception {
+        Hub hub = saveHub("서울 허브");
+        mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+                .andExpect(status().isOk());
+        assertThat(redisTemplate.hasKey(hubCacheKey(hub.getId()))).isTrue();
+
+        mockMvc.perform(master(delete("/api/v1/hubs/{hubId}", hub.getId())))
+                .andExpect(status().isOk());
+
+        assertThat(redisTemplate.hasKey(hubCacheKey(hub.getId()))).isFalse();
+        mockMvc.perform(authenticated(get("/api/v1/hubs/{hubId}", hub.getId()), USER_ID, "CUSTOMER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("HUB_001"));
     }
 
     @Test
@@ -368,6 +456,10 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
         ));
         SecurityContextHolder.clearContext();
         return hub;
+    }
+
+    private String hubCacheKey(UUID hubId) {
+        return HUB_BY_ID_CACHE + "::" + hubId;
     }
 
     private void updateCreatedAt(Hub hub, LocalDateTime createdAt) {

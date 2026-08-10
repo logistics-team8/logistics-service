@@ -7,6 +7,7 @@ import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +32,7 @@ public class HubCommandService {
     }
 
     @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
+    @CacheEvict(cacheNames = "hubById", key = "#hubId")
     public HubResponse update(UUID hubId, @Valid UpdateHubCommand command) {
         Hub hub = findActiveHub(hubId);
         hub.update(command.name(), command.address(), command.latitude(), command.longitude());
@@ -39,6 +41,7 @@ public class HubCommandService {
     }
 
     @PreAuthorize("hasRole('MASTER')")
+    @CacheEvict(cacheNames = "hubById", key = "#hubId")
     public void delete(UUID hubId, UUID deletedBy) {
         Hub hub = findActiveHub(hubId);
         hub.delete(deletedBy);

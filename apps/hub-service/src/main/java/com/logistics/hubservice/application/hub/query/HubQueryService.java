@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class HubQueryService {
 
     private final HubRepository hubRepository;
 
+    @Cacheable(cacheNames = "hubById", key = "#hubId")
     public HubResponse getOne(UUID hubId) {
         return HubResponse.from(findActiveHub(hubId));
     }
