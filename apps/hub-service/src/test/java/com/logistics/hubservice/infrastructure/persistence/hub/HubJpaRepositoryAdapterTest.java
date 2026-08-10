@@ -2,6 +2,7 @@ package com.logistics.hubservice.infrastructure.persistence.hub;
 
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.PostgreSqlIntegrationTest;
+import com.logistics.hubservice.application.hubroute.initialization.DefaultHub;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -51,6 +52,29 @@ class HubJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
         assertThat(savedHub.getUpdatedAt()).isNotNull();
         assertThat(savedHub.getCreatedBy()).isEqualTo(userId);
         assertThat(savedHub.getUpdatedBy()).isEqualTo(userId);
+    }
+
+    @Test
+    @DisplayName("인증 사용자가 없어도 기본 Hub를 고정 UUID와 시스템 감사 정보로 저장한다")
+    void savePersistsHubWithFixedId() {
+        SecurityContextHolder.clearContext();
+        DefaultHub defaultHub = DefaultHub.SEOUL;
+
+        Hub savedHub = hubRepository.save(Hub.createDefault(
+                defaultHub.hubId(),
+                defaultHub.hubName(),
+                defaultHub.address(),
+                new BigDecimal("37.5145751"),
+                new BigDecimal("127.1122451")));
+
+        assertThat(savedHub.getId()).isEqualTo(defaultHub.hubId());
+        assertThat(savedHub.getCreatedBy())
+                .isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        assertThat(savedHub.getUpdatedBy())
+                .isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        assertThat(hubRepository.findByIdAndDeletedAtIsNull(defaultHub.hubId()))
+                .map(Hub::getName)
+                .contains(defaultHub.hubName());
     }
 
     @Test
