@@ -51,10 +51,12 @@ class AuthenticationFilterTest {
         ServerWebExchange exchange =
                 MockServerWebExchange.from(MockServerHttpRequest.get("/auth/login").build());
 
-        given(pathProperties.whitelist()).willReturn(List.of("/auth/**"));
+        given(pathProperties.whitelist())
+                .willReturn(List.of(new PathProperties.PathPattern("GET", "/auth/**")));
 
         // when & then
-        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty())).verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty()))
+                .verifyComplete();
     }
 
     @Test
@@ -73,6 +75,7 @@ class AuthenticationFilterTest {
                 .expectError(BusinessException.class)
                 .verify();
     }
+
 
     @Test
     @DisplayName("만료된 token이면 예외 반환")
