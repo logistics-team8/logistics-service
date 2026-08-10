@@ -58,6 +58,20 @@ public class HubRoute extends BaseEntity {
         return new HubRoute(sourceHubId, destinationHubId, distanceMeters, durationSeconds);
     }
 
+    public static HubRoute createDefault(
+            UUID sourceHubId,
+            UUID destinationHubId,
+            long distanceMeters,
+            long durationSeconds) {
+        HubRoute hubRoute = new HubRoute(
+                sourceHubId,
+                destinationHubId,
+                distanceMeters,
+                durationSeconds);
+        hubRoute.initializeSystemAudit();
+        return hubRoute;
+    }
+
     public void update(Long distanceMeters, Long durationSeconds) {
         ensureActive();
         if (distanceMeters != null) {
