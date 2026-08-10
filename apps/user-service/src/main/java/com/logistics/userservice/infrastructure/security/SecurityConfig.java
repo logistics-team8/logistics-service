@@ -67,6 +67,20 @@ public class SecurityConfig {
                                         "/api/v1/auth/reissue")
                                 .permitAll()
 
+                                // Hub_Manager
+                                .requestMatchers(
+                                        HttpMethod.PATCH,
+                                        "/api/v1/admin/users/{userId}/approve",
+                                        "/api/v1/admin/users/{userId}/reject")
+                                .hasRole("HUB_MANAGER")
+                                .requestMatchers(
+                                        HttpMethod.GET, "/api/v1/admin/users/pending-approvals")
+                                .hasRole("HUB_MANAGER")
+
+                                // Master
+                                .requestMatchers("/api/v1/admin/**")
+                                .hasRole("MASTER")
+
                                 // 내부 API 허용
                                 .requestMatchers("/internal/**")
                                 .permitAll()

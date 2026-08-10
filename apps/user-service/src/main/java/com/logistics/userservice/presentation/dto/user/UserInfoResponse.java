@@ -1,6 +1,6 @@
 package com.logistics.userservice.presentation.dto.user;
 
-import com.logistics.userservice.application.dto.UserInfo;
+import com.logistics.userservice.application.dto.user.UserInfo;
 import com.logistics.userservice.domain.Role;
 import java.time.LocalDateTime;
 import java.util.UUID;

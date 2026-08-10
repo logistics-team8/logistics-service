@@ -3,9 +3,9 @@ package com.logistics.userservice.presentation;
 import com.logistics.common.response.ApiResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.userservice.application.UserService;
-import com.logistics.userservice.presentation.dto.user.SignUpRequest;
-import com.logistics.userservice.presentation.dto.user.UpdateRequest;
+import com.logistics.userservice.presentation.dto.user.UserCreateRequest;
 import com.logistics.userservice.presentation.dto.user.UserInfoResponse;
+import com.logistics.userservice.presentation.dto.user.UserUpdateRequest;
 import com.logistics.userservice.presentation.swagger.UserApi;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class UserController implements UserApi {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> signUp(@Valid @RequestBody SignUpRequest request) {
+    public ResponseEntity<ApiResponse<Void>> signUp(@Valid @RequestBody UserCreateRequest request) {
         userService.createUser(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED).body((ApiResponse.success(null)));
     }
@@ -39,7 +39,7 @@ public class UserController implements UserApi {
     @PatchMapping("/me")
     public ResponseEntity<ApiResponse<Void>> updateMyInfo(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @Valid @RequestBody UpdateRequest request) {
+            @Valid @RequestBody UserUpdateRequest request) {
         userService.updateUser(request.toCommand(customUserDetails.getId()));
         return ResponseEntity.ok(ApiResponse.success(null));
     }

@@ -2,11 +2,12 @@ package com.logistics.userservice.domain;
 
 import com.github.f4b6a3.uuid.UuidCreator;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.error.AuthErrorCode;
 import com.logistics.userservice.infrastructure.config.BaseEntity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -53,7 +54,17 @@ public class User extends BaseEntity {
     @Column(length = 255)
     private String rejectionReason;
 
-    public static User create(UserSignUpCommand command) {
+    public static User create(UserCreateCommand command) {
+        return createBaseUser(command);
+    }
+
+    public static User createByAdmin(UUID approvedBy, UserCreateCommand command) {
+        User user = createBaseUser(command);
+        user.approve(approvedBy);
+        return user;
+    }
+
+    private static User createBaseUser(UserCreateCommand command) {
         User user = new User();
         user.username = command.username();
         user.password = command.password();
@@ -94,6 +105,40 @@ public class User extends BaseEntity {
         super.delete(deletedBy);
         this.username = this.username + "_" + this.id;
         this.slackId = this.slackId + "_" + this.id;
+    }
+
+    /**
+     * 회원 가입 요청 승인
+     *
+     * @param approvedBy 승인자 UUID
+     */
+    public void approve(UUID approvedBy) {
+        this.userStatus = UserStatus.APPROVED;
+        this.approvedBy = approvedBy;
+        this.approvedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 회원가입 요청 거절
+     *
+     * @param approvedBy 거부자 UUID
+     * @param rejectionReason 거절 사유
+     */
+    public void reject(UUID approvedBy, String rejectionReason) {
+        this.userStatus = UserStatus.REJECTED;
+        this.approvedBy = approvedBy;
+        this.approvedAt = LocalDateTime.now();
+        this.rejectionReason = rejectionReason;
+    }
+
+    /**
+     * 허브 직원 확인
+     *
+     * @param hubId 승인자 허브 ID
+     * @return 결과 boolean
+     */
+    public boolean isManagedByHub(UUID hubId) {
+        return Objects.equals(this.hubId, hubId);
     }
 
     /** UUID 삽입 */

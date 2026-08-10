@@ -1,4 +1,4 @@
-package com.logistics.userservice.application.dto;
+package com.logistics.userservice.application.dto.user;
 
 import java.util.UUID;
 

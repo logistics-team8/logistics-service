@@ -2,7 +2,7 @@ package com.logistics.userservice.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.token.TokenResult;
 import com.logistics.userservice.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.domain.Role;
@@ -27,8 +27,8 @@ class AuthServiceIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        UserSignUpCommand command =
-                new UserSignUpCommand(
+        UserCreateCommand command =
+                new UserCreateCommand(
                         "test1234",
                         passwordEncoder.encode("Testtest123!"),
                         "김철수",

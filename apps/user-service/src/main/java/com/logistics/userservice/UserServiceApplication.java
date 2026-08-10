@@ -1,6 +1,6 @@
 package com.logistics.userservice;
 
-import com.logistics.userservice.infrastructure.security.JwtProperties;
+import com.logistics.userservice.infrastructure.config.JwtProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

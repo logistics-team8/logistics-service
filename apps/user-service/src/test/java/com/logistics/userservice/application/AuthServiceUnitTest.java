@@ -8,7 +8,7 @@ import static org.mockito.Mockito.*;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.UserSignUpCommand;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.token.TokenPayload;
 import com.logistics.userservice.application.token.TokenProvider;
 import com.logistics.userservice.domain.Role;
@@ -71,8 +71,8 @@ class AuthServiceUnitTest {
             // given
             LoginRequest request = new LoginRequest("test1234", "testtest1234!");
 
-            UserSignUpCommand command =
-                    new UserSignUpCommand(
+            UserCreateCommand command =
+                    new UserCreateCommand(
                             "test1234",
                             "비밀번호",
                             "김철수",
@@ -104,8 +104,8 @@ class AuthServiceUnitTest {
             // given
             LoginRequest request = new LoginRequest("test1234", "testtest1234!");
 
-            UserSignUpCommand command =
-                    new UserSignUpCommand(
+            UserCreateCommand command =
+                    new UserCreateCommand(
                             "test1234",
                             "비밀번호",
                             "김철수",
@@ -138,8 +138,8 @@ class AuthServiceUnitTest {
             // given
             LoginRequest request = new LoginRequest("test1234", "testtest1234!");
 
-            UserSignUpCommand command =
-                    new UserSignUpCommand(
+            UserCreateCommand command =
+                    new UserCreateCommand(
                             "test1234",
                             "비밀번호",
                             "김철수",

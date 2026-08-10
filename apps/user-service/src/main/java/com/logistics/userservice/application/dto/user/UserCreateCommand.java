@@ -1,9 +1,9 @@
-package com.logistics.userservice.application.dto;
+package com.logistics.userservice.application.dto.user;
 
 import com.logistics.userservice.domain.Role;
 import java.util.UUID;
 
-public record UserSignUpCommand(
+public record UserCreateCommand(
         String username,
         String password,
         String name,

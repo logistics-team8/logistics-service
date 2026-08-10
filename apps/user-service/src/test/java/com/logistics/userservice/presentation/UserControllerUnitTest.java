@@ -10,8 +10,8 @@ import com.logistics.common.error.CommonErrorCode;
 import com.logistics.userservice.application.UserService;
 import com.logistics.userservice.config.test.AbstractControllerTest;
 import com.logistics.userservice.domain.Role;
-import com.logistics.userservice.presentation.dto.user.SignUpRequest;
-import com.logistics.userservice.presentation.dto.user.UpdateRequest;
+import com.logistics.userservice.presentation.dto.user.UserCreateRequest;
+import com.logistics.userservice.presentation.dto.user.UserUpdateRequest;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
@@ -36,8 +36,8 @@ class UserControllerUnitTest extends AbstractControllerTest {
         @DisplayName("회원가입 성공")
         void signUp_success() throws Exception {
             // given
-            SignUpRequest request =
-                    new SignUpRequest(
+            UserCreateRequest request =
+                    new UserCreateRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -59,7 +59,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
         @ParameterizedTest
         @MethodSource("testCase")
         @DisplayName("회원가입 시 유효성 체크를 통과하지 못하면 예외가 발생해야한다.")
-        void signUp_fail_when_invalid(SignUpRequest request) throws Exception {
+        void signUp_fail_when_invalid(UserCreateRequest request) throws Exception {
             // when & then
             mockMvc.perform(
                             post("/api/v1/users")
@@ -70,10 +70,10 @@ class UserControllerUnitTest extends AbstractControllerTest {
             verify(userService, never()).createUser(any());
         }
 
-        static Stream<SignUpRequest> testCase() {
+        static Stream<UserCreateRequest> testCase() {
             return Stream.of(
                     // 1. 아이디 유효성 검사 실패
-                    new SignUpRequest(
+                    new UserCreateRequest(
                             "아이디",
                             "Testtest123!",
                             "김철수",
@@ -83,7 +83,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 2. 비밀번호 유효성 검사 실패
-                    new SignUpRequest(
+                    new UserCreateRequest(
                             "test1234",
                             "비밀번호",
                             "김철수",
@@ -93,7 +93,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 3. 이름 유효성 검사 실패
-                    new SignUpRequest(
+                    new UserCreateRequest(
                             "test1234",
                             "Testtest123!",
                             "",
@@ -103,7 +103,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 4. 슬랙ID 유효성 검사 실패
-                    new SignUpRequest(
+                    new UserCreateRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -113,7 +113,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 5. 허브 ID 유효성 검사 실패
-                    new SignUpRequest(
+                    new UserCreateRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -123,7 +123,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             Role.COMPANY_MANAGER),
 
                     // 6. 권한 유효성 검사 실패
-                    new SignUpRequest(
+                    new UserCreateRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -177,13 +177,13 @@ class UserControllerUnitTest extends AbstractControllerTest {
             verify(userService, never()).updateUser(any());
         }
 
-        static Stream<UpdateRequest> updateTestCase() {
+        static Stream<UserUpdateRequest> updateTestCase() {
             return Stream.of(
                     // 1. 아이디 유효성 검사 실패
-                    new UpdateRequest("", "U1234567890"),
+                    new UserUpdateRequest("", "U1234567890"),
 
                     // 2. Slack Id 유효성 검사 실패
-                    new UpdateRequest("김철수", "qweqwr213"));
+                    new UserUpdateRequest("김철수", "qweqwr213"));
         }
     }
 

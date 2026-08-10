@@ -5,7 +5,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.*;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
+import com.logistics.userservice.application.dto.user.UserInfo;
+import com.logistics.userservice.application.dto.user.UserRoleInfo;
+import com.logistics.userservice.application.dto.user.UserSlackInfo;
+import com.logistics.userservice.application.dto.user.UserUpdateCommand;
 import com.logistics.userservice.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.config.test.ConcurrencyTestingUtil;
 import com.logistics.userservice.domain.Role;
@@ -23,7 +27,6 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @DisplayName("UserService - 통합 테스트")
@@ -41,8 +44,8 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        UserSignUpCommand command =
-                new UserSignUpCommand(
+        UserCreateCommand command =
+                new UserCreateCommand(
                         "dummy1234",
                         "Testtest123!",
                         "김철수",
@@ -51,8 +54,8 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
                         null,
                         Role.COMPANY_MANAGER);
 
-        UserSignUpCommand command2 =
-                new UserSignUpCommand(
+        UserCreateCommand command2 =
+                new UserCreateCommand(
                         "dummy12345",
                         "Testtest123!",
                         "김철수",
@@ -68,6 +71,16 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
 
     @AfterEach
     void tearDown() {
+        if (userId != null) {
+            refreshTokenRepository.delete(userId);
+            roleCacheRepository.delete(userId);
+        }
+
+        if (userId2 != null) {
+            refreshTokenRepository.delete(userId2);
+            roleCacheRepository.delete(userId2);
+        }
+
         userRepository.deleteAllInBatch();
     }
 
@@ -78,8 +91,8 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
         @DisplayName("회원가입 성공")
         void createUser_success() {
             // given
-            UserSignUpCommand command =
-                    new UserSignUpCommand(
+            UserCreateCommand command =
+                    new UserCreateCommand(
                             "test1234",
                             "Testtest123!",
                             "김철수",
@@ -112,8 +125,8 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
         @DisplayName(("회원가입 시 동시 클릭하는 경우 하나의 케이스만 성공해야 한다."))
         void createUser_fail_when_duplicate_on_concurrency() throws InterruptedException {
             // given
-            UserSignUpCommand command =
-                    new UserSignUpCommand(
+            UserCreateCommand command =
+                    new UserCreateCommand(
                             "test123456",
                             "Testtest123!",
                             "김철수",
@@ -182,7 +195,6 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
         }
 
         @Test
-        @Transactional
         @DisplayName("회원 슬랙ID 조회 성공")
         void getUserSlackId_success() {
             // given
@@ -229,7 +241,6 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    @Transactional
     @DisplayName("회원 탈퇴에 성공하면 회원 정보와 Redis 인증 정보를 삭제한다.")
     void deleteUser_success() {
         // given
@@ -241,9 +252,8 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
 
         // then
         assertThat(refreshTokenRepository.findByUserId(userId).orElse(null)).isNull();
-        ;
+
         assertThat(roleCacheRepository.findByUserId(userId).orElse(null)).isNull();
-        ;
 
         assertThatThrownBy(() -> userService.deleteUser(userId))
                 .isInstanceOf(BusinessException.class)

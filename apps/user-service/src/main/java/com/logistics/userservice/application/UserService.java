@@ -2,17 +2,20 @@ package com.logistics.userservice.application;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.*;
+import com.logistics.userservice.application.dto.user.UserCreateCommand;
+import com.logistics.userservice.application.dto.user.UserInfo;
+import com.logistics.userservice.application.dto.user.UserRoleInfo;
+import com.logistics.userservice.application.dto.user.UserSlackInfo;
+import com.logistics.userservice.application.dto.user.UserUpdateCommand;
+import com.logistics.userservice.application.event.UserDeletedEvent;
+import com.logistics.userservice.application.validator.UserValidator;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
-import com.logistics.userservice.domain.redis.RefreshTokenRepository;
-import com.logistics.userservice.domain.redis.RoleCacheRepository;
 import com.logistics.userservice.error.UserErrorCode;
-import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataAccessException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,10 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserService {
+    private final UserValidator userValidator;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final RoleCacheRepository roleCacheRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * User 회원가입
@@ -34,9 +37,9 @@ public class UserService {
      * @param command
      */
     @Transactional
-    public void createUser(UserSignUpCommand command) {
+    public void createUser(UserCreateCommand command) {
         User user = User.create(command);
-        validateDuplicate(command);
+        userValidator.validateDuplicate(command);
 
         user.encodePassword(passwordEncoder.encode(user.getPassword()));
 
@@ -48,35 +51,13 @@ public class UserService {
     }
 
     /**
-     * 회원가입 중복 체크 로직 List 형태로 중복인 아이디 또는 Slack ID를 찾고 동일할 시 예외처리
-     *
-     * @param command
-     */
-    private void validateDuplicate(UserSignUpCommand command) {
-        List<User> existUsers =
-                userRepository.findByUsernameOrSlackId(command.username(), command.slackId());
-
-        for (User user : existUsers) {
-            if (command.username().equals(user.getUsername())) {
-                throw new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME);
-            }
-            if (command.slackId().equals(user.getSlackId())) {
-                throw new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID);
-            }
-        }
-    }
-
-    /**
      * 회원 정보 조회
      *
      * @param userId
      * @return UserInfo DTO 객체
      */
     public UserInfo getUserInfo(UUID userId) {
-        return UserInfo.from(
-                userRepository
-                        .findByIdAndDeletedAtIsNull(userId)
-                        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
+        return UserInfo.from(findUserById(userId));
     }
 
     /**
@@ -86,19 +67,11 @@ public class UserService {
      */
     @Transactional
     public void deleteUser(UUID userId) {
-        User deletedUser =
-                userRepository
-                        .findByIdAndDeletedAtIsNull(userId)
-                        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+        User deletedUser = findUserById(userId);
         deletedUser.delete(deletedUser.getId());
 
-        try {
-            // 토큰 재발급 시 DB를 조회하므로 탈퇴 프로세스가 진행되도록 적용
-            refreshTokenRepository.delete(userId);
-            roleCacheRepository.delete(userId);
-        } catch (DataAccessException e) {
-            log.warn("[FAIL] 회원 탈퇴 후 Redis 인증 정보 삭제 실패 userId = {}", userId, e);
-        }
+        // Redis 인증 정보 삭제는 이벤트 처리
+        applicationEventPublisher.publishEvent(new UserDeletedEvent(userId));
     }
 
     /**
@@ -108,10 +81,7 @@ public class UserService {
      */
     @Transactional
     public void updateUser(UserUpdateCommand command) {
-        User updatedUser =
-                userRepository
-                        .findByIdAndDeletedAtIsNull(command.userId())
-                        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+        User updatedUser = findUserById(command.userId());
         updatedUser.update(command.name(), command.slackId());
 
         try {
@@ -145,5 +115,19 @@ public class UserService {
                 userRepository
                         .findSlackIdByIdDeletedAtIsNull(userId)
                         .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND)));
+    }
+
+    // ============================== Helper Method ====================================
+
+    /**
+     * 회원 조회 헬퍼 메서드
+     *
+     * @param userId
+     * @return
+     */
+    private User findUserById(UUID userId) {
+        return userRepository
+                .findByIdAndDeletedAtIsNull(userId)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
     }
 }
