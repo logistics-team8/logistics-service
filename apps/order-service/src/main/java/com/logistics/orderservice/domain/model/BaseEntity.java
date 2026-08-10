@@ -19,15 +19,25 @@ import java.util.UUID;
 public abstract class BaseEntity {
 
     @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(
+            name = "created_at",
+            nullable = false,
+            updatable = false
+    )
     private LocalDateTime createdAt;
 
     @CreatedBy
-    @Column(name = "created_by", updatable = false)
+    @Column(
+            name = "created_by",
+            updatable = false
+    )
     private UUID createdBy;
 
     @LastModifiedDate
-    @Column(name = "updated_at")
+    @Column(
+            name = "updated_at",
+            nullable = false
+    )
     private LocalDateTime updatedAt;
 
     @LastModifiedBy
@@ -40,13 +50,16 @@ public abstract class BaseEntity {
     @Column(name = "deleted_by")
     private UUID deletedBy;
 
-    public void softDelete(UUID deletedBy) {
+    public void softDelete(
+            UUID deletedBy,
+            LocalDateTime deletedAt
+    ) {
         if (isDeleted()) {
             return;
         }
 
-        this.deletedAt = LocalDateTime.now();
         this.deletedBy = deletedBy;
+        this.deletedAt = deletedAt;
     }
 
     public boolean isDeleted() {

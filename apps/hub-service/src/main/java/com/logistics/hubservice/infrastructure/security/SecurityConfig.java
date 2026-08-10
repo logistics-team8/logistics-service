@@ -32,6 +32,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(new CustomAccessDeniedHandler(jsonMapper)))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/actuator/health").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/hub-routes").hasRole("MASTER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/hubs", "/api/v1/hubs/**").hasRole("MASTER")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/hubs", "/api/v1/hubs/**")
                         .hasAnyRole("MASTER", "HUB_MANAGER")

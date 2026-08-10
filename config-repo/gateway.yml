@@ -50,7 +50,7 @@ spring:
             - id: company-product-service
               uri: lb://company-product-service
               predicates:
-                - Path=/api/v1/companies/**
+                - Path=/api/v1/companies/**, /api/v1/products/**
 
             - id: company-swagger
               uri: lb://company-service

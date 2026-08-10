@@ -1,5 +1,6 @@
 package com.logistics.orderservice.presentation.dto.request;
 
+import com.logistics.orderservice.application.command.CreateOrderCommand;
 import jakarta.validation.ConstraintViolation;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +72,47 @@ class CreateOrderRequestTest {
     }
 
     @Test
+    @DisplayName("요청 DTO를 requesterId 없이 주문 생성 Command로 변환한다")
+    void toCommand_success() {
+        UUID receiverCompanyId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        CreateOrderRequest request = new CreateOrderRequest(
+                receiverCompanyId,
+                "안전하게 배송해주세요.",
+                FIXED_NOW.plusDays(2),
+                List.of(new CreateOrderItemRequest(productId, 2))
+        );
+
+        CreateOrderCommand command = request.toCommand();
+
+        assertThat(command.receiverCompanyId()).isEqualTo(receiverCompanyId);
+        assertThat(command.requestMessage()).isEqualTo("안전하게 배송해주세요.");
+        assertThat(command.requestedDeliveryAt()).isEqualTo(FIXED_NOW.plusDays(2));
+        assertThat(command.items()).singleElement().satisfies(item -> {
+            assertThat(item.productId()).isEqualTo(productId);
+            assertThat(item.quantity()).isEqualTo(2);
+        });
+    }
+
+    @Test
+    @DisplayName("수령 업체 ID가 null이면 검증에 실패한다")
+    void nullReceiverCompanyId_fail() {
+        CreateOrderRequest request = new CreateOrderRequest(
+                null,
+                "안전하게 배송해주세요.",
+                FIXED_NOW.plusDays(2),
+                validItems()
+        );
+
+        Set<ConstraintViolation<CreateOrderRequest>> violations = validator.validate(request);
+
+        assertThat(violations)
+                .anySatisfy(violation -> assertThat(
+                        violation.getPropertyPath().toString()
+                ).isEqualTo("receiverCompanyId"));
+    }
+
+    @Test
     @DisplayName("희망 납품 일시가 정확히 1일 이후이면 검증에 성공한다")
     void exactlyOneDayLater_success() {
         CreateOrderRequest request = createRequest(
@@ -99,7 +141,7 @@ class CreateOrderRequestTest {
         assertViolation(
                 violations,
                 "requestedDeliveryAt",
-                "희망 납품 일시는 현재로부터 최소 1일 이후여야 합니다."
+                "일시는 현재로부터 최소 1일 이후여야 합니다."
         );
     }
 
