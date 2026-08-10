@@ -12,6 +12,7 @@ import com.logistics.companyproductservice.presentation.dto.request.CompanyCreat
 import com.logistics.companyproductservice.presentation.dto.request.CompanyUpdateRequest;
 import com.logistics.companyproductservice.presentation.dto.response.CompanyResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -44,7 +45,11 @@ public class CompanyService {
                 request.getAddress()
         );
 
-        return companyRepository.save(company);
+        try {
+            return companyRepository.saveAndFlush(company);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
+        }
     }
 
     public Company getCompany(UUID id) {

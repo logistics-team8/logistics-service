@@ -10,6 +10,7 @@ import java.util.UUID;
 
 public interface CompanyRepository {
     Company save(Company company);
+    Company saveAndFlush(Company company);
     boolean existsByName(String name);
     Optional<Company> findByIdAndDeletedAtIsNull(UUID id);
     List<Company> findAllByIds(List<UUID> ids);

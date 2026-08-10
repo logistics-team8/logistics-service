@@ -23,6 +23,11 @@ public class CompanyRepositoryImpl implements CompanyRepository {
     }
 
     @Override
+    public Company saveAndFlush(Company company) {
+        return companyJpaRepository.saveAndFlush(company);
+    }
+
+    @Override
     public boolean existsByName(String name) {
         return companyJpaRepository.existsByNameAndDeletedAtIsNull(name);
     }
