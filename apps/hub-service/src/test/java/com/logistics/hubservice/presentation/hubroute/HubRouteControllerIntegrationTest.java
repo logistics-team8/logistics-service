@@ -14,6 +14,7 @@ import com.logistics.hubservice.domain.hub.HubRepository;
 import com.logistics.hubservice.domain.hubroute.HubRoute;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -21,6 +22,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -185,6 +188,127 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    @DisplayName("출발 허브와 도착 허브 조건을 조합하면 활성 경로만 검색한다")
+    void searchCombinesHubConditionsAndExcludesDeletedRoutes() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        Hub otherHub = saveHub("부산 허브");
+        HubRoute matchingRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+        saveRoute(sourceHub.getId(), otherHub.getId());
+        saveRoute(otherHub.getId(), destinationHub.getId());
+        HubRoute deletedRoute = saveRoute(destinationHub.getId(), sourceHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                deletedRoute.getId());
+
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes")
+                        .param("sourceHubId", sourceHub.getId().toString())
+                        .param("destinationHubId", destinationHub.getId().toString()),
+                HUB_MANAGER_ID,
+                "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].hubRouteId").value(matchingRoute.getId().toString()))
+                .andExpect(jsonPath("$.error").value(nullValue()));
+
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes"), HUB_MANAGER_ID, "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(3));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {10, 30, 50})
+    @DisplayName("허용한 페이지 크기로 허브 경로 검색 결과를 조회한다")
+    void searchSupportsAllowedPageSizes(int pageSize) throws Exception {
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes")
+                        .param("size", String.valueOf(pageSize)),
+                HUB_MANAGER_ID,
+                "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(pageSize));
+    }
+
+    @Test
+    @DisplayName("페이지 크기를 지정하지 않거나 지원하지 않는 크기를 지정하면 10개로 조회한다")
+    void searchUsesPageSizeTenAsDefaultAndFallback() throws Exception {
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes"), HUB_MANAGER_ID, "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(10));
+
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes")
+                        .param("size", "25"),
+                HUB_MANAGER_ID,
+                "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.size").value(10));
+    }
+
+    @Test
+    @DisplayName("생성일과 수정일을 지정한 방향으로 허브 경로를 정렬한다")
+    void searchSupportsCreatedAtAndUpdatedAtInBothDirections() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        Hub otherSourceHub = saveHub("부산 허브");
+        Hub otherDestinationHub = saveHub("광주 허브");
+        HubRoute olderRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+        HubRoute newerRoute = saveRoute(otherSourceHub.getId(), otherDestinationHub.getId());
+        updateRouteTimestamps(
+                olderRoute,
+                LocalDateTime.of(2026, 8, 8, 9, 0),
+                LocalDateTime.of(2026, 8, 8, 11, 0));
+        updateRouteTimestamps(
+                newerRoute,
+                LocalDateTime.of(2026, 8, 8, 10, 0),
+                LocalDateTime.of(2026, 8, 8, 10, 30));
+
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes")
+                        .param("sort", "createdAt,asc"),
+                HUB_MANAGER_ID,
+                "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].hubRouteId").value(olderRoute.getId().toString()));
+
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes")
+                        .param("sort", "updatedAt,desc"),
+                HUB_MANAGER_ID,
+                "HUB_MANAGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].hubRouteId").value(olderRoute.getId().toString()));
+    }
+
+    @Test
+    @DisplayName("허용하지 않는 정렬 필드로 허브 경로를 검색할 수 없다")
+    void searchRejectsUnsupportedSortProperty() throws Exception {
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes")
+                        .param("sort", "sourceHubId,asc"),
+                HUB_MANAGER_ID,
+                "HUB_MANAGER"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("COMMON_001"));
+    }
+
+    @Test
+    @DisplayName("허브 경로 검색 결과는 Redis에 저장하지 않는다")
+    void searchDoesNotCachePageResults() throws Exception {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        mockMvc.perform(authenticated(get("/api/v1/hub-routes"), HUB_MANAGER_ID, "HUB_MANAGER"))
+                .andExpect(status().isOk());
+
+        assertThat(redisTemplate.keys("hubRoute*")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("인증되지 않은 사용자는 허브 경로를 검색할 수 없다")
+    void unauthenticatedUserCannotSearchHubRoutes() throws Exception {
+        mockMvc.perform(get("/api/v1/hub-routes"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("COMMON_101"));
+    }
+
+    @Test
     @DisplayName("인증된 사용자는 활성 허브 경로를 단건 조회할 수 있다")
     void authenticatedUserCanGetOneActiveHubRoute() throws Exception {
         Hub sourceHub = saveHub("서울 허브");
@@ -275,7 +399,7 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
-    @DisplayName("Swagger 문서에 허브 경로 생성과 단건 조회 API를 포함한다")
+    @DisplayName("Swagger 문서에 허브 경로 생성과 조회 API를 포함한다")
     void openApiDocumentsTheHubRouteCreateEndpoint() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -286,6 +410,10 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post.responses['403']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post.responses['404']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].post.responses['409']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].get.responses['200']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].get.responses['400']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes'].get.responses['401']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['200']").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/{hubRouteId}'].get.responses['401']").exists())
@@ -314,6 +442,15 @@ class HubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
         ));
         SecurityContextHolder.clearContext();
         return route;
+    }
+
+    private void updateRouteTimestamps(
+            HubRoute route, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        jdbcTemplate.update(
+                "update p_hub_routes set created_at = ?, updated_at = ? where id = ?",
+                createdAt,
+                updatedAt,
+                route.getId());
     }
 
     private String createRequest(

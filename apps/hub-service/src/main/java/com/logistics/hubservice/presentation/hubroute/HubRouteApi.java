@@ -1,19 +1,26 @@
 package com.logistics.hubservice.presentation.hubroute;
 
 import com.logistics.common.response.ApiResponse;
+import com.logistics.common.response.PageResponse;
 import com.logistics.hubservice.presentation.hubroute.dto.CreateHubRouteRequest;
 import com.logistics.hubservice.presentation.hubroute.dto.HubRouteResponseDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Tag(name = "Hub Route", description = "허브 간 이동 경로 관리 API")
 @RequestMapping("/api/v1/hub-routes")
@@ -33,6 +40,24 @@ public interface HubRouteApi {
     @PostMapping
     ResponseEntity<ApiResponse<HubRouteResponseDto>> create(
             @Valid @RequestBody CreateHubRouteRequest request);
+
+    @Operation(
+            summary = "허브 경로 검색",
+            description = "인증이 필요합니다. 출발·도착 허브 ID를 정확히 일치하는 조건으로 선택해 검색할 수 있습니다. "
+                    + "삭제된 경로는 제외하며 페이지 크기는 10, 30, 50만 허용하고 정렬 필드는 createdAt, updatedAt만 사용할 수 있습니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "검색 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "허용하지 않는 정렬 필드"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    })
+    @GetMapping
+    ResponseEntity<ApiResponse<PageResponse<HubRouteResponseDto>>> search(
+            @Parameter(description = "출발 허브 UUID")
+            @RequestParam(required = false) UUID sourceHubId,
+            @Parameter(description = "도착 허브 UUID")
+            @RequestParam(required = false) UUID destinationHubId,
+            @ParameterObject
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable);
 
     @Operation(
             summary = "허브 경로 단건 조회",

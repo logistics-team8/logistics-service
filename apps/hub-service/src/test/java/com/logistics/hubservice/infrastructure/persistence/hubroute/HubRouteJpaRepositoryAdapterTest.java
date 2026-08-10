@@ -16,6 +16,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -98,12 +101,46 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
         assertThat(hubRouteRepository.findByIdAndDeletedAtIsNull(savedRoute.getId())).isEmpty();
     }
 
+    @Test
+    @DisplayName("출발 허브와 도착 허브 조건으로 활성 경로를 페이지 조회한다")
+    void searchFiltersActiveRoutesBySourceAndDestinationHub() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        Hub otherHub = saveHub("부산 허브");
+        HubRoute matchingRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+        saveRoute(sourceHub.getId(), otherHub.getId());
+        saveRoute(otherHub.getId(), destinationHub.getId());
+        HubRoute deletedRoute = saveRoute(otherHub.getId(), sourceHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                deletedRoute.getId());
+
+        Page<HubRoute> result = hubRouteRepository.search(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"))
+        );
+
+        assertThat(result.getContent())
+                .extracting(HubRoute::getId)
+                .containsExactly(matchingRoute.getId());
+    }
+
     private Hub saveHub(String name) {
         return hubRepository.save(Hub.create(
                 name,
                 "주소",
                 new BigDecimal("37.5000000"),
                 new BigDecimal("127.0000000")
+        ));
+    }
+
+    private HubRoute saveRoute(UUID sourceHubId, UUID destinationHubId) {
+        return hubRouteRepository.save(HubRoute.create(
+                sourceHubId,
+                destinationHubId,
+                123_400L,
+                7_200L
         ));
     }
 

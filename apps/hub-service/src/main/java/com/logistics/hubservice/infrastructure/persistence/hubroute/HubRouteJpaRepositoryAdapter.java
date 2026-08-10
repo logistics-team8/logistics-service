@@ -5,6 +5,8 @@ import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -21,6 +23,11 @@ public class HubRouteJpaRepositoryAdapter implements HubRouteRepository {
     @Override
     public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
         return repository.findByIdAndDeletedAtIsNull(id);
+    }
+
+    @Override
+    public Page<HubRoute> search(UUID sourceHubId, UUID destinationHubId, Pageable pageable) {
+        return repository.search(sourceHubId, destinationHubId, pageable);
     }
 
     @Override
