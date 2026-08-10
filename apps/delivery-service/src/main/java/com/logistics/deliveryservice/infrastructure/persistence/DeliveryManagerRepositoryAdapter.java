@@ -9,9 +9,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-/**
- * 배송 담당자 도메인 Repository 요청을 Spring Data JPA에 위임한다.
- */
+// 도메인 Repository와 Spring Data JPA 사이를 연결
 @Repository
 @RequiredArgsConstructor
 public class DeliveryManagerRepositoryAdapter implements DeliveryManagerRepository {
@@ -20,7 +18,7 @@ public class DeliveryManagerRepositoryAdapter implements DeliveryManagerReposito
 
     @Override
     public DeliveryManager save(DeliveryManager deliveryManager) {
-        // User ID 중복 경합을 등록 서비스가 같은 트랜잭션 안에서 판단할 수 있도록 즉시 flush한다.
+        // 동시에 같은 아이디로 가입할 때 생기는 중복 에러를 바로 잡아내기 위해, DB에 즉시 반영(flush)
         return deliveryManagerJpaRepository.saveAndFlush(deliveryManager);
     }
 
@@ -30,6 +28,7 @@ public class DeliveryManagerRepositoryAdapter implements DeliveryManagerReposito
         return deliveryManagerJpaRepository.findById(userId);
     }
 
+    // 배정 그룹의 타입과 허브 ID를 JPA Repository에 전달
     @Override
     public List<Integer> findActiveDeliverySequences(
             DeliveryManagerAssignmentGroup assignmentGroup

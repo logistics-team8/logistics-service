@@ -8,13 +8,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+// Spring Data JPA가 실제 DB 작업을 수행하는 인터페이스
 interface DeliveryManagerJpaRepository extends JpaRepository<DeliveryManager, UUID> {
 
     @Query("""
             select manager.deliverySequence
             from DeliveryManager manager
             where manager.managerType = :managerType
-              and ((:hubId is null and manager.hubId is null) or manager.hubId = :hubId)
+              and manager.hubId = :hubId
               and manager.deletedAt is null
             order by manager.deliverySequence asc
             """)

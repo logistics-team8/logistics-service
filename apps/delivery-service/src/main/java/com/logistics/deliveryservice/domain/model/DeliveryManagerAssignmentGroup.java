@@ -23,17 +23,34 @@ public record DeliveryManagerAssignmentGroup(
         validateGroup(managerType, hubId);
     }
 
-    public static DeliveryManagerAssignmentGroup hubDelivery() {
-        return new DeliveryManagerAssignmentGroup(DeliveryManagerType.HUB_DELIVERY, null);
+    // 배송 순번 검증
+    public static void validateSequence(Integer sequence) {
+        if (sequence == null || sequence < MIN_SEQUENCE || sequence > MAX_SEQUENCE) {
+            throw invalidManagerChange();
+        }
+    }
+
+    // managerType과 hubId가 비어 있지 않은지 검사
+    private static void validateGroup(DeliveryManagerType managerType, UUID hubId) {
+        if (managerType == null
+                || hubId == null) {
+            throw new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_HUB);
+        }
+    }
+
+    private static DeliveryException invalidManagerChange() {
+        return new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_CHANGE);
+    }
+
+
+    public static DeliveryManagerAssignmentGroup hubDelivery(UUID hubId) {
+        return new DeliveryManagerAssignmentGroup(DeliveryManagerType.HUB_DELIVERY, hubId);
     }
 
     public static DeliveryManagerAssignmentGroup companyDelivery(UUID hubId) {
         return new DeliveryManagerAssignmentGroup(DeliveryManagerType.COMPANY_DELIVERY, hubId);
     }
 
-    /**
-     * Cursor와 담당자 조회가 같은 그룹을 식별하도록 규격화된 키를 반환한다.
-     */
     public String assignmentGroupKey() {
         if (managerType == DeliveryManagerType.HUB_DELIVERY) {
             return HUB_DELIVERY_GROUP_KEY;
@@ -41,9 +58,6 @@ public record DeliveryManagerAssignmentGroup(
         return managerType.name() + ":" + hubId;
     }
 
-    /**
-     * 활성 담당자가 사용 중인 순번을 제외하고 0부터 가장 작은 빈 순번을 선택한다.
-     */
     public int findSmallestAvailableSequence(Collection<Integer> activeSequences) {
         if (activeSequences == null) {
             throw invalidManagerChange();
@@ -66,23 +80,5 @@ public record DeliveryManagerAssignmentGroup(
             }
         }
         throw new DeliveryException(DeliveryErrorCode.DELIVERY_MANAGER_GROUP_FULL);
-    }
-
-    public static void validateSequence(Integer sequence) {
-        if (sequence == null || sequence < MIN_SEQUENCE || sequence > MAX_SEQUENCE) {
-            throw invalidManagerChange();
-        }
-    }
-
-    private static void validateGroup(DeliveryManagerType managerType, UUID hubId) {
-        if (managerType == null
-                || (managerType == DeliveryManagerType.HUB_DELIVERY && hubId != null)
-                || (managerType == DeliveryManagerType.COMPANY_DELIVERY && hubId == null)) {
-            throw new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_HUB);
-        }
-    }
-
-    private static DeliveryException invalidManagerChange() {
-        return new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_CHANGE);
     }
 }
