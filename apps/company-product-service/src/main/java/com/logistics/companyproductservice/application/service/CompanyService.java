@@ -27,12 +27,17 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class CompanyService {
 
-    private static final Set<String> ALLOWED_SORT = Set.of("createdAt", "name");
+    private static final Set<String> ALLOWED_SORT = Set.of("createdAt", "updatedAt");
 
     private final CompanyRepository companyRepository;
 
     @Transactional
-    public Company create(CompanyCreateRequest request) {
+    public Company create(CompanyCreateRequest request, CustomUserDetails userDetails) {
+        if ("HUB_MANAGER".equals(userDetails.getRole())
+                && !request.getHubId().equals(userDetails.getHubId())) {
+            throw new BusinessException(CompanyErrorCode.NOT_OWNED_COMPANY);
+        }
+
         if (companyRepository.existsByName(request.getName())) {
             throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
         }
@@ -103,10 +108,16 @@ public class CompanyService {
     }
 
     private void validateOwnership(Company company, CustomUserDetails userDetails) {
-        boolean isMaster = "MASTER".equals(userDetails.getRole());
-        boolean isOwnCompany = company.getId().equals(userDetails.getCompanyId());
-        if (!isMaster && !isOwnCompany) {
-            throw new BusinessException(CompanyErrorCode.NOT_OWNED_COMPANY);
+        String role = userDetails.getRole();
+        if ("MASTER".equals(role)) {
+            return;
         }
+        if ("HUB_MANAGER".equals(role) && company.getHubId().equals(userDetails.getHubId())) {
+            return;
+        }
+        if ("COMPANY_MANAGER".equals(role) && company.getId().equals(userDetails.getCompanyId())) {
+            return;
+        }
+        throw new BusinessException(CompanyErrorCode.NOT_OWNED_COMPANY);
     }
 }

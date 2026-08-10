@@ -29,8 +29,10 @@ public class CompanyController {
     private final CompanyService companyService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<CompanyResponse>> createCompany(@RequestBody @Valid CompanyCreateRequest request) {
-        Company company = companyService.create(request);
+    public ResponseEntity<ApiResponse<CompanyResponse>> createCompany(
+            @RequestBody @Valid CompanyCreateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Company company = companyService.create(request, userDetails);
         CompanyResponse response = CompanyResponse.from(company);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
