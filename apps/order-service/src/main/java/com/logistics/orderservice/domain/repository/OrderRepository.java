@@ -3,8 +3,6 @@ package com.logistics.orderservice.domain.repository;
 import com.logistics.orderservice.domain.model.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.Optional;
 import java.util.UUID;
 
@@ -28,4 +26,11 @@ public interface OrderRepository{
     Optional<Order> findByIdAndRequesterIdAndDeletedAtIsNull(UUID orderId, UUID userId);
 
     Page<Order> findAllByRequesterIdAndDeletedAtIsNull(UUID userId, Pageable pageable);
+
+
+    /**
+     *
+     * 허브 관리자 주문 조회
+     */
+    Page<Order> findAllByManagedHubIdAndDeletedAtIsNull(UUID hubId, Pageable pageable);
 }

@@ -1,15 +1,32 @@
 package com.logistics.userservice.presentation.swagger;
 
 import com.logistics.common.response.ApiResponse;
-import com.logistics.userservice.presentation.dto.request.SignUpRequest;
+import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.userservice.presentation.dto.user.UserCreateRequest;
+import com.logistics.userservice.presentation.dto.user.UserInfoResponse;
+import com.logistics.userservice.presentation.dto.user.UserUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@Tag(name = "User / AUTH")
+@Tag(name = "User / Auth")
 public interface UserApi {
     @Operation(summary = "회원가입", description = "사용자가 신규 회원을 등록합니다.")
-    public ResponseEntity<ApiResponse<Void>> createUser(@Valid @RequestBody SignUpRequest request);
+    public ResponseEntity<ApiResponse<Void>> signUp(@Valid @RequestBody UserCreateRequest request);
+
+    @Operation(summary = "회원 정보 조회", description = "사용자가 자신의 정보를 조회합니다.")
+    public ResponseEntity<ApiResponse<UserInfoResponse>> getMyInfo(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails);
+
+    @Operation(summary = "회원 정보 수정", description = "사용자가 자신의 정보를 수정합니다.")
+    public ResponseEntity<ApiResponse<Void>> updateMyInfo(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @Valid @RequestBody UserUpdateRequest request);
+
+    @Operation(summary = "회원탈퇴", description = "사용자가 탈퇴를 진행합니다..")
+    public ResponseEntity<ApiResponse<Void>> deleteMyAccount(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails);
 }

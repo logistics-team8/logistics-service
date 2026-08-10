@@ -1,10 +1,10 @@
 package com.logistics.gateway.filter;
 
-import com.logistics.gateway.infrastructure.config.PathProperties;
-import com.logistics.gateway.infrastructure.redis.RedisUserRoleCache;
-import com.logistics.gateway.infrastructure.security.JwtTokenProvider;
-import com.logistics.gateway.presentation.error.GatewayErrorCode;
-import com.logistics.gateway.presentation.exception.BusinessException;
+import com.logistics.gateway.config.PathProperties;
+import com.logistics.gateway.redis.RedisUserRoleCache;
+import com.logistics.gateway.security.JwtTokenProvider;
+import com.logistics.gateway.error.GatewayErrorCode;
+import com.logistics.gateway.error.BusinessException;
 import io.jsonwebtoken.ExpiredJwtException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,10 +51,12 @@ class AuthenticationFilterTest {
         ServerWebExchange exchange =
                 MockServerWebExchange.from(MockServerHttpRequest.get("/auth/login").build());
 
-        given(pathProperties.whitelist()).willReturn(List.of("/auth/**"));
+        given(pathProperties.whitelist())
+                .willReturn(List.of(new PathProperties.PathPattern("GET", "/auth/**")));
 
         // when & then
-        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty())).verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty()))
+                .verifyComplete();
     }
 
     @Test
@@ -73,6 +75,7 @@ class AuthenticationFilterTest {
                 .expectError(BusinessException.class)
                 .verify();
     }
+
 
     @Test
     @DisplayName("만료된 token이면 예외 반환")

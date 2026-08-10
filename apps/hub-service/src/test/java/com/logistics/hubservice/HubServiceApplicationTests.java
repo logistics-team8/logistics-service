@@ -6,7 +6,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class HubServiceApplicationTests {
+class HubServiceApplicationTests extends PostgreSqlIntegrationTest {
 
     @Test
     void contextLoads() {

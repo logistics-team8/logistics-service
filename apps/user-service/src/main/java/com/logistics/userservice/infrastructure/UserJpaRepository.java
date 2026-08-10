@@ -20,8 +20,8 @@ public interface UserJpaRepository extends UserRepository, JpaRepository<User, U
     List<User> findByUsernameOrSlackId(String username, String slackId);
 
     @Query("SELECT u.role FROM User u WHERE u.id = :userId AND u.deletedAt IS NULL")
-    Optional<Role> findRoleById(@Param("userId") UUID userId);
+    Optional<Role> findRoleByIdDeletedAtIsNull(@Param("userId") UUID userId);
 
     @Query("SELECT u.slackId FROM User u WHERE u.id = :userId AND u.deletedAt IS NULL")
-    Optional<String> findSlackIdById(@Param("userId") UUID userId);
+    Optional<String> findSlackIdByIdDeletedAtIsNull(@Param("userId") UUID userId);
 }

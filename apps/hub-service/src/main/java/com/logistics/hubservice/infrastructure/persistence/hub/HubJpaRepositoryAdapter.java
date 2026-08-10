@@ -2,9 +2,10 @@ package com.logistics.hubservice.infrastructure.persistence.hub;
 
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -27,7 +28,12 @@ public class HubJpaRepositoryAdapter implements HubRepository {
     }
 
     @Override
-    public List<Hub> findAllByDeletedAtIsNullOrderByCreatedAtDesc() {
-        return repository.findAllByDeletedAtIsNullOrderByCreatedAtDesc();
+    public Page<Hub> findAllByDeletedAtIsNull(Pageable pageable) {
+        return repository.findAllByDeletedAtIsNull(pageable);
+    }
+
+    @Override
+    public Page<Hub> search(String keyword, Pageable pageable) {
+        return repository.search(keyword, pageable);
     }
 }
