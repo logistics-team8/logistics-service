@@ -1,3 +1,4 @@
+// BaseEntity.java
 package com.logistics.companyproductservice.domain.model;
 
 import com.logistics.common.error.CommonErrorCode;
