@@ -48,4 +48,8 @@ public abstract class BaseEntity {
         return deletedAt != null;
     }
 
+    protected void setCreatedBy(UUID createdBy) {
+        this.createdBy = createdBy;
+    }
+
 }
