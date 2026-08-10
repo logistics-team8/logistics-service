@@ -44,5 +44,13 @@ public class CustomUserDetails implements UserDetails {
         return new CustomUserDetails(userId, null, hubId, companyId, authorities);
     }
 
+    public String getRole() {
+        return authorities.stream()
+                .findFirst()
+                .orElseThrow()
+                .getAuthority()
+                .substring(5);
+    }
+
     @Override public String getPassword() { return null; }
 }
