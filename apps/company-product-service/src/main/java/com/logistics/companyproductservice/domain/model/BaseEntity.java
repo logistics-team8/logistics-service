@@ -48,9 +48,6 @@ public abstract class BaseEntity {
     }
 
     public void delete(UUID deletedBy) {
-        if (this.deletedAt != null) {
-            throw new IllegalStateException("이미 삭제된 엔티티입니다.");
-        }
         this.deletedAt = Instant.now();
         this.deletedBy = deletedBy;
     }

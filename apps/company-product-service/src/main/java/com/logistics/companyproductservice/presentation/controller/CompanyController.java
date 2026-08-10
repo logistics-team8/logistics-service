@@ -1,6 +1,7 @@
 package com.logistics.companyproductservice.presentation.controller;
 
 import com.logistics.common.response.ApiResponse;
+import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.companyproductservice.application.page.PageResponse;
 import com.logistics.companyproductservice.application.service.CompanyService;
 import com.logistics.companyproductservice.domain.model.Company;
@@ -15,8 +16,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
 
@@ -33,21 +34,30 @@ public class CompanyController {
         CompanyResponse response = CompanyResponse.from(company);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));
     }
+
     @GetMapping("/{id}")
     public ApiResponse<CompanyResponse> getCompany(@PathVariable UUID id) {
         Company company = companyService.getCompany(id);
         return ApiResponse.success(CompanyResponse.from(company));
     }
+
     @PatchMapping("/{id}")
-    public ApiResponse<CompanyResponse> updateCompany(@PathVariable UUID id, @RequestBody @Valid CompanyUpdateRequest request) {
-        Company company = companyService.update(id, request);
+    public ApiResponse<CompanyResponse> updateCompany(
+            @PathVariable UUID id,
+            @RequestBody @Valid CompanyUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Company company = companyService.update(id, request, userDetails);
         return ApiResponse.success(CompanyResponse.from(company));
     }
+
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> deleteCompany(@PathVariable UUID id, @RequestHeader("X-User-Id") UUID userId) {
-        companyService.delete(id, userId);
+    public ApiResponse<Void> deleteCompany(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        companyService.delete(id, userDetails);
         return ApiResponse.success(null);
     }
+
     @GetMapping
     public ApiResponse<PageResponse<CompanyResponse>> getCompanies(
             @RequestParam(required = false) String name,

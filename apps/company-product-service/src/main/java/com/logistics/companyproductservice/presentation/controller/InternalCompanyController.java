@@ -1,13 +1,12 @@
 package com.logistics.companyproductservice.presentation.controller;
 
+import com.logistics.common.response.ApiResponse;
 import com.logistics.companyproductservice.application.dto.CompanyInfo;
 import com.logistics.companyproductservice.application.service.CompanyService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -18,7 +17,12 @@ public class InternalCompanyController {
     private final CompanyService companyService;
 
     @GetMapping("/{companyId}")
-    public CompanyInfo getCompanyInfo(@PathVariable UUID companyId) {
-        return companyService.getCompanyInfo(companyId);
+    public ApiResponse<CompanyInfo> getCompanyInfo(@PathVariable UUID companyId) {
+        return ApiResponse.success(companyService.getCompanyInfo(companyId));
+    }
+
+    @GetMapping("/batch")
+    public ApiResponse<List<CompanyInfo>> getCompanyInfos(@RequestParam List<UUID> ids) {
+        return ApiResponse.success(companyService.getCompanyInfos(ids));
     }
 }
