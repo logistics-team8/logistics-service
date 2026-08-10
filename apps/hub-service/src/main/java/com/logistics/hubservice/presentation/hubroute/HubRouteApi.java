@@ -67,7 +67,7 @@ public interface HubRouteApi {
 
     @Operation(
             summary = "허브 최단 경로 조회",
-            description = "인증이 필요합니다. 활성 허브 경로를 거리 우선으로 탐색하고 거리 합계가 같으면 소요시간 합계를 비교합니다.")
+            description = "인증이 필요합니다. 활성 허브 경로를 소요시간 우선으로 탐색하고 소요시간 합계가 같으면 거리 합계를 비교합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패"),

@@ -20,8 +20,8 @@ public class HubRoutePathFinder {
                     HubRoute::getId,
                     Comparator.nullsLast(Comparator.naturalOrder()));
     private static final Comparator<PathState> PATH_STATE_ORDER = Comparator
-            .comparingLong(PathState::distanceMeters)
-            .thenComparingLong(PathState::durationSeconds)
+            .comparingLong(PathState::durationSeconds)
+            .thenComparingLong(PathState::distanceMeters)
             .thenComparing(PathState::hubId);
 
     public Optional<HubRoutePath> findShortestPath(
@@ -141,11 +141,11 @@ public class HubRoutePathFinder {
 
         @Override
         public int compareTo(PathCost other) {
-            int distanceComparison = Long.compare(distanceMeters, other.distanceMeters);
-            if (distanceComparison != 0) {
-                return distanceComparison;
+            int durationComparison = Long.compare(durationSeconds, other.durationSeconds);
+            if (durationComparison != 0) {
+                return durationComparison;
             }
-            return Long.compare(durationSeconds, other.durationSeconds);
+            return Long.compare(distanceMeters, other.distanceMeters);
         }
 
         private boolean matches(PathState state) {

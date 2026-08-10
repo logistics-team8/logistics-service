@@ -45,8 +45,8 @@ class HubRoutePathFinderTest {
     }
 
     @Test
-    @DisplayName("소요 시간이 길어도 이동 거리 합계가 짧은 경로를 선택한다")
-    void prioritizesTotalDistanceOverDuration() {
+    @DisplayName("이동 거리가 길어도 소요 시간 합계가 짧은 경로를 선택한다")
+    void prioritizesTotalDurationOverDistance() {
         HubRoute shortFirst = route(101, HUB_A, HUB_B, 5L, 100L);
         HubRoute shortSecond = route(102, HUB_B, HUB_D, 5L, 100L);
         HubRoute fastButLong = route(103, HUB_A, HUB_D, 11L, 1L);
@@ -57,26 +57,26 @@ class HubRoutePathFinderTest {
                         HUB_D)
                 .orElseThrow();
 
-        assertThat(path.segments()).containsExactly(shortFirst, shortSecond);
-        assertThat(path.totalDistanceMeters()).isEqualTo(10L);
-        assertThat(path.totalDurationSeconds()).isEqualTo(200L);
+        assertThat(path.segments()).containsExactly(fastButLong);
+        assertThat(path.totalDistanceMeters()).isEqualTo(11L);
+        assertThat(path.totalDurationSeconds()).isEqualTo(1L);
     }
 
     @Test
-    @DisplayName("이동 거리 합계가 같으면 소요 시간 합계가 짧은 경로를 선택한다")
-    void usesTotalDurationAsDistanceTieBreaker() {
-        HubRoute slowFirst = route(101, HUB_A, HUB_B, 5L, 100L);
-        HubRoute slowSecond = route(102, HUB_B, HUB_D, 5L, 100L);
-        HubRoute fastFirst = route(103, HUB_A, HUB_C, 4L, 10L);
-        HubRoute fastSecond = route(104, HUB_C, HUB_D, 6L, 10L);
+    @DisplayName("소요 시간 합계가 같으면 이동 거리 합계가 짧은 경로를 선택한다")
+    void usesTotalDistanceAsDurationTieBreaker() {
+        HubRoute longFirst = route(101, HUB_A, HUB_B, 6L, 10L);
+        HubRoute longSecond = route(102, HUB_B, HUB_D, 6L, 10L);
+        HubRoute shortFirst = route(103, HUB_A, HUB_C, 4L, 10L);
+        HubRoute shortSecond = route(104, HUB_C, HUB_D, 6L, 10L);
 
         HubRoutePath path = pathFinder.findShortestPath(
-                        List.of(slowFirst, slowSecond, fastFirst, fastSecond),
+                        List.of(longFirst, longSecond, shortFirst, shortSecond),
                         HUB_A,
                         HUB_D)
                 .orElseThrow();
 
-        assertThat(path.segments()).containsExactly(fastFirst, fastSecond);
+        assertThat(path.segments()).containsExactly(shortFirst, shortSecond);
         assertThat(path.totalDistanceMeters()).isEqualTo(10L);
         assertThat(path.totalDurationSeconds()).isEqualTo(20L);
     }

@@ -90,7 +90,7 @@ class HubRouteShortestPathControllerIntegrationTest extends PostgreSqlIntegratio
     }
 
     @Test
-    @DisplayName("거리 합계가 가장 짧고 시간 합계가 더 짧은 경로의 상세 구간을 조회한다")
+    @DisplayName("소요 시간 합계가 가장 짧은 경로의 상세 구간을 조회한다")
     void authenticatedUserGetsShortestPathSegmentsAndTotals() throws Exception {
         Hub sourceHub = saveHub("서울 허브");
         Hub slowIntermediateHub = saveHub("대전 허브");
@@ -98,21 +98,20 @@ class HubRouteShortestPathControllerIntegrationTest extends PostgreSqlIntegratio
         Hub destinationHub = saveHub("부산 허브");
         saveRoute(sourceHub.getId(), slowIntermediateHub.getId(), 5L, 100L);
         saveRoute(slowIntermediateHub.getId(), destinationHub.getId(), 5L, 100L);
-        HubRoute fastFirst = saveRoute(sourceHub.getId(), fastIntermediateHub.getId(), 4L, 10L);
-        HubRoute fastSecond = saveRoute(fastIntermediateHub.getId(), destinationHub.getId(), 6L, 10L);
-        saveRoute(sourceHub.getId(), destinationHub.getId(), 11L, 1L);
+        saveRoute(sourceHub.getId(), fastIntermediateHub.getId(), 4L, 10L);
+        saveRoute(fastIntermediateHub.getId(), destinationHub.getId(), 6L, 10L);
+        HubRoute fastestRoute = saveRoute(
+                sourceHub.getId(), destinationHub.getId(), 11L, 1L);
 
         mockMvc.perform(authenticated(shortestPathRequest(sourceHub.getId(), destinationHub.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.sourceHubId").value(sourceHub.getId().toString()))
                 .andExpect(jsonPath("$.data.destinationHubId").value(destinationHub.getId().toString()))
-                .andExpect(jsonPath("$.data.totalDistanceMeters").value(10L))
-                .andExpect(jsonPath("$.data.totalDurationSeconds").value(20L))
-                .andExpect(jsonPath("$.data.segments", hasSize(2)))
+                .andExpect(jsonPath("$.data.totalDistanceMeters").value(11L))
+                .andExpect(jsonPath("$.data.totalDurationSeconds").value(1L))
+                .andExpect(jsonPath("$.data.segments", hasSize(1)))
                 .andExpect(jsonPath("$.data.segments[0].sequence").value(1))
-                .andExpect(jsonPath("$.data.segments[0].hubRouteId").value(fastFirst.getId().toString()))
-                .andExpect(jsonPath("$.data.segments[1].sequence").value(2))
-                .andExpect(jsonPath("$.data.segments[1].hubRouteId").value(fastSecond.getId().toString()))
+                .andExpect(jsonPath("$.data.segments[0].hubRouteId").value(fastestRoute.getId().toString()))
                 .andExpect(jsonPath("$.error").value(nullValue()));
     }
 
@@ -222,6 +221,8 @@ class HubRouteShortestPathControllerIntegrationTest extends PostgreSqlIntegratio
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/shortest-path'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/hub-routes/shortest-path'].get.description")
+                        .value("인증이 필요합니다. 활성 허브 경로를 소요시간 우선으로 탐색하고 소요시간 합계가 같으면 거리 합계를 비교합니다."))
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/shortest-path'].get.parameters[*].name")
                         .value(org.hamcrest.Matchers.containsInAnyOrder("sourceHubId", "destinationHubId")))
                 .andExpect(jsonPath("$.paths['/api/v1/hub-routes/shortest-path'].get.responses['200']").exists())
