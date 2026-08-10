@@ -10,9 +10,8 @@ import com.logistics.userservice.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
-import java.util.UUID;
-
 import com.logistics.userservice.domain.UserStatus;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,12 +45,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
         createUser(
                 "test2345", "U222222222", dummyUserHubId, dummyUserCompany, Role.COMPANY_MANAGER);
 
-        createUser(
-                "test3456",
-                "U333333333",
-                dummyUserHubId2,
-                null,
-                Role.DELIVERY_MANAGER);
+        createUser("test3456", "U333333333", dummyUserHubId2, null, Role.DELIVERY_MANAGER);
     }
 
     @Test
@@ -97,8 +91,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
     @DisplayName("Master는 특정 허브만 검색이 가능하다.")
     void searchUsers_success_search_by_hub() {
         // given
-        UserContext userContext =
-                new UserContext(UUID.randomUUID(), Role.MASTER, null);
+        UserContext userContext = new UserContext(UUID.randomUUID(), Role.MASTER, null);
 
         SearchUsersQuery searchUsersQuery =
                 new SearchUsersQuery(null, null, dummyUserHubId2, null, null, null);
@@ -117,8 +110,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
     @DisplayName("특정 업체 유저만 검색이 가능하다.")
     void searchUsers_success_search_by_company() {
         // given
-        UserContext userContext =
-                new UserContext(UUID.randomUUID(), Role.MASTER, null);
+        UserContext userContext = new UserContext(UUID.randomUUID(), Role.MASTER, null);
 
         SearchUsersQuery searchUsersQuery =
                 new SearchUsersQuery(null, null, null, dummyUserCompany, null, null);
@@ -137,8 +129,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
     @DisplayName("특정 권한 유저만 검색이 가능하다.")
     void searchUsers_success_search_by_role() {
         // given
-        UserContext userContext =
-                new UserContext(UUID.randomUUID(), Role.MASTER, null);
+        UserContext userContext = new UserContext(UUID.randomUUID(), Role.MASTER, null);
 
         SearchUsersQuery searchUsersQuery =
                 new SearchUsersQuery(null, null, null, null, Role.COMPANY_MANAGER, null);
@@ -157,8 +148,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
     @DisplayName("특정 상태 유저만 검색이 가능하다.")
     void searchUsers_success_search_by_userStatus() {
         // given
-        UserContext userContext =
-                new UserContext(UUID.randomUUID(), Role.MASTER, null);
+        UserContext userContext = new UserContext(UUID.randomUUID(), Role.MASTER, null);
 
         SearchUsersQuery searchUsersQuery =
                 new SearchUsersQuery(null, null, null, null, null, UserStatus.PENDING);
