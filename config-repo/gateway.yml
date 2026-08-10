@@ -37,7 +37,7 @@ spring:
             - id: hub-service
               uri: lb://hub-service
               predicates:
-                - Path=/api/v1/hubs/**
+                - Path=/api/v1/hubs/**, /api/v1/hub-routes/**
 
             - id: hub-swagger
               uri: lb://hub-service

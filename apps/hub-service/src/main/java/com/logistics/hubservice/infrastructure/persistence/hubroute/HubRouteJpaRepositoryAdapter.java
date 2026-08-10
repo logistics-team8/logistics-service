@@ -2,6 +2,7 @@ package com.logistics.hubservice.infrastructure.persistence.hubroute;
 
 import com.logistics.hubservice.domain.hubroute.HubRoute;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,11 @@ public class HubRouteJpaRepositoryAdapter implements HubRouteRepository {
     @Override
     public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
         return repository.findByIdAndDeletedAtIsNull(id);
+    }
+
+    @Override
+    public List<HubRoute> findAllByDeletedAtIsNull() {
+        return repository.findAllByDeletedAtIsNull();
     }
 
     @Override

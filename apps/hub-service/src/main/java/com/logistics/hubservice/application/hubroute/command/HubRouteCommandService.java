@@ -26,6 +26,7 @@ public class HubRouteCommandService {
     private final HubRouteRepository hubRouteRepository;
 
     @PreAuthorize("hasRole('MASTER')")
+    @CacheEvict(cacheNames = "hubRoutePath", allEntries = true)
     public HubRouteResponse create(@Valid CreateHubRouteCommand command) {
         validateDifferentHubs(command.sourceHubId(), command.destinationHubId());
         validateActiveHub(command.sourceHubId());

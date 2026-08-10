@@ -1,6 +1,7 @@
 package com.logistics.hubservice.infrastructure.persistence.hubroute;
 
 import com.logistics.hubservice.domain.hubroute.HubRoute;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 interface SpringDataHubRouteRepository extends JpaRepository<HubRoute, UUID> {
 
     Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id);
+
+    List<HubRoute> findAllByDeletedAtIsNull();
 
     @Query("""
             SELECT hr

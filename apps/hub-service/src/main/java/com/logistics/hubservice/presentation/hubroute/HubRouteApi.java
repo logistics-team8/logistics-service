@@ -4,6 +4,7 @@ import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.presentation.hubroute.dto.CreateHubRouteRequest;
+import com.logistics.hubservice.presentation.hubroute.dto.HubRoutePathResponseDto;
 import com.logistics.hubservice.presentation.hubroute.dto.HubRouteResponseDto;
 import com.logistics.hubservice.presentation.hubroute.dto.UpdateHubRouteRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,7 +34,7 @@ public interface HubRouteApi {
 
     @Operation(
             summary = "허브 경로 생성",
-            description = "MASTER 권한이 필요합니다. 출발·도착 허브는 활성 상태여야 하며 서로 달라야 합니다.")
+            description = "MASTER 권한이 필요합니다. 출발 허브와 도착 허브는 활성 상태여야 하며 서로 달라야 합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "생성 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 또는 동일 허브 경로"),
@@ -48,7 +49,7 @@ public interface HubRouteApi {
 
     @Operation(
             summary = "허브 경로 검색",
-            description = "인증이 필요합니다. 출발·도착 허브 ID를 정확히 일치하는 조건으로 선택해 검색할 수 있습니다. "
+            description = "인증이 필요합니다. 출발 허브와 도착 허브 ID를 정확히 일치하는 조건으로 선택해 검색할 수 있습니다. "
                     + "삭제된 경로는 제외하며 페이지 크기는 10, 30, 50만 허용하고 정렬 필드는 createdAt, updatedAt만 사용할 수 있습니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "검색 성공"),
@@ -63,6 +64,22 @@ public interface HubRouteApi {
             @RequestParam(required = false) UUID destinationHubId,
             @ParameterObject
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable);
+
+    @Operation(
+            summary = "허브 최단 경로 조회",
+            description = "인증이 필요합니다. 활성 허브 경로를 거리 우선으로 탐색하고 거리 합계가 같으면 소요시간 합계를 비교합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "입력값 검증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "허브 또는 연결 경로 없음")
+    })
+    @GetMapping("/shortest-path")
+    ResponseEntity<ApiResponse<HubRoutePathResponseDto>> getShortestPath(
+            @Parameter(description = "출발 허브 UUID", required = true)
+            @RequestParam UUID sourceHubId,
+            @Parameter(description = "도착 허브 UUID", required = true)
+            @RequestParam UUID destinationHubId);
 
     @Operation(
             summary = "허브 경로 단건 조회",
