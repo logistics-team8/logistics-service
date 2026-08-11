@@ -55,9 +55,9 @@ spring:
             - id: company-swagger
               uri: lb://company-product-service
               predicates:
-                - Path=/company-service/v3/api-docs/**
+                - Path=/company-product-service/v3/api-docs/**
               filters:
-                - RewritePath=/company-service/(?<segment>.*), /${segment}
+                - RewritePath=/company-product-service/(?<segment>.*), /${segment}
 
             # Order
             - id: order-service
@@ -120,6 +120,7 @@ springdoc:
     urls[2]:
       name: company-product-service
       url: /company-product-service/v3/api-docs
+
 
 path:
   whitelist:
