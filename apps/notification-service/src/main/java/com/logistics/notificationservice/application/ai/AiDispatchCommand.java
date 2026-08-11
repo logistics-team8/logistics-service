@@ -1,6 +1,6 @@
 package com.logistics.notificationservice.application.ai;
 
-import com.logistics.notificationservice.presentation.slack.dto.OrderNotificationRequestDto;
+import com.logistics.notificationservice.presentation.slack.dto.DispatchNotificationRequestDto;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -37,7 +37,7 @@ public record AiDispatchCommand(
             LocalTime.of(18, 0);
 
     public static AiDispatchCommand from(
-            OrderNotificationRequestDto request
+            DispatchNotificationRequestDto request
     ) {
 
         List<ProductInfo> products =

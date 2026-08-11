@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 
-public record OrderNotificationRequestDto(
+public record DispatchNotificationRequestDto(
 
         UUID orderId,
         String orderNumber,

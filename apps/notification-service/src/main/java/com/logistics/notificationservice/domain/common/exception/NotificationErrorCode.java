@@ -1,6 +1,7 @@
 package com.logistics.notificationservice.domain.common.exception;
 
 import com.logistics.common.error.ErrorCode;
+import org.apache.http.protocol.HTTP;
 import org.springframework.http.HttpStatus;
 
 public enum NotificationErrorCode implements ErrorCode {
@@ -33,7 +34,15 @@ public enum NotificationErrorCode implements ErrorCode {
             "NOTIFICATION_103",
             HttpStatus.BAD_GATEWAY,
             "Gemini 응답을 변환할 수 없습니다."
+    ),
+
+    USER_NOT_FOUND(
+            "INTERNAL_001",
+            HttpStatus.BAD_GATEWAY,
+            "사용자의 Slack_ID를 조회할 수 없습니다."
     );
+
+
 
     private final String code;
     private final HttpStatus status;
