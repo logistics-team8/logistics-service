@@ -127,7 +127,10 @@ public class OrderCreateService {
             productPort.decreaseStock(stockItems);
         } catch (StockDecreaseException e) {
             log.error("재고 차감 실패 orderId : {}", orderId, e);
+
             orderStateService.failOrder(orderId, OrderFailureReason.STOCK_DECREASE_FAILED);
+
+            throw new BusinessException(OrderErrorCode.STOCK_DECREASE_FAILED);
         }
 
         //재고 차감 성공
@@ -241,7 +244,7 @@ public class OrderCreateService {
             log.error( "배송 생성 실패 후 재고 복원 실패. orderId={}", orderId, e);
 
             orderStateService.failOrder(orderId, OrderFailureReason.STOCK_RESTORE_FAILED);
-
+            throw new BusinessException(OrderErrorCode.DELIVERY_STATUS_CHECK_FAILED);
         }
     }
 

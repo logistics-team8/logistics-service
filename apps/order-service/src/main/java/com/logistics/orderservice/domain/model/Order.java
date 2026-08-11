@@ -280,7 +280,7 @@ public class Order extends BaseEntity {
         }
     }
 
-    private void validateCancelable(){
+    public void validateCancelable(){
         if (this.status == OrderStatus.DELIVERY_CREATED) {
             throw new BusinessException(
                     OrderErrorCode.ORDER_NOT_CANCELABLE

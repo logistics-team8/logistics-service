@@ -173,6 +173,25 @@ public enum OrderErrorCode implements ErrorCode {
             "ORD_027",
             HttpStatus.CONFLICT,
             "기존 배송 정보가 주문의 배송 요청 정보와 일치하지 않습니다."
+    ),
+    // 재고 차감 실패
+    STOCK_DECREASE_FAILED(
+            "ORD_028",
+            HttpStatus.BAD_GATEWAY,
+                "재고 차감 요청에 실패했습니다."
+    ),
+
+    // 배송 실패 후 재고 복원까지 실패
+    STOCK_RESTORE_FAILED(
+            "ORD_029",
+            HttpStatus.BAD_GATEWAY,
+                "배송 생성 실패 후 재고 복원에 실패했습니다."
+    ),
+
+    ORDER_CANCEL_STOCK_RESTORE_FAILED(
+            "ORD_030",
+            HttpStatus.BAD_GATEWAY,
+                "주문 취소 중 재고 복원에 실패했습니다."
     );
 
 

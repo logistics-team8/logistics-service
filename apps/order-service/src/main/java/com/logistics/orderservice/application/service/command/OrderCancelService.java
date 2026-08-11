@@ -3,6 +3,7 @@ package com.logistics.orderservice.application.service.command;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.authorization.OrderAuthorization;
+import com.logistics.orderservice.application.exception.StockRestoreException;
 import com.logistics.orderservice.application.port.ProductPort;
 import com.logistics.orderservice.domain.model.Order;
 import com.logistics.orderservice.domain.model.OrderItem;
@@ -11,6 +12,7 @@ import com.logistics.orderservice.error.OrderErrorCode;
 import com.logistics.orderservice.presentation.dto.response.CancelOrderItemResponse;
 import com.logistics.orderservice.presentation.dto.response.CancelOrderResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderCancelService {
@@ -32,7 +35,6 @@ public class OrderCancelService {
     /**
      * 주문 취소
      */
-    @Transactional
     public CancelOrderResponse cancelOrder(CustomUserDetails user, UUID orderId) {
         Order order = orderRepository
                 .findByIdAndDeletedAtIsNull(orderId)
@@ -41,22 +43,13 @@ public class OrderCancelService {
                 );
 
         orderAuthorization.validateCancelPermission(user, order);
+        order.validateCancelable();
 
-        List<ProductPort.StockItem> restoreItems =
-                order.getOrderItems()
-                        .stream()
-                        .filter(orderItem -> !orderItem.isCanceled()
-                        )
-                        .map(orderItem ->
-                                new ProductPort.StockItem(
-                                        orderItem.getProductId(),
-                                        orderItem.getQuantity()
-                                )
-                        )
-                        .toList();
+
 
         if(order.requiresStockRestoreForCancel()){
-            productPort.restoreStock(restoreItems);
+            List<ProductPort.StockItem> restoreItems = restoreItems(order);
+            restoreStock(orderId, restoreItems);
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
@@ -82,4 +75,31 @@ public class OrderCancelService {
         OrderItem canceledOrderItem = order.cancelOrderItem(orderItemId, user.getId());
         return CancelOrderItemResponse.from(order,canceledOrderItem);
     }
+
+
+    private List<ProductPort.StockItem> restoreItems(Order order) {
+
+             return order.getOrderItems()
+                     .stream()
+                     .filter(orderItem -> !orderItem.isCanceled()
+                     )
+                     .map(orderItem ->
+                                new ProductPort.StockItem(
+                                        orderItem.getProductId(),
+                                        orderItem.getQuantity()
+                                )
+                     )
+                     .toList();
+    }
+
+    private void restoreStock(UUID orderId, List<ProductPort.StockItem> restoreItems) {
+        try{
+            productPort.restoreStock(restoreItems);
+        }catch (StockRestoreException e){
+            log.error("주문 취소 중 재고 복원 실패. orderId : {}", orderId, e);
+            throw new BusinessException(OrderErrorCode.ORDER_CANCEL_STOCK_RESTORE_FAILED);
+        }
+
+    }
+
 }
