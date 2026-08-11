@@ -7,10 +7,11 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 import com.logistics.common.exception.BusinessException;
+import com.logistics.userservice.application.dto.user.AffiliationType;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.dto.user.UserUpdateCommand;
 import com.logistics.userservice.application.validator.UserValidator;
-import com.logistics.userservice.domain.Role;
+import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
 import java.util.Optional;
@@ -47,7 +48,8 @@ class UserServiceUnitTest {
                             "U123456789",
                             UUID.randomUUID(),
                             UUID.randomUUID(),
-                            Role.COMPANY_MANAGER);
+                            RequestedRole.COMPANY_MANAGER,
+                            AffiliationType.COMPANY);
 
             doThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME))
                     .when(userValidator)
@@ -74,7 +76,8 @@ class UserServiceUnitTest {
                             "U123456789",
                             UUID.randomUUID(),
                             UUID.randomUUID(),
-                            Role.COMPANY_MANAGER);
+                            RequestedRole.COMPANY_MANAGER,
+                            AffiliationType.COMPANY);
 
             doThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID))
                     .when(userValidator)

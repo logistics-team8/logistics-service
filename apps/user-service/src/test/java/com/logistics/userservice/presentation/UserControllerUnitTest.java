@@ -8,8 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.userservice.application.UserService;
+import com.logistics.userservice.application.dto.user.AffiliationType;
 import com.logistics.userservice.config.test.AbstractControllerTest;
-import com.logistics.userservice.domain.Role;
+import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.presentation.dto.user.UserCreateRequest;
 import com.logistics.userservice.presentation.dto.user.UserUpdateRequest;
 import java.util.UUID;
@@ -42,9 +43,10 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "Testtest123!",
                             "김철수",
                             "U123456789",
+                            AffiliationType.COMPANY,
                             UUID.randomUUID(),
                             UUID.randomUUID(),
-                            Role.COMPANY_MANAGER);
+                            RequestedRole.COMPANY_MANAGER);
 
             // when & then
             mockMvc.perform(
@@ -78,9 +80,10 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "Testtest123!",
                             "김철수",
                             "U123456789",
+                            AffiliationType.COMPANY,
                             UUID.randomUUID(),
                             UUID.randomUUID(),
-                            Role.COMPANY_MANAGER),
+                            RequestedRole.COMPANY_MANAGER),
 
                     // 2. 비밀번호 유효성 검사 실패
                     new UserCreateRequest(
@@ -88,9 +91,10 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "비밀번호",
                             "김철수",
                             "U123456789",
+                            AffiliationType.COMPANY,
                             UUID.randomUUID(),
                             UUID.randomUUID(),
-                            Role.COMPANY_MANAGER),
+                            RequestedRole.COMPANY_MANAGER),
 
                     // 3. 이름 유효성 검사 실패
                     new UserCreateRequest(
@@ -98,9 +102,10 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "Testtest123!",
                             "",
                             "U123456789",
+                            AffiliationType.COMPANY,
                             UUID.randomUUID(),
                             UUID.randomUUID(),
-                            Role.COMPANY_MANAGER),
+                            RequestedRole.COMPANY_MANAGER),
 
                     // 4. 슬랙ID 유효성 검사 실패
                     new UserCreateRequest(
@@ -108,26 +113,18 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "Testtest123!",
                             "김철수",
                             "테스트",
+                            AffiliationType.COMPANY,
                             UUID.randomUUID(),
                             UUID.randomUUID(),
-                            Role.COMPANY_MANAGER),
+                            RequestedRole.COMPANY_MANAGER),
 
-                    // 5. 허브 ID 유효성 검사 실패
+                    // 5 권한 유효성 검사 실패
                     new UserCreateRequest(
                             "test1234",
                             "Testtest123!",
                             "김철수",
                             "U123456789",
-                            null,
-                            UUID.randomUUID(),
-                            Role.COMPANY_MANAGER),
-
-                    // 6. 권한 유효성 검사 실패
-                    new UserCreateRequest(
-                            "test1234",
-                            "Testtest123!",
-                            "김철수",
-                            "U123456789",
+                            AffiliationType.COMPANY,
                             UUID.randomUUID(),
                             UUID.randomUUID(),
                             null));
