@@ -19,6 +19,8 @@ interface SpringDataHubRepository extends JpaRepository<Hub, UUID> {
     @Query("SELECT h FROM Hub h WHERE h.id = :id AND h.deletedAt IS NULL")
     Optional<Hub> findByIdAndDeletedAtIsNullForUpdate(@Param("id") UUID id);
 
+    boolean existsByIdAndDeletedAtIsNull(UUID id);
+
     Page<Hub> findAllByDeletedAtIsNull(Pageable pageable);
 
     @Query("""

@@ -31,6 +31,10 @@ public class HubQueryService {
         return HubResponse.from(findActiveHub(hubId));
     }
 
+    public boolean exists(UUID hubId) {
+        return hubRepository.existsByIdAndDeletedAtIsNull(hubId);
+    }
+
     public Page<HubResponse> search(String keyword, Pageable pageable) {
         Pageable normalizedPageable = PageableUtil.normalize(pageable, ALLOWED_SORT_PROPERTIES);
         String normalizedKeyword = normalizeKeyword(keyword);
