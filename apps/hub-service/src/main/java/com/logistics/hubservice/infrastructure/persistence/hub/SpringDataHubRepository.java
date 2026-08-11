@@ -13,6 +13,8 @@ interface SpringDataHubRepository extends JpaRepository<Hub, UUID> {
 
     Optional<Hub> findByIdAndDeletedAtIsNull(UUID id);
 
+    boolean existsByIdAndDeletedAtIsNull(UUID id);
+
     Page<Hub> findAllByDeletedAtIsNull(Pageable pageable);
 
     @Query("""

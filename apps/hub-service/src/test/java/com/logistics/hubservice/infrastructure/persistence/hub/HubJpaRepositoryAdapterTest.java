@@ -77,6 +77,9 @@ class HubJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
                 .map(Hub::getId)
                 .contains(activeHub.getId());
         assertThat(hubRepository.findByIdAndDeletedAtIsNull(deletedHub.getId())).isEmpty();
+        assertThat(hubRepository.existsByIdAndDeletedAtIsNull(activeHub.getId())).isTrue();
+        assertThat(hubRepository.existsByIdAndDeletedAtIsNull(deletedHub.getId())).isFalse();
+        assertThat(hubRepository.existsByIdAndDeletedAtIsNull(UUID.randomUUID())).isFalse();
         Page<Hub> activeHubs = hubRepository.findAllByDeletedAtIsNull(
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
         assertThat(activeHubs.getContent())
