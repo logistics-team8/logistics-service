@@ -32,6 +32,8 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/delivery-managers")
                         .hasAnyRole("MASTER", "HUB_MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/delivery-managers")
+                        .hasAnyRole("MASTER", "HUB_MANAGER")
                         .anyRequest().permitAll())
                 .addFilterBefore(new UserContextFilter(), UsernamePasswordAuthenticationFilter.class)
                 .build();
