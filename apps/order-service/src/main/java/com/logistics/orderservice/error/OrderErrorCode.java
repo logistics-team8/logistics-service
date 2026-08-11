@@ -192,6 +192,21 @@ public enum OrderErrorCode implements ErrorCode {
             "ORD_030",
             HttpStatus.BAD_GATEWAY,
                 "주문 취소 중 재고 복원에 실패했습니다."
+    ),
+    STOCK_DECREASE_UNKNOWN(
+            "ORD_031",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "재고 차감 결과를 확인할 수 없습니다."
+    ),
+    STOCK_RESTORE_UNKNOWN(
+            "ORD_032",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "재고 복원 결과를 확인할 수 없습니다."
+    ),
+    ORDER_CANCEL_STOCK_RESTORE_UNKNOWN(
+            "ORD_033",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "주문 취소 중 재고 복원 결과를 확인할 수 없습니다."
     );
 
 
