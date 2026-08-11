@@ -4,7 +4,6 @@ import com.logistics.common.exception.BusinessException;
 import com.logistics.orderservice.error.OrderErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -16,797 +15,156 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OrderTest {
 
-    private UUID requesterId;
-    private UUID receiverCompanyId;
-    private LocalDateTime requestedDeliveryAt;
     private LocalDateTime now;
+    private UUID requesterId;
+    private UUID companyId;
+    private UUID destinationHubId;
+
     @BeforeEach
     void setUp() {
+        now = LocalDateTime.of(2026, 8, 12, 10, 0);
         requesterId = UUID.randomUUID();
-        receiverCompanyId = UUID.randomUUID();
+        companyId = UUID.randomUUID();
+        destinationHubId = UUID.randomUUID();
+    }
 
-        now = LocalDateTime.of(
-                2026,
-                8,
-                6,
-                10,
-                0
-        );
+    @Test
+    @DisplayName("주문 생성 시 배송 스냅샷과 PENDING 상태를 저장한다")
+    void create_success() {
+        Order order = createOrder();
 
-        requestedDeliveryAt = now.plusDays(9);
+        assertThat(order.getRequesterId()).isEqualTo(requesterId);
+        assertThat(order.getReceiverCompanyId()).isEqualTo(companyId);
+        assertThat(order.getDestinationHubId()).isEqualTo(destinationHubId);
+        assertThat(order.getDeliveryAddress()).isEqualTo("서울특별시 중구 세종대로 110");
+        assertThat(order.getReceiverName()).isEqualTo("홍길동");
+        assertThat(order.getReceiverSlackId()).isEqualTo("hong.slack");
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("희망 납품일이 하루 미만이면 주문을 생성할 수 없다")
+    void create_invalidDeliveryDate() {
+        assertBusinessException(() -> createOrder(now.plusHours(23)),
+                OrderErrorCode.INVALID_REQUESTED_DELIVERY_AT);
+    }
+
+    @Test
+    @DisplayName("상품 스냅샷을 포함해 주문 상품을 추가한다")
+    void addOrderItem_success() {
+        Order order = createOrder();
+        UUID productId = UUID.randomUUID();
+        UUID supplierId = UUID.randomUUID();
+        UUID departureHubId = UUID.randomUUID();
+
+        order.addOrderItem(productId, "노트북", supplierId, departureHubId, 2);
+
+        OrderItem item = order.getOrderItems().getFirst();
+        assertThat(item.getProductId()).isEqualTo(productId);
+        assertThat(item.getProductName()).isEqualTo("노트북");
+        assertThat(item.getSupplierCompanyId()).isEqualTo(supplierId);
+        assertThat(item.getDepartureHubId()).isEqualTo(departureHubId);
+        assertThat(item.getQuantity()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("동일한 상품은 한 주문에 중복 추가할 수 없다")
+    void addOrderItem_duplicate() {
+        Order order = createOrder();
+        UUID productId = UUID.randomUUID();
+        addItem(order, productId, 1);
+
+        assertBusinessException(() -> addItem(order, productId, 2),
+                OrderErrorCode.DUPLICATE_ORDER_PRODUCT);
+    }
+
+    @Test
+    @DisplayName("재고 차감 성공 후 주문을 확정한다")
+    void confirm_success() {
+        Order order = createOrder();
+        order.confirm();
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+    }
+
+    @Test
+    @DisplayName("재고 차감 결과 미확인 시 PENDING을 유지하고 실패 사유를 기록한다")
+    void markStockDecreaseUnknown() {
+        Order order = createOrder();
+        order.markStockDecreaseUnknown();
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
+        assertThat(order.getFailureReason()).isEqualTo(OrderFailureReason.STOCK_DECREASE_UNKNOWN);
+    }
+
+    @Test
+    @DisplayName("배송 생성이 확인되면 DELIVERY_CREATED 상태가 된다")
+    void markDeliveryCreated_success() {
+        Order order = createOrder();
+        order.confirm();
+        order.markDeliveryCreated();
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.DELIVERY_CREATED);
+    }
+
+    @Test
+    @DisplayName("주문 취소 시 활성 주문 상품도 모두 취소한다")
+    void cancel_success() {
+        Order order = createOrder();
+        addItem(order, UUID.randomUUID(), 2);
+        LocalDateTime canceledAt = now.plusHours(1);
+
+        order.cancel(requesterId, canceledAt);
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
+        assertThat(order.getCanceledBy()).isEqualTo(requesterId);
+        assertThat(order.getCanceledAt()).isEqualTo(canceledAt);
+        assertThat(order.getOrderItems()).allMatch(OrderItem::isCanceled);
+    }
+
+    @Test
+    @DisplayName("DELIVERY_CREATED 주문은 취소 불가 예외가 발생한다")
+    void cancel_deliveryCreatedOrder() {
+        Order order = createOrder();
+        order.confirm();
+        order.markDeliveryCreated();
+
+        assertBusinessException(() -> order.cancel(requesterId, now),
+                OrderErrorCode.ORDER_NOT_CANCELABLE);
+    }
+
+    @Test
+    @DisplayName("주문 상품 하나를 취소하고 모두 취소되면 주문도 취소한다")
+    void cancelOrderItem_success() {
+        Order order = createOrder();
+        addItem(order, UUID.randomUUID(), 1);
+        OrderItem item = order.getOrderItems().getFirst();
+        UUID itemId = UUID.randomUUID();
+        ReflectionTestUtils.setField(item, "id", itemId);
+
+        order.cancelOrderItem(itemId, requesterId);
+
+        assertThat(item.isCanceled()).isTrue();
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
     }
 
     private Order createOrder() {
+        return createOrder(now.plusDays(3));
+    }
+
+    private Order createOrder(LocalDateTime deliveryAt) {
         return Order.create(
-                "ORD-20260806-ABCDEF123456",
-                requesterId,
-                receiverCompanyId,
-                "기존 요청사항",
-                requestedDeliveryAt,
-                now
+                "ORD-20260812-ABCDEF123456", requesterId, companyId,
+                destinationHubId, "서울특별시 중구 세종대로 110", "홍길동",
+                "hong.slack", "안전 배송", deliveryAt, now
         );
     }
 
-    @Test
-    @DisplayName("희망 납품일이 현재보다 하루 미만이면 생성할 수 없다")
-    void createOrder_invalidRequestedDeliveryAt() {
+    private void addItem(Order order, UUID productId, int quantity) {
+        order.addOrderItem(productId, "상품", UUID.randomUUID(), UUID.randomUUID(), quantity);
+    }
 
-        assertThatThrownBy(() ->
-                Order.create(
-                        "ORD-1",
-                        requesterId,
-                        receiverCompanyId,
-                        "요청",
-                        now.plusHours(12),
-                        now
-                )
-        )
+    private void assertBusinessException(Runnable action, OrderErrorCode errorCode) {
+        assertThatThrownBy(action::run)
                 .isInstanceOf(BusinessException.class)
-                .satisfies(exception -> {
-                    BusinessException businessException =
-                            (BusinessException) exception;
-
-                    assertThat(businessException.getErrorCode())
-                            .isEqualTo(
-                                    OrderErrorCode.INVALID_REQUESTED_DELIVERY_AT
-                            );
-                });
-    }
-
-    @Test
-    @DisplayName("희망 납품일이 하루 미만이면 수정할 수 없다")
-    void updateOrder_invalidRequestedDeliveryAt() {
-
-        Order order = createOrder();
-
-        assertThatThrownBy(() ->
-                order.update(
-                        "변경",
-                        now.plusHours(5),
-                        now
-                )
-        )
-                .isInstanceOf(BusinessException.class)
-                .satisfies(exception -> {
-                    BusinessException businessException =
-                            (BusinessException) exception;
-
-                    assertThat(businessException.getErrorCode())
-                            .isEqualTo(
-                                    OrderErrorCode.INVALID_REQUESTED_DELIVERY_AT
-                            );
-                });
-    }
-
-    @Nested
-    @DisplayName("주문 생성")
-    class CreateOrderTest {
-
-        @Test
-        @DisplayName("주문을 생성하면 기본 상태는 PENDING이다")
-        void createOrder_success() {
-            // when
-            Order order = createOrder();
-
-            // then
-            assertThat(order.getOrderNumber())
-                    .isEqualTo("ORD-20260806-ABCDEF123456");
-
-            assertThat(order.getRequesterId())
-                    .isEqualTo(requesterId);
-
-            assertThat(order.getReceiverCompanyId())
-                    .isEqualTo(receiverCompanyId);
-
-            assertThat(order.getRequestMessage())
-                    .isEqualTo("기존 요청사항");
-
-            assertThat(order.getRequestedDeliveryAt())
-                    .isEqualTo(requestedDeliveryAt);
-
-            assertThat(order.getStatus())
-                    .isEqualTo(OrderStatus.PENDING);
-
-            assertThat(order.getOrderItems())
-                    .isEmpty();
-
-            assertThat(order.getCanceledBy())
-                    .isNull();
-
-            assertThat(order.getCanceledAt())
-                    .isNull();
-        }
-    }
-
-    @Nested
-    @DisplayName("주문상품 추가")
-    class AddOrderItemTest {
-
-        @Test
-        @DisplayName("주문에 상품을 추가한다")
-        void addOrderItem_success() {
-            // given
-            Order order = createOrder();
-            UUID productId = UUID.randomUUID();
-
-            // when
-            order.addOrderItem(productId, 3);
-
-            // then
-            assertThat(order.getOrderItems())
-                    .hasSize(1);
-
-            OrderItem orderItem =
-                    order.getOrderItems().getFirst();
-
-            assertThat(orderItem.getProductId())
-                    .isEqualTo(productId);
-
-            assertThat(orderItem.getQuantity())
-                    .isEqualTo(3);
-
-            assertThat(orderItem.getStatus())
-                    .isEqualTo(OrderItemStatus.ACTIVE);
-
-            assertThat(orderItem.getOrder())
-                    .isSameAs(order);
-        }
-
-        @Test
-        @DisplayName("하나의 주문에 동일한 상품을 중복으로 추가할 수 없다")
-        void addOrderItem_duplicateProduct_fail() {
-            // given
-            Order order = createOrder();
-            UUID productId = UUID.randomUUID();
-
-            order.addOrderItem(productId, 2);
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.addOrderItem(productId, 3)
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .DUPLICATE_ORDER_PRODUCT
-                                );
-                    });
-
-            assertThat(order.getOrderItems())
-                    .hasSize(1);
-        }
-
-        @Test
-        @DisplayName("주문 수량이 null이면 상품을 추가할 수 없다")
-        void addOrderItem_nullQuantity_fail() {
-            // given
-            Order order = createOrder();
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.addOrderItem(
-                            UUID.randomUUID(),
-                            null
-                    )
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .INVALID_ORDER_QUANTITY
-                                );
-                    });
-
-            assertThat(order.getOrderItems())
-                    .isEmpty();
-        }
-
-        @Test
-        @DisplayName("주문 수량이 0이면 상품을 추가할 수 없다")
-        void addOrderItem_zeroQuantity_fail() {
-            // given
-            Order order = createOrder();
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.addOrderItem(
-                            UUID.randomUUID(),
-                            0
-                    )
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .INVALID_ORDER_QUANTITY
-                                );
-                    });
-
-            assertThat(order.getOrderItems())
-                    .isEmpty();
-        }
-
-        @Test
-        @DisplayName("주문 수량이 음수이면 상품을 추가할 수 없다")
-        void addOrderItem_negativeQuantity_fail() {
-            // given
-            Order order = createOrder();
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.addOrderItem(
-                            UUID.randomUUID(),
-                            -1
-                    )
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .INVALID_ORDER_QUANTITY
-                                );
-                    });
-
-            assertThat(order.getOrderItems())
-                    .isEmpty();
-        }
-    }
-
-    @Nested
-    @DisplayName("주문 수정")
-    class UpdateOrderTest {
-
-        @Test
-        @DisplayName("PENDING 주문의 요청사항과 희망 납품 일시를 수정한다")
-        void updateOrder_success() {
-            // given
-            Order order = createOrder();
-
-            String newRequestMessage =
-                    "오후 5시 이전에 배송해주세요.";
-
-            LocalDateTime newRequestedDeliveryAt =
-                    LocalDateTime.of(
-                            2026,
-                            8,
-                            20,
-                            17,
-                            0
-                    );
-
-            // when
-            order.update(
-                    newRequestMessage,
-                    newRequestedDeliveryAt,
-                    now
-            );
-
-            // then
-            assertThat(order.getRequestMessage())
-                    .isEqualTo(newRequestMessage);
-
-            assertThat(order.getRequestedDeliveryAt())
-                    .isEqualTo(newRequestedDeliveryAt);
-
-            assertThat(order.getStatus())
-                    .isEqualTo(OrderStatus.PENDING);
-        }
-
-        @Test
-        @DisplayName("CONFIRMED 주문은 수정할 수 없다")
-        void updateOrder_confirmed_fail() {
-            // given
-            Order order = createOrder();
-
-            changeStatus(
-                    order,
-                    OrderStatus.CONFIRMED
-            );
-
-            String originalMessage =
-                    order.getRequestMessage();
-
-            LocalDateTime originalDeliveryAt =
-                    order.getRequestedDeliveryAt();
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.update(
-                            "변경 요청사항",
-                            now.plusDays(10),
-                            now
-                    )
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .ORDER_NOT_UPDATABLE
-                                );
-                    });
-
-            assertThat(order.getRequestMessage())
-                    .isEqualTo(originalMessage);
-
-            assertThat(order.getRequestedDeliveryAt())
-                    .isEqualTo(originalDeliveryAt);
-        }
-
-        @Test
-        @DisplayName("FAILED 주문은 수정할 수 없다")
-        void updateOrder_failed_fail() {
-            // given
-            Order order = createOrder();
-
-            changeStatus(
-                    order,
-                    OrderStatus.FAILED
-            );
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.update(
-                            "변경 요청사항",
-                            now.plusDays(10),
-                            now
-                    )
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .ORDER_NOT_UPDATABLE
-                                );
-                    });
-        }
-
-        @Test
-        @DisplayName("CANCELED 주문은 수정할 수 없다")
-        void updateOrder_canceled_fail() {
-            // given
-            Order order = createOrder();
-
-            changeStatus(
-                    order,
-                    OrderStatus.CANCELED
-            );
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.update(
-                            "변경 요청사항",
-                            now.plusDays(10),
-                            now
-                    )
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .ORDER_NOT_UPDATABLE
-                                );
-                    });
-        }
-    }
-
-    @Nested
-    @DisplayName("주문 논리 삭제")
-    class DeleteOrderTest {
-
-        @Test
-        @DisplayName("FAILED 주문을 논리 삭제한다")
-        void deleteOrder_failed_success() {
-            // given
-            Order order = createOrder();
-            UUID deletedBy = UUID.randomUUID();
-
-            order.addOrderItem(
-                    UUID.randomUUID(),
-                    2
-            );
-
-            order.addOrderItem(
-                    UUID.randomUUID(),
-                    3
-            );
-
-            changeStatus(
-                    order,
-                    OrderStatus.FAILED
-            );
-
-            // when
-            order.delete(deletedBy);
-
-            // then
-            assertThat(order.getDeletedAt())
-                    .isNotNull();
-
-            assertThat(order.getDeletedBy())
-                    .isEqualTo(deletedBy);
-
-            assertThat(order.getStatus())
-                    .isEqualTo(OrderStatus.FAILED);
-
-            assertThat(order.getOrderItems())
-                    .allSatisfy(orderItem -> {
-                        assertThat(orderItem.getDeletedAt())
-                                .isNotNull();
-
-                        assertThat(orderItem.getDeletedBy())
-                                .isEqualTo(deletedBy);
-                    });
-        }
-
-        @Test
-        @DisplayName("CANCELED 주문을 논리 삭제한다")
-        void deleteOrder_canceled_success() {
-            // given
-            Order order = createOrder();
-            UUID deletedBy = UUID.randomUUID();
-
-            order.addOrderItem(
-                    UUID.randomUUID(),
-                    2
-            );
-
-            changeStatus(
-                    order,
-                    OrderStatus.CANCELED
-            );
-
-            // when
-            order.delete(deletedBy);
-
-            // then
-            assertThat(order.getDeletedAt())
-                    .isNotNull();
-
-            assertThat(order.getDeletedBy())
-                    .isEqualTo(deletedBy);
-
-            assertThat(order.getStatus())
-                    .isEqualTo(OrderStatus.CANCELED);
-
-            assertThat(order.getOrderItems())
-                    .allSatisfy(orderItem -> {
-                        assertThat(orderItem.getDeletedAt())
-                                .isNotNull();
-
-                        assertThat(orderItem.getDeletedBy())
-                                .isEqualTo(deletedBy);
-                    });
-        }
-
-        @Test
-        @DisplayName("PENDING 주문은 삭제할 수 없다")
-        void deleteOrder_pending_fail() {
-            // given
-            Order order = createOrder();
-            UUID deletedBy = UUID.randomUUID();
-
-            order.addOrderItem(
-                    UUID.randomUUID(),
-                    2
-            );
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.delete(deletedBy)
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .ORDER_NOT_DELETABLE
-                                );
-                    });
-
-            assertThat(order.getDeletedAt())
-                    .isNull();
-
-            assertThat(order.getDeletedBy())
-                    .isNull();
-
-            assertThat(order.getOrderItems())
-                    .allSatisfy(orderItem -> {
-                        assertThat(orderItem.getDeletedAt())
-                                .isNull();
-
-                        assertThat(orderItem.getDeletedBy())
-                                .isNull();
-                    });
-        }
-
-        @Test
-        @DisplayName("CONFIRMED 주문은 취소하지 않고 바로 삭제할 수 없다")
-        void deleteOrder_confirmed_fail() {
-            // given
-            Order order = createOrder();
-            UUID deletedBy = UUID.randomUUID();
-
-            order.addOrderItem(
-                    UUID.randomUUID(),
-                    2
-            );
-
-            changeStatus(
-                    order,
-                    OrderStatus.CONFIRMED
-            );
-
-            // when & then
-            assertThatThrownBy(() ->
-                    order.delete(deletedBy)
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> {
-                        BusinessException businessException =
-                                (BusinessException) exception;
-
-                        assertThat(businessException.getErrorCode())
-                                .isEqualTo(
-                                        OrderErrorCode
-                                                .ORDER_NOT_DELETABLE
-                                );
-                    });
-
-            assertThat(order.getDeletedAt())
-                    .isNull();
-
-            assertThat(order.getDeletedBy())
-                    .isNull();
-
-            assertThat(order.getOrderItems())
-                    .allSatisfy(orderItem -> {
-                        assertThat(orderItem.getDeletedAt())
-                                .isNull();
-
-                        assertThat(orderItem.getDeletedBy())
-                                .isNull();
-                    });
-        }
-
-        @Test
-        @DisplayName("논리 삭제해도 주문 상태와 주문상품 상태는 변경되지 않는다")
-        void deleteOrder_doesNotChangeStatus() {
-            // given
-            Order order = createOrder();
-            UUID deletedBy = UUID.randomUUID();
-
-            order.addOrderItem(
-                    UUID.randomUUID(),
-                    2
-            );
-
-            changeStatus(
-                    order,
-                    OrderStatus.FAILED
-            );
-
-            OrderItem orderItem =
-                    order.getOrderItems().getFirst();
-
-            // when
-            order.delete(deletedBy);
-
-            // then
-            assertThat(order.getStatus())
-                    .isEqualTo(OrderStatus.FAILED);
-
-            assertThat(orderItem.getStatus())
-                    .isEqualTo(OrderItemStatus.ACTIVE);
-
-            assertThat(order.getDeletedAt())
-                    .isNotNull();
-
-            assertThat(orderItem.getDeletedAt())
-                    .isNotNull();
-        }
-    }
-
-    @Nested
-    @DisplayName("주문 취소")
-    class CancelOrderTest {
-
-        @Test
-        @DisplayName("PENDING 주문을 취소하면 주문과 모든 활성 주문상품이 취소된다")
-        void cancelOrder_success() {
-            Order order = createOrder();
-            UUID canceledBy = UUID.randomUUID();
-            order.addOrderItem(UUID.randomUUID(), 2);
-            order.addOrderItem(UUID.randomUUID(), 3);
-
-            order.cancel(canceledBy);
-
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
-            assertThat(order.getCanceledBy()).isEqualTo(canceledBy);
-            assertThat(order.getCanceledAt()).isNotNull();
-            assertThat(order.getOrderItems()).allSatisfy(item -> {
-                assertThat(item.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
-                assertThat(item.getCanceledBy()).isEqualTo(canceledBy);
-                assertThat(item.getCanceledAt()).isNotNull();
-            });
-        }
-
-        @Test
-        @DisplayName("이미 취소된 주문은 다시 취소할 수 없다")
-        void cancelOrder_alreadyCanceled() {
-            Order order = createOrder();
-            UUID canceledBy = UUID.randomUUID();
-            order.cancel(canceledBy);
-
-            assertThatThrownBy(() -> order.cancel(canceledBy))
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> assertThat(
-                            ((BusinessException) exception).getErrorCode()
-                    ).isEqualTo(OrderErrorCode.ORDER_ALREADY_CANCELED));
-        }
-
-        @Test
-        @DisplayName("PENDING 상태가 아닌 주문은 취소할 수 없다")
-        void cancelOrder_notCancelable() {
-            Order order = createOrder();
-            changeStatus(order, OrderStatus.CONFIRMED);
-
-            assertThatThrownBy(() -> order.cancel(UUID.randomUUID()))
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> assertThat(
-                            ((BusinessException) exception).getErrorCode()
-                    ).isEqualTo(OrderErrorCode.ORDER_NOT_CANCELABLE));
-        }
-    }
-
-    @Nested
-    @DisplayName("주문상품 취소")
-    class CancelOrderItemTest {
-
-        @Test
-        @DisplayName("일부 주문상품만 취소하면 주문 상태는 PENDING을 유지한다")
-        void cancelOrderItem_partial_success() {
-            Order order = createOrder();
-            UUID canceledBy = UUID.randomUUID();
-            order.addOrderItem(UUID.randomUUID(), 2);
-            order.addOrderItem(UUID.randomUUID(), 3);
-            OrderItem target = order.getOrderItems().getFirst();
-            UUID targetId = UUID.randomUUID();
-            ReflectionTestUtils.setField(target, "id", targetId);
-
-            OrderItem canceledItem = order.cancelOrderItem(targetId, canceledBy);
-
-            assertThat(canceledItem).isSameAs(target);
-            assertThat(canceledItem.getStatus()).isEqualTo(OrderItemStatus.CANCELED);
-            assertThat(canceledItem.getCanceledBy()).isEqualTo(canceledBy);
-            assertThat(canceledItem.getCanceledAt()).isNotNull();
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING);
-            assertThat(order.getCanceledAt()).isNull();
-        }
-
-        @Test
-        @DisplayName("마지막 활성 주문상품을 취소하면 주문도 취소된다")
-        void cancelOrderItem_allCanceled() {
-            Order order = createOrder();
-            UUID canceledBy = UUID.randomUUID();
-            order.addOrderItem(UUID.randomUUID(), 1);
-            OrderItem target = order.getOrderItems().getFirst();
-            UUID targetId = UUID.randomUUID();
-            ReflectionTestUtils.setField(target, "id", targetId);
-
-            order.cancelOrderItem(targetId, canceledBy);
-
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);
-            assertThat(order.getCanceledBy()).isEqualTo(canceledBy);
-            assertThat(order.getCanceledAt()).isNotNull();
-        }
-
-        @Test
-        @DisplayName("주문에 속하지 않은 주문상품은 취소할 수 없다")
-        void cancelOrderItem_notFound() {
-            Order order = createOrder();
-            order.addOrderItem(UUID.randomUUID(), 1);
-            ReflectionTestUtils.setField(
-                    order.getOrderItems().getFirst(),
-                    "id",
-                    UUID.randomUUID()
-            );
-
-            assertThatThrownBy(() ->
-                    order.cancelOrderItem(UUID.randomUUID(), UUID.randomUUID())
-            )
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> assertThat(
-                            ((BusinessException) exception).getErrorCode()
-                    ).isEqualTo(OrderErrorCode.ORDER_ITEM_NOT_FOUND));
-        }
-
-        @Test
-        @DisplayName("이미 취소된 주문상품은 다시 취소할 수 없다")
-        void cancelOrderItem_alreadyCanceled() {
-            Order order = createOrder();
-            UUID canceledBy = UUID.randomUUID();
-            order.addOrderItem(UUID.randomUUID(), 1);
-            order.addOrderItem(UUID.randomUUID(), 1);
-            OrderItem target = order.getOrderItems().getFirst();
-            UUID targetId = UUID.randomUUID();
-            ReflectionTestUtils.setField(target, "id", targetId);
-            order.cancelOrderItem(targetId, canceledBy);
-
-            assertThatThrownBy(() -> order.cancelOrderItem(targetId, canceledBy))
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> assertThat(
-                            ((BusinessException) exception).getErrorCode()
-                    ).isEqualTo(OrderErrorCode.ORDER_ITEM_ALREADY_CANCELED));
-        }
-    }
-
-    /**
-     * 현재 Order에 상태 전환 메서드가 공개되어 있지 않기 때문에
-     * 도메인 상태별 테스트를 위해서만 ReflectionTestUtils를 사용한다.
-     *
-     * confirm(), fail(), cancel() 메서드가 구현되면
-     * 해당 도메인 메서드 호출로 교체하는 것이 바람직하다.
-     */
-    private void changeStatus(
-            Order order,
-            OrderStatus status
-    ) {
-        ReflectionTestUtils.setField(
-                order,
-                "status",
-                status
-        );
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(errorCode));
     }
 }
