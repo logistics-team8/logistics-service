@@ -84,6 +84,7 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
                 .build();
         jdbcTemplate.update("delete from p_hub_routes");
         jdbcTemplate.update("delete from p_hubs");
+        cacheManager.getCache(HUB_BY_ID_CACHE).clear();
         cacheManager.getCache("hubRouteById").clear();
         cacheManager.getCache("hubRoutePath").clear();
         SecurityContextHolder.clearContext();
@@ -494,6 +495,10 @@ class HubControllerIntegrationTest extends PostgreSqlIntegrationTest {
         ));
         SecurityContextHolder.clearContext();
         return hub;
+    }
+
+    private String hubCacheKey(UUID hubId) {
+        return HUB_BY_ID_CACHE + "::" + hubId;
     }
 
     private HubRoute saveRoute(UUID sourceHubId, UUID destinationHubId) {
