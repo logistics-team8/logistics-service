@@ -410,9 +410,8 @@ class HubApplicationServiceTest {
 
         @Override
         public Hub save(Hub hub) {
-            if (hub.getId() == null) {
+            if (!hubs.containsKey(hub.getId())) {
                 int index = sequence.incrementAndGet();
-                ReflectionTestUtils.setField(hub, "id", new UUID(0L, index));
                 ReflectionTestUtils.setField(hub, "createdAt", LocalDateTime.of(2026, 8, 5, 9, 0).plusMinutes(index));
             }
             ReflectionTestUtils.setField(hub, "updatedAt", LocalDateTime.of(2026, 8, 5, 10, 0).plusMinutes(sequence.get()));
