@@ -1,12 +1,12 @@
 package com.logistics.orderservice.presentation;
 
 import com.logistics.common.response.ApiResponse;
+import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.service.command.OrderCancelService;
 import com.logistics.orderservice.application.service.command.OrderCommandService;
 import com.logistics.orderservice.application.service.command.OrderCreateService;
 import com.logistics.orderservice.application.service.query.OrderQueryService;
-import com.logistics.orderservice.page.PageResponse;
 import com.logistics.orderservice.presentation.dto.request.CreateOrderRequest;
 import com.logistics.orderservice.presentation.dto.request.UpdateOrderRequest;
 import com.logistics.orderservice.presentation.dto.response.*;
