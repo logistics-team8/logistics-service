@@ -80,7 +80,10 @@ public interface HubApi {
     ResponseEntity<ApiResponse<HubResponseDto>> update(
             @PathVariable UUID hubId, @Valid @RequestBody UpdateHubRequest request);
 
-    @Operation(summary = "허브 삭제", description = "MASTER 권한이 필요합니다. 성공하면 data와 error가 모두 null인 응답을 반환합니다.")
+    @Operation(
+            summary = "허브 삭제",
+            description = "MASTER 권한이 필요합니다. 허브와 출발지 또는 도착지로 연결된 활성 경로를 함께 논리 삭제합니다. "
+                    + "성공하면 data와 error가 모두 null인 응답을 반환합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "삭제 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),

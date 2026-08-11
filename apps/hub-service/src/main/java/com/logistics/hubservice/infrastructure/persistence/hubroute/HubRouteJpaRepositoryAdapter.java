@@ -22,6 +22,11 @@ public class HubRouteJpaRepositoryAdapter implements HubRouteRepository {
     }
 
     @Override
+    public List<HubRoute> saveAll(List<HubRoute> hubRoutes) {
+        return repository.saveAll(hubRoutes);
+    }
+
+    @Override
     public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
         return repository.findByIdAndDeletedAtIsNull(id);
     }
@@ -29,6 +34,11 @@ public class HubRouteJpaRepositoryAdapter implements HubRouteRepository {
     @Override
     public List<HubRoute> findAllByDeletedAtIsNull() {
         return repository.findAllByDeletedAtIsNull();
+    }
+
+    @Override
+    public List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId) {
+        return repository.findAllByHubIdAndDeletedAtIsNull(hubId);
     }
 
     @Override

@@ -7,6 +7,7 @@ import com.logistics.hubservice.domain.hub.HubRepository;
 import com.logistics.hubservice.domain.hubroute.HubRoute;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import jakarta.validation.Valid;
+import java.util.stream.Stream;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,8 +30,7 @@ public class HubRouteCommandService {
     @CacheEvict(cacheNames = "hubRoutePath", allEntries = true)
     public HubRouteResponse create(@Valid CreateHubRouteCommand command) {
         validateDifferentHubs(command.sourceHubId(), command.destinationHubId());
-        validateActiveHub(command.sourceHubId());
-        validateActiveHub(command.destinationHubId());
+        validateAndLockActiveHubs(command.sourceHubId(), command.destinationHubId());
         validateNoActiveDuplicate(command.sourceHubId(), command.destinationHubId());
 
         HubRoute hubRoute = HubRoute.create(
@@ -72,8 +72,14 @@ public class HubRouteCommandService {
         }
     }
 
-    private void validateActiveHub(UUID hubId) {
-        if (hubRepository.findByIdAndDeletedAtIsNull(hubId).isEmpty()) {
+    private void validateAndLockActiveHubs(UUID sourceHubId, UUID destinationHubId) {
+        Stream.of(sourceHubId, destinationHubId)
+                .sorted()
+                .forEach(this::validateAndLockActiveHub);
+    }
+
+    private void validateAndLockActiveHub(UUID hubId) {
+        if (hubRepository.findByIdAndDeletedAtIsNullForUpdate(hubId).isEmpty()) {
             throw new BusinessException(HubErrorCode.HUB_NOT_FOUND);
         }
     }

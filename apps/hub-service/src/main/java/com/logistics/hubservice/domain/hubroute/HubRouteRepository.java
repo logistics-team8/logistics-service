@@ -10,9 +10,13 @@ public interface HubRouteRepository {
 
     HubRoute save(HubRoute hubRoute);
 
+    List<HubRoute> saveAll(List<HubRoute> hubRoutes);
+
     Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id);
 
     List<HubRoute> findAllByDeletedAtIsNull();
+
+    List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId);
 
     Page<HubRoute> search(UUID sourceHubId, UUID destinationHubId, Pageable pageable);
 

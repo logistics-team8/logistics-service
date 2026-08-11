@@ -20,6 +20,14 @@ interface SpringDataHubRouteRepository extends JpaRepository<HubRoute, UUID> {
             SELECT hr
             FROM HubRoute hr
             WHERE hr.deletedAt IS NULL
+              AND (hr.sourceHubId = :hubId OR hr.destinationHubId = :hubId)
+            """)
+    List<HubRoute> findAllByHubIdAndDeletedAtIsNull(@Param("hubId") UUID hubId);
+
+    @Query("""
+            SELECT hr
+            FROM HubRoute hr
+            WHERE hr.deletedAt IS NULL
               AND (:sourceHubId IS NULL OR hr.sourceHubId = :sourceHubId)
               AND (:destinationHubId IS NULL OR hr.destinationHubId = :destinationHubId)
             """)

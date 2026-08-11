@@ -107,6 +107,28 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    @DisplayName("허브 ID가 출발지 또는 도착지인 활성 경로만 조회한다")
+    void findAllByHubIdReturnsOnlyActiveConnectedRoutes() {
+        Hub targetHub = saveHub("서울 허브");
+        Hub otherHub = saveHub("대전 허브");
+        Hub thirdHub = saveHub("부산 허브");
+        HubRoute outgoingRoute = saveRoute(targetHub.getId(), otherHub.getId());
+        HubRoute incomingRoute = saveRoute(thirdHub.getId(), targetHub.getId());
+        saveRoute(otherHub.getId(), thirdHub.getId());
+        HubRoute deletedRoute = saveRoute(targetHub.getId(), thirdHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                deletedRoute.getId());
+
+        List<HubRoute> result =
+                hubRouteRepository.findAllByHubIdAndDeletedAtIsNull(targetHub.getId());
+
+        assertThat(result)
+                .extracting(HubRoute::getId)
+                .containsExactlyInAnyOrder(outgoingRoute.getId(), incomingRoute.getId());
+    }
+
+    @Test
     @DisplayName("출발 허브와 도착 허브 조건으로 활성 경로를 페이지 조회한다")
     void searchFiltersActiveRoutesBySourceAndDestinationHub() {
         Hub sourceHub = saveHub("서울 허브");

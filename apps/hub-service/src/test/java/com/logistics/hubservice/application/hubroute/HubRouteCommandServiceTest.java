@@ -17,12 +17,14 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -71,6 +73,8 @@ class HubRouteCommandServiceTest {
         assertThat(response.durationSeconds()).isEqualTo(7_200L);
         assertThat(response.createdAt()).isNotNull();
         assertThat(response.updatedAt()).isNotNull();
+        assertThat(hubRepository.lockedHubIds)
+                .containsExactlyElementsOf(Stream.of(SOURCE_HUB_ID, DESTINATION_HUB_ID).sorted().toList());
     }
 
     @Test
@@ -230,6 +234,7 @@ class HubRouteCommandServiceTest {
     private static final class InMemoryHubRepository implements HubRepository {
 
         private final Map<UUID, Hub> hubs = new LinkedHashMap<>();
+        private final List<UUID> lockedHubIds = new ArrayList<>();
 
         void add(Hub hub) {
             hubs.put(hub.getId(), hub);
@@ -244,6 +249,17 @@ class HubRouteCommandServiceTest {
         @Override
         public Optional<Hub> findByIdAndDeletedAtIsNull(UUID id) {
             return Optional.ofNullable(hubs.get(id)).filter(hub -> hub.getDeletedAt() == null);
+        }
+
+        @Override
+        public Optional<Hub> findByIdAndDeletedAtIsNullForUpdate(UUID id) {
+            lockedHubIds.add(id);
+            return findByIdAndDeletedAtIsNull(id);
+        }
+
+        @Override
+        public boolean existsByIdAndDeletedAtIsNull(UUID id) {
+            return findByIdAndDeletedAtIsNull(id).isPresent();
         }
 
         @Override
@@ -277,6 +293,12 @@ class HubRouteCommandServiceTest {
         }
 
         @Override
+        public List<HubRoute> saveAll(List<HubRoute> hubRoutes) {
+            hubRoutes.forEach(this::save);
+            return hubRoutes;
+        }
+
+        @Override
         public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
             return Optional.ofNullable(routes.get(id))
                     .filter(route -> route.getDeletedAt() == null);
@@ -286,6 +308,15 @@ class HubRouteCommandServiceTest {
         public List<HubRoute> findAllByDeletedAtIsNull() {
             return routes.values().stream()
                     .filter(route -> route.getDeletedAt() == null)
+                    .toList();
+        }
+
+        @Override
+        public List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId) {
+            return routes.values().stream()
+                    .filter(route -> route.getDeletedAt() == null)
+                    .filter(route -> route.getSourceHubId().equals(hubId)
+                            || route.getDestinationHubId().equals(hubId))
                     .toList();
         }
 
