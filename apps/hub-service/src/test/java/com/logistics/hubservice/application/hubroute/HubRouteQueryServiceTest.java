@@ -2,12 +2,18 @@ package com.logistics.hubservice.application.hubroute;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.hubservice.application.hub.HubErrorCode;
+import com.logistics.hubservice.application.hubroute.dto.HubRoutePathResponse;
 import com.logistics.hubservice.application.hubroute.dto.HubRouteResponse;
 import com.logistics.hubservice.application.hubroute.query.HubRouteQueryService;
+import com.logistics.hubservice.domain.hub.Hub;
+import com.logistics.hubservice.domain.hub.HubRepository;
 import com.logistics.hubservice.domain.hubroute.HubRoute;
+import com.logistics.hubservice.domain.hubroute.HubRoutePathFinder;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -36,12 +42,17 @@ class HubRouteQueryServiceTest {
             UUID.fromString("b44a6de8-51ae-4f34-b3ad-a484ae85583c");
 
     private InMemoryHubRouteRepository repository;
+    private HubRepository hubRepository;
     private HubRouteQueryService service;
 
     @BeforeEach
     void setUp() {
         repository = new InMemoryHubRouteRepository();
-        service = new HubRouteQueryService(repository);
+        hubRepository = mock(HubRepository.class);
+        service = new HubRouteQueryService(
+                hubRepository,
+                repository,
+                new HubRoutePathFinder());
     }
 
     @Test
@@ -121,6 +132,78 @@ class HubRouteQueryServiceTest {
                         .isEqualTo(com.logistics.common.error.CommonErrorCode.INVALID_INPUT));
     }
 
+    @Test
+    @DisplayName("활성 허브 사이의 최단 경로 구간과 합계를 조회한다")
+    void getShortestPathReturnsSegmentsAndTotals() {
+        UUID intermediateHubId = UUID.randomUUID();
+        HubRoute first = route(
+                UUID.randomUUID(),
+                SOURCE_HUB_ID,
+                intermediateHubId,
+                LocalDateTime.of(2026, 8, 9, 9, 0),
+                40L,
+                50L);
+        HubRoute second = route(
+                UUID.randomUUID(),
+                intermediateHubId,
+                DESTINATION_HUB_ID,
+                LocalDateTime.of(2026, 8, 9, 10, 0),
+                60L,
+                70L);
+        repository.save(first);
+        repository.save(second);
+        mockActiveHub(SOURCE_HUB_ID);
+        mockActiveHub(DESTINATION_HUB_ID);
+
+        HubRoutePathResponse response = service.getShortestPath(
+                SOURCE_HUB_ID,
+                DESTINATION_HUB_ID);
+
+        assertThat(response.totalDistanceMeters()).isEqualTo(100L);
+        assertThat(response.totalDurationSeconds()).isEqualTo(120L);
+        assertThat(response.segments())
+                .extracting(HubRoutePathResponse.Segment::sequence)
+                .containsExactly(1, 2);
+        assertThat(response.segments())
+                .extracting(HubRoutePathResponse.Segment::hubRouteId)
+                .containsExactly(first.getId(), second.getId());
+    }
+
+    @Test
+    @DisplayName("출발 허브나 도착 허브가 없으면 최단 경로를 조회할 수 없다")
+    void getShortestPathRejectsMissingHub() {
+        mockActiveHub(SOURCE_HUB_ID);
+
+        assertThatThrownBy(() -> service.getShortestPath(SOURCE_HUB_ID, DESTINATION_HUB_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).getErrorCode())
+                        .isEqualTo(HubErrorCode.HUB_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("활성 허브 사이에 연결 경로가 없으면 최단 경로를 찾을 수 없다")
+    void getShortestPathRejectsUnreachableDestination() {
+        mockActiveHub(SOURCE_HUB_ID);
+        mockActiveHub(DESTINATION_HUB_ID);
+
+        assertThatThrownBy(() -> service.getShortestPath(SOURCE_HUB_ID, DESTINATION_HUB_ID))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(exception -> assertThat(((BusinessException) exception).getErrorCode())
+                        .isEqualTo(HubErrorCode.HUB_ROUTE_PATH_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("같은 활성 허브를 조회하면 이동 구간과 합계가 0이다")
+    void getShortestPathReturnsEmptyPathForSameHub() {
+        mockActiveHub(SOURCE_HUB_ID);
+
+        HubRoutePathResponse response = service.getShortestPath(SOURCE_HUB_ID, SOURCE_HUB_ID);
+
+        assertThat(response.segments()).isEmpty();
+        assertThat(response.totalDistanceMeters()).isZero();
+        assertThat(response.totalDurationSeconds()).isZero();
+    }
+
     private static void assertHubRouteNotFound(Runnable action) {
         assertThatThrownBy(action::run)
                 .isInstanceOf(BusinessException.class)
@@ -134,16 +217,37 @@ class HubRouteQueryServiceTest {
 
     private static HubRoute route(
             UUID routeId, UUID sourceHubId, UUID destinationHubId, LocalDateTime createdAt) {
+        return route(
+                routeId,
+                sourceHubId,
+                destinationHubId,
+                createdAt,
+                123_400L,
+                7_200L);
+    }
+
+    private static HubRoute route(
+            UUID routeId,
+            UUID sourceHubId,
+            UUID destinationHubId,
+            LocalDateTime createdAt,
+            long distanceMeters,
+            long durationSeconds) {
         HubRoute route = HubRoute.create(
                 sourceHubId,
                 destinationHubId,
-                123_400L,
-                7_200L
+                distanceMeters,
+                durationSeconds
         );
         ReflectionTestUtils.setField(route, "id", routeId);
         ReflectionTestUtils.setField(route, "createdAt", createdAt);
         ReflectionTestUtils.setField(route, "updatedAt", createdAt.plusHours(1));
         return route;
+    }
+
+    private void mockActiveHub(UUID hubId) {
+        when(hubRepository.findByIdAndDeletedAtIsNull(hubId))
+                .thenReturn(Optional.of(mock(Hub.class)));
     }
 
     private static final class InMemoryHubRouteRepository implements HubRouteRepository {
@@ -157,9 +261,31 @@ class HubRouteQueryServiceTest {
         }
 
         @Override
+        public List<HubRoute> saveAll(List<HubRoute> hubRoutes) {
+            hubRoutes.forEach(this::save);
+            return hubRoutes;
+        }
+
+        @Override
         public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
             return Optional.ofNullable(routes.get(id))
                     .filter(route -> route.getDeletedAt() == null);
+        }
+
+        @Override
+        public List<HubRoute> findAllByDeletedAtIsNull() {
+            return routes.values().stream()
+                    .filter(route -> route.getDeletedAt() == null)
+                    .toList();
+        }
+
+        @Override
+        public List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId) {
+            return routes.values().stream()
+                    .filter(route -> route.getDeletedAt() == null)
+                    .filter(route -> route.getSourceHubId().equals(hubId)
+                            || route.getDestinationHubId().equals(hubId))
+                    .toList();
         }
 
         @Override
