@@ -9,8 +9,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.logistics.deliveryservice.application.command.CreateDeliveryCommand;
-import com.logistics.deliveryservice.application.dto.CreateDeliveryResult;
+import com.logistics.deliveryservice.application.command.DeliveryCreateCommand;
+import com.logistics.deliveryservice.application.dto.DeliveryCreateResult;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.Delivery;
@@ -29,7 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
 @ExtendWith(MockitoExtension.class)
-class CreateDeliveryServiceTest {
+class DeliveryCreateServiceTest {
 
     private static final UUID ORDER_ID = UUID.fromString("571ea3ed-ec73-4158-aaed-f157b76dd7f7");
     private static final UUID REQUESTER_ID = UUID.fromString("86d6d4a2-b267-4ae6-8520-9fca2f990079");
@@ -45,11 +45,11 @@ class CreateDeliveryServiceTest {
     private HubDeliveryPlanProvider hubDeliveryPlanProvider;
 
     @InjectMocks
-    private CreateDeliveryService createDeliveryService;
+    private DeliveryService deliveryService;
 
     @Test
     void createsDeliveryAfterFetchingHubPlanOnce() {
-        CreateDeliveryCommand command = command("서울시 중구 세종대로 1");
+        DeliveryCreateCommand command = command("서울시 중구 세종대로 1");
         DeliveryPlan plan = plan();
         when(deliveryRepository.findByOrderId(ORDER_ID)).thenReturn(Optional.empty());
         when(hubDeliveryPlanProvider.getDeliveryPlan(
@@ -60,7 +60,7 @@ class CreateDeliveryServiceTest {
         when(deliveryRepository.save(any(Delivery.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        CreateDeliveryResult result = createDeliveryService.create(command);
+        DeliveryCreateResult result = deliveryService.create(command);
 
         assertThat(result.created()).isTrue();
         assertThat(result.response().orderId()).isEqualTo(ORDER_ID);
@@ -75,12 +75,12 @@ class CreateDeliveryServiceTest {
 
     @Test
     void returnsExistingDeliveryWithoutCallingHubForSamePayload() {
-        CreateDeliveryCommand command = command("서울시 중구 세종대로 1");
+        DeliveryCreateCommand command = command("서울시 중구 세종대로 1");
         Delivery existingDelivery = delivery(command, plan());
         when(deliveryRepository.findByOrderId(ORDER_ID))
                 .thenReturn(Optional.of(existingDelivery));
 
-        CreateDeliveryResult result = createDeliveryService.create(command);
+        DeliveryCreateResult result = deliveryService.create(command);
 
         assertThat(result.created()).isFalse();
         assertThat(result.response().orderId()).isEqualTo(ORDER_ID);
@@ -90,7 +90,7 @@ class CreateDeliveryServiceTest {
 
     @Test
     void rejectsDifferentPayloadForExistingOrder() {
-        CreateDeliveryCommand command = command("변경된 배송 주소");
+        DeliveryCreateCommand command = command("변경된 배송 주소");
         Delivery existingDelivery = delivery(
                 command("서울시 중구 세종대로 1"),
                 plan()
@@ -98,25 +98,25 @@ class CreateDeliveryServiceTest {
         when(deliveryRepository.findByOrderId(ORDER_ID))
                 .thenReturn(Optional.of(existingDelivery));
 
-        assertDuplicateConflict(() -> createDeliveryService.create(command));
+        assertDuplicateConflict(() -> deliveryService.create(command));
         verifyNoInteractions(hubDeliveryPlanProvider);
     }
 
     @Test
     void rejectsCanceledOrDeletedExistingDelivery() {
-        CreateDeliveryCommand command = command("서울시 중구 세종대로 1");
+        DeliveryCreateCommand command = command("서울시 중구 세종대로 1");
         Delivery existingDelivery = mock(Delivery.class);
         when(existingDelivery.isRecreationBlocked()).thenReturn(true);
         when(deliveryRepository.findByOrderId(ORDER_ID))
                 .thenReturn(Optional.of(existingDelivery));
 
-        assertDuplicateConflict(() -> createDeliveryService.create(command));
+        assertDuplicateConflict(() -> deliveryService.create(command));
         verifyNoInteractions(hubDeliveryPlanProvider);
     }
 
     @Test
     void resolvesUniqueRaceAsIdempotentWhenConcurrentPayloadIsSame() {
-        CreateDeliveryCommand command = command("서울시 중구 세종대로 1");
+        DeliveryCreateCommand command = command("서울시 중구 세종대로 1");
         Delivery concurrentDelivery = delivery(command, plan());
         when(deliveryRepository.findByOrderId(ORDER_ID))
                 .thenReturn(Optional.empty())
@@ -129,7 +129,7 @@ class CreateDeliveryServiceTest {
         when(deliveryRepository.save(any(Delivery.class)))
                 .thenThrow(new DataIntegrityViolationException("order_id unique"));
 
-        CreateDeliveryResult result = createDeliveryService.create(command);
+        DeliveryCreateResult result = deliveryService.create(command);
 
         assertThat(result.created()).isFalse();
         assertThat(result.response().orderId()).isEqualTo(ORDER_ID);
@@ -137,7 +137,7 @@ class CreateDeliveryServiceTest {
 
     @Test
     void resolvesUniqueRaceAsConflictWhenConcurrentPayloadDiffers() {
-        CreateDeliveryCommand command = command("서울시 중구 세종대로 1");
+        DeliveryCreateCommand command = command("서울시 중구 세종대로 1");
         Delivery concurrentDelivery = delivery(command("다른 주소"), plan());
         when(deliveryRepository.findByOrderId(ORDER_ID))
                 .thenReturn(Optional.empty())
@@ -150,12 +150,12 @@ class CreateDeliveryServiceTest {
         when(deliveryRepository.save(any(Delivery.class)))
                 .thenThrow(new DataIntegrityViolationException("order_id unique"));
 
-        assertDuplicateConflict(() -> createDeliveryService.create(command));
+        assertDuplicateConflict(() -> deliveryService.create(command));
     }
 
     @Test
     void rethrowsUnexpectedIntegrityViolationWhenNoConcurrentOrderExists() {
-        CreateDeliveryCommand command = command("서울시 중구 세종대로 1");
+        DeliveryCreateCommand command = command("서울시 중구 세종대로 1");
         DataIntegrityViolationException violation =
                 new DataIntegrityViolationException("unrelated constraint");
         when(deliveryRepository.findByOrderId(ORDER_ID))
@@ -168,7 +168,7 @@ class CreateDeliveryServiceTest {
         )).thenReturn(plan());
         when(deliveryRepository.save(any(Delivery.class))).thenThrow(violation);
 
-        assertThatThrownBy(() -> createDeliveryService.create(command)).isSameAs(violation);
+        assertThatThrownBy(() -> deliveryService.create(command)).isSameAs(violation);
     }
 
     private void assertDuplicateConflict(Runnable invocation) {
@@ -178,8 +178,8 @@ class CreateDeliveryServiceTest {
                                 .isSameAs(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY));
     }
 
-    private CreateDeliveryCommand command(String deliveryAddress) {
-        return new CreateDeliveryCommand(
+    private DeliveryCreateCommand command(String deliveryAddress) {
+        return new DeliveryCreateCommand(
                 ORDER_ID,
                 REQUESTER_ID,
                 DEPARTURE_HUB_ID,
@@ -203,7 +203,7 @@ class CreateDeliveryServiceTest {
         ));
     }
 
-    private Delivery delivery(CreateDeliveryCommand command, DeliveryPlan plan) {
+    private Delivery delivery(DeliveryCreateCommand command, DeliveryPlan plan) {
         return Delivery.create(
                 command.orderId(),
                 command.requesterId(),

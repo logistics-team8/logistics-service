@@ -1,6 +1,6 @@
 package com.logistics.deliveryservice.presentation.dto;
 
-import com.logistics.deliveryservice.application.command.CreateDeliveryCommand;
+import com.logistics.deliveryservice.application.command.DeliveryCreateCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * Order Service가 전달하는 배송 생성 요청을 검증하고 Application Command로 변환한다.
  */
-public record CreateDeliveryRequest(
+public record DeliveryCreateRequest(
         @NotNull(message = "주문 ID는 필수입니다.")
         UUID orderId,
 
@@ -30,8 +30,8 @@ public record CreateDeliveryRequest(
         String receiverSlackId
 ) {
 
-    public CreateDeliveryCommand toCommand() {
-        return new CreateDeliveryCommand(
+    public DeliveryCreateCommand toCommand() {
+        return new DeliveryCreateCommand(
                 orderId,
                 requesterId,
                 departureHubId,

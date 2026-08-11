@@ -5,7 +5,7 @@ import java.util.UUID;
 /**
  * 주문 기반 배송 생성에 필요한 불변 요청 정보를 Application 계층으로 전달한다.
  */
-public record CreateDeliveryCommand(
+public record DeliveryCreateCommand(
         UUID orderId,
         UUID requesterId,
         UUID departureHubId,

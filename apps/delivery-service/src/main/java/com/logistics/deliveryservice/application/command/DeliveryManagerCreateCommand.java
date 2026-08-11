@@ -4,7 +4,7 @@ import com.logistics.deliveryservice.domain.model.DeliveryManagerType;
 import java.util.UUID;
 
 
-public record CreateDeliveryManagerCommand(
+public record DeliveryManagerCreateCommand(
         UUID userId,
         DeliveryManagerType managerType,
         UUID hubId

@@ -11,9 +11,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 생성되었거나 멱등 조회된 Delivery Aggregate를 내부 API 응답으로 변환한다.
+ * 주문 ID로 조회한 활성 Delivery Aggregate를 내부 API 응답으로 변환한다.
  */
-public record CreateDeliveryResponse(
+public record DeliveryGetByOrderResponse(
         UUID deliveryId,
         UUID orderId,
         UUID requesterId,
@@ -29,14 +29,14 @@ public record CreateDeliveryResponse(
         List<RouteResponse> routes
 ) {
 
-    public static CreateDeliveryResponse from(Delivery delivery) {
-        // JPA 컬렉션의 조회 순서에 의존하지 않고 Route를 이동 순서대로 응답한다.
+    public static DeliveryGetByOrderResponse from(Delivery delivery) {
+        // JPA가 반환한 컬렉션 순서와 관계없이 Order Service에는 실제 이동 순서대로 전달한다.
         List<RouteResponse> routes = delivery.getRouteHistories().stream()
                 .sorted(Comparator.comparingInt(DeliveryRouteHistory::getSequence))
                 .map(RouteResponse::from)
                 .toList();
 
-        return new CreateDeliveryResponse(
+        return new DeliveryGetByOrderResponse(
                 delivery.getDeliveryId(),
                 delivery.getOrderId(),
                 delivery.getRequesterId(),

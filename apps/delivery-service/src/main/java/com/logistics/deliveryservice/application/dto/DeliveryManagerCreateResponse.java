@@ -5,15 +5,15 @@ import com.logistics.deliveryservice.domain.model.DeliveryManagerType;
 import java.util.UUID;
 
 
-public record CreateDeliveryManagerResponse(
+public record DeliveryManagerCreateResponse(
         UUID userId,
         DeliveryManagerType managerType,
         UUID hubId,
         Integer sequenceNumber
 ) {
 
-    public static CreateDeliveryManagerResponse from(DeliveryManager deliveryManager) {
-        return new CreateDeliveryManagerResponse(
+    public static DeliveryManagerCreateResponse from(DeliveryManager deliveryManager) {
+        return new DeliveryManagerCreateResponse(
                 deliveryManager.getUserId(),
                 deliveryManager.getManagerType(),
                 deliveryManager.getHubId(),

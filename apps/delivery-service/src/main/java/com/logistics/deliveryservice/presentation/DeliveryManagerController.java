@@ -1,9 +1,9 @@
 package com.logistics.deliveryservice.presentation;
 
 import com.logistics.common.response.ApiResponse;
-import com.logistics.deliveryservice.application.dto.CreateDeliveryManagerResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryManagerCreateResponse;
 import com.logistics.deliveryservice.application.service.DeliveryManagerService;
-import com.logistics.deliveryservice.presentation.dto.CreateDeliveryManagerRequest;
+import com.logistics.deliveryservice.presentation.dto.DeliveryManagerCreateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,11 +22,11 @@ public class DeliveryManagerController {
     private final DeliveryManagerService deliveryManagerService;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<CreateDeliveryManagerResponse>> createDeliveryManager(
-            @Valid @RequestBody CreateDeliveryManagerRequest request
+    public ResponseEntity<ApiResponse<DeliveryManagerCreateResponse>> createDeliveryManager(
+            @Valid @RequestBody DeliveryManagerCreateRequest request
     ) {
         // Command 객체 변환후 생성 결과 response에 담음
-        CreateDeliveryManagerResponse response = deliveryManagerService.create(
+        DeliveryManagerCreateResponse response = deliveryManagerService.create(
                 request.toCommand()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(response));

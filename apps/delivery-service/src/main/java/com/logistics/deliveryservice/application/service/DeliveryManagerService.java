@@ -1,7 +1,7 @@
 package com.logistics.deliveryservice.application.service;
 
-import com.logistics.deliveryservice.application.command.CreateDeliveryManagerCommand;
-import com.logistics.deliveryservice.application.dto.CreateDeliveryManagerResponse;
+import com.logistics.deliveryservice.application.command.DeliveryManagerCreateCommand;
+import com.logistics.deliveryservice.application.dto.DeliveryManagerCreateResponse;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.DeliveryManager;
@@ -24,7 +24,7 @@ public class DeliveryManagerService {
     // TODO : 추후 구현체 구현
 //    private final DeliveryManagerHubValidator deliveryManagerHubValidator;
 
-    public CreateDeliveryManagerResponse create(CreateDeliveryManagerCommand command) {
+    public DeliveryManagerCreateResponse create(DeliveryManagerCreateCommand command) {
         // 담당자 유형과 허브 ID를 그룹화
         DeliveryManagerAssignmentGroup assignmentGroup = new DeliveryManagerAssignmentGroup(
                 command.managerType(),
@@ -49,13 +49,13 @@ public class DeliveryManagerService {
                 sequenceNumber
         );
 
-        return CreateDeliveryManagerResponse.from(
+        return DeliveryManagerCreateResponse.from(
                 deliveryManagerRepository.save(deliveryManager)
         );
     }
 
     // 동일한 userId의 배송 담당자가 이미 등록되어 있는지 확인하는 메서드
-    private void validateNotAlreadyRegistered(CreateDeliveryManagerCommand command) {
+    private void validateNotAlreadyRegistered(DeliveryManagerCreateCommand command) {
         if (deliveryManagerRepository.findByUserId(command.userId()).isPresent()) {
             throw new DeliveryException(DeliveryErrorCode.DUPLICATE_DELIVERY_MANAGER);
         }
