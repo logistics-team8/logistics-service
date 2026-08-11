@@ -94,17 +94,28 @@ public class Order extends BaseEntity {
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    private OrderFailureReason failureReason;
 
     private Order(
             String orderNumber,
             UUID requesterId,
             UUID receiverCompanyId,
+            UUID destinationHubId,
+            String deliveryAddress,
+            String receiverName,
+            String receiverSlackId,
             String requestMessage,
             LocalDateTime requestedDeliveryAt
     ) {
         this.orderNumber = orderNumber;
         this.requesterId = requesterId;
         this.receiverCompanyId = receiverCompanyId;
+        this.destinationHubId = destinationHubId;
+        this.deliveryAddress = deliveryAddress;
+        this.receiverName = receiverName;
+        this.receiverSlackId = receiverSlackId;
         this.requestMessage = requestMessage;
         this.requestedDeliveryAt = requestedDeliveryAt;
         this.status = OrderStatus.PENDING;
@@ -114,6 +125,10 @@ public class Order extends BaseEntity {
             String orderNumber,
             UUID requesterId,
             UUID receiverCompanyId,
+            UUID destinationHubId,
+            String deliveryAddress,
+            String receiverName,
+            String receiverSlackId,
             String requestMessage,
             LocalDateTime requestedDeliveryAt,
             LocalDateTime now
@@ -124,17 +139,33 @@ public class Order extends BaseEntity {
                 orderNumber,
                 requesterId,
                 receiverCompanyId,
+                destinationHubId,
+                deliveryAddress,
+                receiverName,
+                receiverSlackId,
                 requestMessage,
                 requestedDeliveryAt
         );
     }
 
 
-    public void addOrderItem(UUID productId, Integer quantity){
+    public void addOrderItem(
+            UUID productId,
+            String productName,
+            UUID supplierCompanyId,
+            UUID departureHubId,
+            Integer quantity
+    ){
         validateDuplicateProduct(productId);
 
-        OrderItem orderItem =
-                OrderItem.create(this, productId, quantity);
+        OrderItem orderItem = OrderItem.create(
+                this,
+                productId,
+                productName,
+                supplierCompanyId,
+                departureHubId,
+                quantity
+        );
         this.orderItems.add(orderItem);
     }
 
@@ -250,16 +281,52 @@ public class Order extends BaseEntity {
     }
 
     private void validateCancelable(){
-        if (status == OrderStatus.CANCELED) {
+        if (this.status == OrderStatus.CANCELED) {
             throw new BusinessException(
                     OrderErrorCode.ORDER_ALREADY_CANCELED
             );
         }
-        if (this.status != OrderStatus.PENDING) {
+        if (this.status != OrderStatus.PENDING
+                && this.status != OrderStatus.CONFIRMED
+                && this.status != OrderStatus.DELIVERY_CREATED) {
             throw new BusinessException(
                     OrderErrorCode.ORDER_NOT_CANCELABLE
             );
         }
+    }
+
+    public void confirm() {
+        if(this.status != OrderStatus.PENDING){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.CONFIRMED;
+        this.failureReason = null;
+
+    }
+
+    public void markDeliveryCreated(){
+        if(this.status != OrderStatus.CONFIRMED){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.DELIVERY_CREATED;
+    }
+
+    public void fail(OrderFailureReason failureReason) {
+        if(this.status != OrderStatus.PENDING && this.status != OrderStatus.CONFIRMED){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.FAILED;
+        this.failureReason = failureReason;
+    }
+
+    public boolean requiresStockRestoreForCancel(){
+        return this.status == OrderStatus.CANCELED ||  this.status == OrderStatus.DELIVERY_CREATED;
     }
 
 }
