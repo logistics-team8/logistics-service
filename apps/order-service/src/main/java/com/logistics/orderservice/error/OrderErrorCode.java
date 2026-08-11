@@ -156,6 +156,23 @@ public enum OrderErrorCode implements ErrorCode {
             "ORD_024",
             HttpStatus.CONFLICT,
             "배송이 생성된 주문은 현재 취소할 수 없습니다."
+    ),
+    DELIVERY_CREATE_FAILED(
+            "ORD_025",
+            HttpStatus.BAD_GATEWAY,
+            "배송 생성에 실패했습니다."
+    ),
+
+    DELIVERY_STATUS_CHECK_FAILED(
+            "ORD_026",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "배송 생성 결과를 확인할 수 없습니다."
+    ),
+
+    DELIVERY_REQUEST_CONFLICT(
+            "ORD_027",
+            HttpStatus.CONFLICT,
+            "기존 배송 정보가 주문의 배송 요청 정보와 일치하지 않습니다."
     );
 
 

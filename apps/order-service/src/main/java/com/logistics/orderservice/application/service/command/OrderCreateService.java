@@ -5,6 +5,8 @@ import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.authorization.OrderAuthorization;
 import com.logistics.orderservice.application.command.CreateOrderCommand;
 import com.logistics.orderservice.application.command.CreateOrderItemCommand;
+import com.logistics.orderservice.application.exception.StockDecreaseException;
+import com.logistics.orderservice.application.exception.StockRestoreException;
 import com.logistics.orderservice.application.port.CompanyPort;
 import com.logistics.orderservice.application.port.DeliveryPort;
 import com.logistics.orderservice.application.port.ProductPort;
@@ -33,14 +35,13 @@ public class OrderCreateService {
     private final UserPort userPort;
     private final CompanyPort companyPort;
     private final ProductPort productPort;
-    private final OrderRepository orderRepository;
     private final Clock clock;
     private final DeliveryPort deliveryPort;
     private final OrderStateService orderStateService;
-    private final OrderAuthorization orderAuthorization;
+    private final DeliveryRequestService deliveryRequestService;
 
 
-    @Transactional
+
     public CreateOrderResponse createOrder(CreateOrderCommand command, CustomUserDetails user) {
         LocalDateTime now = LocalDateTime.now(clock);
 
@@ -124,48 +125,41 @@ public class OrderCreateService {
         //재고 차감 요청
         try {
             productPort.decreaseStock(stockItems);
-        } catch (RuntimeException e) {
+        } catch (StockDecreaseException e) {
             log.error("재고 차감 실패 orderId : {}", orderId, e);
             orderStateService.failOrder(orderId, OrderFailureReason.STOCK_DECREASE_FAILED);
-            throw e;
         }
 
         //재고 차감 성공
         orderStateService.confirmOrder(orderId);
 
-        //배송 생성
-        try {
-            deliveryPort.createDelivery(
-                    new DeliveryPort.CreateDeliveryCommand(
-                            orderId,
-                            user.getId(),
-                            departureHubId,
-                            receiverCompany.hubId(),
-                            receiverCompany.address(),
-                            receiver.name(),
-                            receiver.slackId()
-                    )
-            );
+        //배송 요청 정보 생성
+        DeliveryPort.CreateDeliveryCommand deliveryCommand =
+                new DeliveryPort.CreateDeliveryCommand(
+                        orderId,
+                        user.getId(),
+                        departureHubId,
+                        receiverCompany.hubId(),
+                        receiverCompany.address(),
+                        receiver.name(),
+                        receiver.slackId()
+                );
 
-        } catch (RuntimeException deliveryException) {
-            log.error("배송 생성 실패 orderId : {}", orderId, deliveryException);
-            /**
-             * 재고는 차감 됬지만 배송 실패로 재고 복원 필요
-             */
+        //배송 생성 요청
+        Optional<DeliveryPort.DeliveryInfo> delivery = deliveryRequestService.requestDelivery(deliveryCommand);
 
-            try{
-                productPort.restoreStock(stockItems);
-            }catch (RuntimeException compensationException){
-                log.error( "재고 복원 실패 orderId : {}", orderId, compensationException);
 
-                orderStateService.failOrder(orderId,OrderFailureReason.STOCK_COMPENSATION_FAILED);
-
-                throw compensationException;
-            }
+        // 배송을 조회 했는데 배송이 없다면 CONFIRMED 상태에서 재고 복원 후 FAILED 상태로 변환시킨다.
+        if(delivery.isEmpty()){
+            restoreStockAfterDeliveryFailure(orderId, stockItems);
 
             orderStateService.failOrder(orderId, OrderFailureReason.DELIVERY_CREATE_FAILED);
-            throw deliveryException;
+
+            throw new BusinessException(OrderErrorCode.DELIVERY_CREATE_FAILED);
         }
+
+
+        //배송이 확인 되어 주문->배송 성공 CONFIRMED에서 DELIVERY_CREATED 상태로 변환한다.
         Order successOrder = orderStateService.markDeliveryCreated(orderId);
         //주문 생성 완료
         return CreateOrderResponse.from(successOrder);
@@ -209,6 +203,7 @@ public class OrderCreateService {
         }
     }
 
+
     private UUID resolveDepartureHub(List<ProductPort.ProductInfo> products){
         UUID departureHubId = products.getFirst().hubId();;
 
@@ -225,6 +220,7 @@ public class OrderCreateService {
         return departureHubId;
     }
 
+    //중복 상품 검증 메서드
     private void validateDuplicateProducts(List<CreateOrderItemCommand> items) {
         Set<UUID> productIds = new HashSet<>();
         for (CreateOrderItemCommand item : items) {
@@ -235,4 +231,19 @@ public class OrderCreateService {
             }
         }
     }
+
+
+    //재고 보상 메서드
+    private void restoreStockAfterDeliveryFailure(UUID orderId, List<ProductPort.StockItem> stockItems) {
+        try{
+            productPort.restoreStock(stockItems);
+        }catch (StockRestoreException e){
+            log.error( "배송 생성 실패 후 재고 복원 실패. orderId={}", orderId, e);
+
+            orderStateService.failOrder(orderId, OrderFailureReason.STOCK_RESTORE_FAILED);
+
+        }
+    }
+
+
 }

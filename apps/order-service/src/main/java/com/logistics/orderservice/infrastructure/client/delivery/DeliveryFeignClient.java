@@ -3,6 +3,8 @@ package com.logistics.orderservice.infrastructure.client.delivery;
 
 import com.logistics.common.response.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
@@ -19,6 +21,12 @@ public interface DeliveryFeignClient {
       @RequestBody CreateDeliveryRequest request
     );
 
+
+    @GetMapping("/by-order/{orderId}")
+    ApiResponse<GetDeliveryByOrderResponse> getDeliveryByOrder(
+            @PathVariable("orderId") UUID orderId
+    );
+
     record CreateDeliveryRequest(
             UUID orderId,
             UUID requesterId,
@@ -30,6 +38,19 @@ public interface DeliveryFeignClient {
     ){
     }
     record CreateDeliveryResponse(
+            UUID deliveryId,
+            UUID orderId,
+            UUID requesterId,
+            String status,
+            UUID departureHubId,
+            UUID arrivalHubId,
+            String deliveryAddress,
+            String receiverName,
+            String receiverSlackId
+    ) {
+    }
+
+    record GetDeliveryByOrderResponse(
             UUID deliveryId,
             UUID orderId,
             UUID requesterId,

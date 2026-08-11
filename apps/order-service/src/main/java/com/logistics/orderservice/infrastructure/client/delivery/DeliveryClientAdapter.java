@@ -1,9 +1,14 @@
 package com.logistics.orderservice.infrastructure.client.delivery;
 
+import com.logistics.orderservice.application.exception.DeliveryCreateException;
+import com.logistics.orderservice.application.exception.DeliveryLookupException;
 import com.logistics.orderservice.application.port.DeliveryPort;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Component;
+
+import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -25,18 +30,75 @@ public class DeliveryClientAdapter implements DeliveryPort {
                         command.receiverSlackId()
                 );
 
-        DeliveryFeignClient.CreateDeliveryResponse response =
-                deliveryFeignClient.createDelivery(request).getData();
+        try {
+            DeliveryFeignClient.CreateDeliveryResponse response = deliveryFeignClient
+                            .createDelivery(request)
+                            .getData();
 
+            if (response == null) {
+                throw new DeliveryCreateException("배송 생성 응답 데이터가 없습니다.");
+            }
+            return toDeliveryInfo(response);
 
-        if(response == null){
-            throw new IllegalArgumentException("배송 생성 응답 데이터가 없습니다.");
+        } catch (FeignException e) {
+            throw new DeliveryCreateException("배송 생성 요청에 실패했습니다.", e);
         }
 
+    }
+
+    @Override
+    public Optional<DeliveryInfo> findDeliveryByOrderId(UUID orderId) {
+        try {
+            DeliveryFeignClient.GetDeliveryByOrderResponse response = deliveryFeignClient
+                            .getDeliveryByOrder(orderId)
+                            .getData();
+
+            if (response == null) {
+                throw new DeliveryLookupException("배송 조회 응답 데이터가 없습니다.");
+            }
+
+            return Optional.of(toDeliveryInfo(response));
+
+        } catch (FeignException.NotFound e) {
+
+            return Optional.empty();
+
+        } catch (FeignException e) {
+            throw new DeliveryLookupException("배송 조회 요청에 실패했습니다.", e);
+        }
+    }
+
+    private DeliveryInfo toDeliveryInfo(
+            DeliveryFeignClient.CreateDeliveryResponse response
+    ) {
         return new DeliveryInfo(
                 response.deliveryId(),
                 response.orderId(),
-                response.status()
+                response.requesterId(),
+                response.status(),
+                response.departureHubId(),
+                response.arrivalHubId(),
+                response.deliveryAddress(),
+                response.receiverName(),
+                response.receiverSlackId()
         );
     }
+
+
+    private DeliveryInfo toDeliveryInfo(
+            DeliveryFeignClient.GetDeliveryByOrderResponse response
+    ) {
+        return new DeliveryInfo(
+                response.deliveryId(),
+                response.orderId(),
+                response.requesterId(),
+                response.status(),
+                response.departureHubId(),
+                response.arrivalHubId(),
+                response.deliveryAddress(),
+                response.receiverName(),
+                response.receiverSlackId()
+        );
+    }
+
 }
