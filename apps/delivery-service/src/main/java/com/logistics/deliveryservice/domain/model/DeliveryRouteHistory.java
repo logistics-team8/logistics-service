@@ -64,4 +64,20 @@ public class DeliveryRouteHistory extends BaseEntity {
 
     @Column(name = "hub_delivery_manager_id", nullable = false)
     private UUID hubDeliveryManagerId;
+
+    /**
+     * Hub 계획의 한 구간을 WAITING 상태의 배송 경로 이력으로 생성한다.
+     */
+    static DeliveryRouteHistory create(Delivery delivery, DeliveryPlan.Route routePlan) {
+        DeliveryRouteHistory routeHistory = new DeliveryRouteHistory();
+        routeHistory.delivery = delivery;
+        routeHistory.sequence = routePlan.sequence();
+        routeHistory.departureHubId = routePlan.departureHubId();
+        routeHistory.arrivalHubId = routePlan.arrivalHubId();
+        routeHistory.estimatedDistanceKm = routePlan.estimatedDistanceKm();
+        routeHistory.estimatedDurationMinutes = routePlan.estimatedDurationMinutes();
+        routeHistory.status = RouteStatus.WAITING;
+        routeHistory.hubDeliveryManagerId = routePlan.hubDeliveryManagerId();
+        return routeHistory;
+    }
 }
