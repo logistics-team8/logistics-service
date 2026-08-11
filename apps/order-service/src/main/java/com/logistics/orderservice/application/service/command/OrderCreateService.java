@@ -33,7 +33,6 @@ public class OrderCreateService {
     private final UserPort userPort;
     private final CompanyPort companyPort;
     private final ProductPort productPort;
-    private final DeliveryPort DeliveryPort;
     private final OrderRepository orderRepository;
     private final Clock clock;
     private final DeliveryPort deliveryPort;
@@ -75,7 +74,7 @@ public class OrderCreateService {
         //주문 수령인 조회
         UserPort.UserInfo receiver = userPort.getUserInfo(user.getId());
         //수령 업체 조회
-        CompanyPort.CompanyInfo receiverCompany = companyPort.getCompanyInfo(user.getId());
+        CompanyPort.CompanyInfo receiverCompany = companyPort.getCompanyInfo(command.receiverCompanyId());
 
 
         //주문 생성
@@ -125,7 +124,7 @@ public class OrderCreateService {
         //재고 차감 요청
         try {
             productPort.decreaseStock(stockItems);
-        } catch (BusinessException e) {
+        } catch (RuntimeException e) {
             log.error("재고 차감 실패 orderId : {}", orderId, e);
             orderStateService.failOrder(orderId, OrderFailureReason.STOCK_DECREASE_FAILED);
             throw e;
@@ -148,8 +147,8 @@ public class OrderCreateService {
                     )
             );
 
-        } catch (BusinessException e) {
-            log.error("배송 생성 실패 orderId : {}", orderId, e);
+        } catch (RuntimeException deliveryException) {
+            log.error("배송 생성 실패 orderId : {}", orderId, deliveryException);
             /**
              * 재고는 차감 됬지만 배송 실패로 재고 복원 필요
              */
@@ -165,7 +164,7 @@ public class OrderCreateService {
             }
 
             orderStateService.failOrder(orderId, OrderFailureReason.DELIVERY_CREATE_FAILED);
-            throw e;
+            throw deliveryException;
         }
         Order successOrder = orderStateService.markDeliveryCreated(orderId);
         //주문 생성 완료

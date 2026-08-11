@@ -95,7 +95,7 @@ public class Order extends BaseEntity {
     private LocalDateTime canceledAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30)
+    @Column(name = "failure_reason", nullable = false, length = 50)
     private OrderFailureReason failureReason;
 
     private Order(
@@ -204,7 +204,7 @@ public class Order extends BaseEntity {
     }
 
 
-    public void cancel(UUID canceledBy){
+    public void cancel(UUID canceledBy, LocalDateTime canceledAt){
         validateCancelable();
 
         this.orderItems.stream()
@@ -223,7 +223,7 @@ public class Order extends BaseEntity {
                 );
         this.status = OrderStatus.CANCELED;
         this.canceledBy = canceledBy;
-        this.canceledAt = LocalDateTime.now();
+        this.canceledAt = canceledAt;
     }
 
 
@@ -326,7 +326,7 @@ public class Order extends BaseEntity {
     }
 
     public boolean requiresStockRestoreForCancel(){
-        return this.status == OrderStatus.CANCELED ||  this.status == OrderStatus.DELIVERY_CREATED;
+        return this.status == OrderStatus.CONFIRMED ||  this.status == OrderStatus.DELIVERY_CREATED;
     }
 
 }

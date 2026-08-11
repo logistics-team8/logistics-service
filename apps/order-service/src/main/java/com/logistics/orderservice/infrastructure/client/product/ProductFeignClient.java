@@ -2,7 +2,6 @@ package com.logistics.orderservice.infrastructure.client.product;
 
 import com.logistics.common.response.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,7 +15,7 @@ import java.util.UUID;
 public interface ProductFeignClient {
 
     @GetMapping("/batch")
-    List<ProductResponse> getProducts(  @RequestParam("ids") List<UUID> productIds);
+    ApiResponse<List<ProductResponse>> getProducts(  @RequestParam("ids") List<UUID> productIds);
 
     @PatchMapping("/decrease-stock")
     ApiResponse<?> decreaseStock(@RequestBody StockItemListRequest request);

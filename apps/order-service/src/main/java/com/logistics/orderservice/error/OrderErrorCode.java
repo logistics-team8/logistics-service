@@ -137,7 +137,7 @@ public enum OrderErrorCode implements ErrorCode {
             "주문 상품을 찾을 수 없습니다."
     ),
     DIFFERENT_DEPARTURE_HUB(
-            "ORD_022",
+            "ORD_023",
             HttpStatus.BAD_REQUEST,
             "하나의 주문에는 동일한 허브에 소속된 상품만 포함할 수 있습니다."
     ),

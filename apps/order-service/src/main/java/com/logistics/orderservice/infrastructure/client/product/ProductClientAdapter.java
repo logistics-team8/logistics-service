@@ -1,6 +1,8 @@
 package com.logistics.orderservice.infrastructure.client.product;
 
+import com.logistics.common.exception.BusinessException;
 import com.logistics.orderservice.application.port.ProductPort;
+import com.logistics.orderservice.error.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,9 +17,20 @@ public class ProductClientAdapter implements ProductPort {
     private final ProductFeignClient  productFeignClient;
 
     @Override
-    public List<ProductInfo> getProducts(List<UUID> productIds){
-        return productFeignClient.getProducts(productIds)
-                .stream()
+    public List<ProductInfo> getProducts(
+            List<UUID> productIds
+    ) {
+        List<ProductFeignClient.ProductResponse> responses = productFeignClient
+                        .getProducts(productIds)
+                        .getData();
+
+        if (responses == null) {
+            throw new BusinessException(
+                    OrderErrorCode.PRODUCT_NOT_FOUND
+            );
+        }
+
+        return responses.stream()
                 .map(response -> new ProductInfo(
                         response.id(),
                         response.name(),

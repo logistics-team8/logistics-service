@@ -15,7 +15,9 @@ public class CompanyClientAdapter implements CompanyPort {
 
     @Override
     public CompanyInfo getCompanyInfo(UUID companyId) {
-        CompanyFeignClient.CompanyResponse response = companyFeignClient.getCompany(companyId);
+        CompanyFeignClient.CompanyResponse response = companyFeignClient
+                .getCompany(companyId)
+                .getData();
 
         return new CompanyInfo(
                 response.id(),
