@@ -4,6 +4,7 @@ import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.authorization.OrderAuthorization;
 import com.logistics.orderservice.application.exception.StockRestoreException;
+import com.logistics.orderservice.application.exception.StockRestoreUnknownException;
 import com.logistics.orderservice.application.port.ProductPort;
 import com.logistics.orderservice.domain.model.Order;
 import com.logistics.orderservice.domain.model.OrderItem;
@@ -28,7 +29,7 @@ public class OrderCancelService {
 
     private final OrderRepository orderRepository;
     private final OrderAuthorization orderAuthorization;
-    private final ProductPort productPort;
+    private final StockProcessService stockProcessService;
     private final OrderStateService orderStateService;
     private final Clock clock;
 
@@ -49,7 +50,7 @@ public class OrderCancelService {
 
         if(order.requiresStockRestoreForCancel()){
             List<ProductPort.StockItem> restoreItems = restoreItems(order);
-            restoreStock(orderId, restoreItems);
+            stockProcessService.restoreStockForCancel(orderId, restoreItems);
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
@@ -92,14 +93,5 @@ public class OrderCancelService {
                      .toList();
     }
 
-    private void restoreStock(UUID orderId, List<ProductPort.StockItem> restoreItems) {
-        try{
-            productPort.restoreStock(restoreItems);
-        }catch (StockRestoreException e){
-            log.error("주문 취소 중 재고 복원 실패. orderId : {}", orderId, e);
-            throw new BusinessException(OrderErrorCode.ORDER_CANCEL_STOCK_RESTORE_FAILED);
-        }
-
-    }
 
 }

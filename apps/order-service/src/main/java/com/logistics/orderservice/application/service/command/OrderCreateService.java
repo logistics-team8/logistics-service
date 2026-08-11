@@ -37,6 +37,7 @@ public class OrderCreateService {
     private final Clock clock;
     private final OrderStateService orderStateService;
     private final DeliveryRequestService deliveryRequestService;
+    private final StockProcessService stockProcessService;
 
 
 
@@ -120,21 +121,8 @@ public class OrderCreateService {
                 .toList();
 
 
-        //재고 차감 요청
-        try {
-            productPort.decreaseStock(stockItems);
-        } catch (StockDecreaseUnknownException e){
-            log.error("재고 차감 결과 확인 불가 orderId : {}", orderId, e);
-            orderStateService.markStockDecreaseUnknown(orderId);
-            throw new BusinessException(OrderErrorCode.STOCK_DECREASE_UNKNOWN);
-        }
-
-        catch (StockDecreaseException e) {
-            log.error("재고 차감 실패 orderId : {}", orderId, e);
-
-            orderStateService.failOrder(orderId, OrderFailureReason.STOCK_DECREASE_FAILED);
-            throw new BusinessException(OrderErrorCode.STOCK_DECREASE_FAILED);
-        }
+        //재고 차감
+        stockProcessService.decreaseStock(orderId, stockItems);
 
         //재고 차감 성공
         orderStateService.confirmOrder(orderId);
@@ -169,7 +157,7 @@ public class OrderCreateService {
 
         // 배송을 조회 했는데 배송이 없다면 CONFIRMED 상태에서 재고 복원 후 FAILED 상태로 변환시킨다.
         if(delivery.isEmpty()){
-            restoreStockAfterDeliveryFailure(orderId, stockItems);
+            stockProcessService.restoreStockAfterDeliveryFailure(orderId, stockItems);
 
             orderStateService.failOrder(orderId, OrderFailureReason.DELIVERY_CREATE_FAILED);
 
@@ -248,22 +236,6 @@ public class OrderCreateService {
         }
     }
 
-
-    //재고 보상 메서드
-    private void restoreStockAfterDeliveryFailure(UUID orderId, List<ProductPort.StockItem> stockItems) {
-        try{
-            productPort.restoreStock(stockItems);
-        }catch (StockRestoreUnknownException e){
-            orderStateService.failOrder(orderId, OrderFailureReason.STOCK_RESTORE_UNKNOWN);
-            log.error("배송 생성 실패 후 재고 복원 결과 확인 불가. orderId : {}", orderId, e);
-        }
-        catch (StockRestoreException e){
-            log.error( "배송 생성 실패 후 재고 복원 실패. orderId={}", orderId, e);
-
-            orderStateService.failOrder(orderId, OrderFailureReason.STOCK_RESTORE_FAILED);
-            throw new BusinessException(OrderErrorCode.STOCK_RESTORE_FAILED);
-        }
-    }
 
 
 }
