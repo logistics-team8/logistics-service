@@ -314,6 +314,7 @@ public class Order extends BaseEntity {
             );
         }
         this.status = OrderStatus.DELIVERY_CREATED;
+        this.failureReason = null;
     }
 
     public void fail(OrderFailureReason failureReason) {
@@ -330,4 +331,23 @@ public class Order extends BaseEntity {
         return this.status == OrderStatus.CONFIRMED;
     }
 
+
+    public void markStockDecreaseUnknown(){
+       if (this.status != OrderStatus.PENDING) {
+           throw new BusinessException(
+                   OrderErrorCode.INVALID_ORDER_STATUS
+           );
+       }
+       this.failureReason = OrderFailureReason.STOCK_DECREASE_UNKNOWN;
+    }
+
+    public void markDeliveryStatusCheckFailed(){
+        if (this.status != OrderStatus.CONFIRMED) {
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+
+        this.failureReason = OrderFailureReason.DELIVERY_STATUS_CHECK_FAILED;
+    }
 }

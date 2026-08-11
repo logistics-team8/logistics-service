@@ -32,6 +32,16 @@ public class OrderStateService {
         return order;
     }
 
+
+    //재고 차감 결과 확인 불가
+    //상태는 PENDING을 유지
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Order markStockDecreaseUnknown(UUID orderId){
+        Order order = getOrder(orderId);
+        order.markStockDecreaseUnknown();
+        return order;
+    }
+
     //Delivery 생성 성공
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Order markDeliveryCreated(UUID orderId){
@@ -40,6 +50,14 @@ public class OrderStateService {
         return order;
     }
 
+
+    //Delivery 상태 확인 실패
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Order markDeliveryStatusCheckFailed(UUID orderId){
+        Order order = getOrder(orderId);
+        order.markDeliveryStatusCheckFailed();
+        return order;
+    }
 
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

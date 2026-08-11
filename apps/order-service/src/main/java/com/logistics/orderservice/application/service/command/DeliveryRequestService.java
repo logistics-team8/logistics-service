@@ -3,6 +3,7 @@ package com.logistics.orderservice.application.service.command;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.orderservice.application.exception.DeliveryCreateException;
 import com.logistics.orderservice.application.exception.DeliveryLookupException;
+import com.logistics.orderservice.application.exception.DeliveryStatusUnknownException;
 import com.logistics.orderservice.application.port.DeliveryPort;
 import com.logistics.orderservice.error.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -62,10 +63,9 @@ public class DeliveryRequestService {
             //조회 자체가 실패하면 배송이 없는 것이 아니라 배송 존재 여부를 모르는 상태로
             //재고를 복원하면 안된다.
             log.error("배송 생성 결과 확인 실패 : orderId : {}", command.orderId(), e);
-            throw new BusinessException(OrderErrorCode.DELIVERY_STATUS_CHECK_FAILED);
+            throw new DeliveryStatusUnknownException("배송 생성 결과를 확인할 수 없습니다.",e);
 
         }
-
            if(delivery.isEmpty()){
                return Optional.empty();
            }

@@ -5,8 +5,7 @@ import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.authorization.OrderAuthorization;
 import com.logistics.orderservice.application.command.CreateOrderCommand;
 import com.logistics.orderservice.application.command.CreateOrderItemCommand;
-import com.logistics.orderservice.application.exception.StockDecreaseException;
-import com.logistics.orderservice.application.exception.StockRestoreException;
+import com.logistics.orderservice.application.exception.*;
 import com.logistics.orderservice.application.port.CompanyPort;
 import com.logistics.orderservice.application.port.DeliveryPort;
 import com.logistics.orderservice.application.port.ProductPort;
@@ -36,7 +35,6 @@ public class OrderCreateService {
     private final CompanyPort companyPort;
     private final ProductPort productPort;
     private final Clock clock;
-    private final DeliveryPort deliveryPort;
     private final OrderStateService orderStateService;
     private final DeliveryRequestService deliveryRequestService;
 
@@ -125,11 +123,16 @@ public class OrderCreateService {
         //재고 차감 요청
         try {
             productPort.decreaseStock(stockItems);
-        } catch (StockDecreaseException e) {
+        } catch (StockDecreaseUnknownException e){
+            log.error("재고 차감 결과 확인 불가 orderId : {}", orderId, e);
+            orderStateService.markStockDecreaseUnknown(orderId);
+            throw new BusinessException(OrderErrorCode.STOCK_DECREASE_UNKNOWN);
+        }
+
+        catch (StockDecreaseException e) {
             log.error("재고 차감 실패 orderId : {}", orderId, e);
 
             orderStateService.failOrder(orderId, OrderFailureReason.STOCK_DECREASE_FAILED);
-
             throw new BusinessException(OrderErrorCode.STOCK_DECREASE_FAILED);
         }
 
@@ -149,7 +152,19 @@ public class OrderCreateService {
                 );
 
         //배송 생성 요청
-        Optional<DeliveryPort.DeliveryInfo> delivery = deliveryRequestService.requestDelivery(deliveryCommand);
+        Optional<DeliveryPort.DeliveryInfo> delivery;
+
+
+        try{
+           delivery = deliveryRequestService.requestDelivery(deliveryCommand);
+        }catch (DeliveryStatusUnknownException e){
+            log.error("배송 생성 여부 확인 불가. orderId : {}", orderId, e);
+
+            //배송이 실제 생성 될 수 있으므로 FAILED로 처리하지 않고, 재고도 복원하지 않는다.
+            //CONFIRMED 상태를 유지,failureReason만 기록
+            orderStateService.markDeliveryStatusCheckFailed(orderId);
+            throw new BusinessException(OrderErrorCode.DELIVERY_STATUS_CHECK_FAILED);
+        }
 
 
         // 배송을 조회 했는데 배송이 없다면 CONFIRMED 상태에서 재고 복원 후 FAILED 상태로 변환시킨다.
@@ -238,7 +253,11 @@ public class OrderCreateService {
     private void restoreStockAfterDeliveryFailure(UUID orderId, List<ProductPort.StockItem> stockItems) {
         try{
             productPort.restoreStock(stockItems);
-        }catch (StockRestoreException e){
+        }catch (StockRestoreUnknownException e){
+            orderStateService.failOrder(orderId, OrderFailureReason.STOCK_RESTORE_UNKNOWN);
+            log.error("배송 생성 실패 후 재고 복원 결과 확인 불가. orderId : {}", orderId, e);
+        }
+        catch (StockRestoreException e){
             log.error( "배송 생성 실패 후 재고 복원 실패. orderId={}", orderId, e);
 
             orderStateService.failOrder(orderId, OrderFailureReason.STOCK_RESTORE_FAILED);

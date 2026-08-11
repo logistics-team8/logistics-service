@@ -2,10 +2,13 @@ package com.logistics.orderservice.infrastructure.client.product;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.orderservice.application.exception.StockDecreaseException;
+import com.logistics.orderservice.application.exception.StockDecreaseUnknownException;
 import com.logistics.orderservice.application.exception.StockRestoreException;
+import com.logistics.orderservice.application.exception.StockRestoreUnknownException;
 import com.logistics.orderservice.application.port.ProductPort;
 import com.logistics.orderservice.error.OrderErrorCode;
 import feign.FeignException;
+import feign.RetryableException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -48,7 +51,11 @@ public class ProductClientAdapter implements ProductPort {
         try {
             productFeignClient.decreaseStock(toRequest(items));
 
-        } catch (FeignException e) {
+        } catch (RetryableException e){
+            throw new StockDecreaseUnknownException( "재고 차감 처리 결과를 확인할 수 없습니다.", e);
+        }
+
+        catch (FeignException e) {
             throw new StockDecreaseException("재고 차감 요청에 실패했습니다.", e);
         }
     }
@@ -58,7 +65,11 @@ public class ProductClientAdapter implements ProductPort {
         try {
             productFeignClient.restoreStock(toRequest(items));
 
-        } catch (FeignException e) {
+        } catch (RetryableException e){
+            throw new StockRestoreUnknownException("재고 복원 처리 결과를 확인할 수 없습니다.", e);
+        }
+
+        catch (FeignException e) {
             throw new StockRestoreException("재고 복원 요청에 실패했습니다.", e);
         }
     }
