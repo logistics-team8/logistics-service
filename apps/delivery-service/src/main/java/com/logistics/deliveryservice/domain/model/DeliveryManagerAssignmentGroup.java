@@ -5,9 +5,7 @@ import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import java.util.Collection;
 import java.util.UUID;
 
-/**
- * 담당자 유형과 허브를 하나의 배정 그룹으로 묶어 그룹 키와 순번 규칙을 관리한다.
- */
+// 담당자 유형과 허브 ID를 그룹화해서 배정 순번을 조회 및 결정
 public record DeliveryManagerAssignmentGroup(
         DeliveryManagerType managerType,
         UUID hubId
@@ -58,6 +56,7 @@ public record DeliveryManagerAssignmentGroup(
         return managerType.name() + ":" + hubId;
     }
 
+    // 사용중인 순번 체크후 사용중이지 않은 가장 작은 순번 배정
     public int findSmallestAvailableSequence(Collection<Integer> activeSequences) {
         if (activeSequences == null) {
             throw invalidManagerChange();
