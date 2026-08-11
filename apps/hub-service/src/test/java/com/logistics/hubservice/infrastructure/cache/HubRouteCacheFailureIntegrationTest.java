@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.PostgreSqlIntegrationTest;
+import com.logistics.hubservice.application.hub.command.HubCommandService;
 import com.logistics.hubservice.application.hubroute.command.HubRouteCommandService;
 import com.logistics.hubservice.application.hubroute.command.UpdateHubRouteCommand;
 import com.logistics.hubservice.application.hubroute.dto.HubRouteResponse;
@@ -52,6 +53,9 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
 
     @Autowired
     private HubRouteCommandService hubRouteCommandService;
+
+    @Autowired
+    private HubCommandService hubCommandService;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -136,6 +140,37 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
                 .isEqualTo(MASTER_ID);
     }
 
+    @Test
+    @DisplayName("캐시 제거에 실패해도 허브와 연결 경로 삭제를 완료한다")
+    void deleteHubAndConnectedRouteWhenCacheEvictionFails() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                123_400L,
+                7_200L
+        ));
+
+        hubCommandService.delete(sourceHub.getId(), MASTER_ID);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hubs where id = ?",
+                Boolean.class,
+                sourceHub.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hub_routes where id = ?",
+                Boolean.class,
+                route.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_by from p_hub_routes where id = ?",
+                UUID.class,
+                route.getId()))
+                .isEqualTo(MASTER_ID);
+    }
+
     private Hub saveHub(String name) {
         return hubRepository.save(Hub.create(
                 name,
@@ -159,7 +194,12 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
         @Primary
         CacheManager failingCacheManager() {
             SimpleCacheManager cacheManager = new SimpleCacheManager();
-            cacheManager.setCaches(List.of(new ConcurrentMapCache("hubRouteById") {
+            cacheManager.setCaches(List.of(new ConcurrentMapCache("hubById") {
+                @Override
+                public void evict(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+            }, new ConcurrentMapCache("hubRouteById") {
                 @Override
                 protected Object lookup(Object key) {
                     throw new IllegalStateException("Redis unavailable");

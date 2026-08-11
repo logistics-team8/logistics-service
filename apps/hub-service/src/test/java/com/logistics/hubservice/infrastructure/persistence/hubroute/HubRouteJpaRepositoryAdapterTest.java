@@ -9,6 +9,7 @@ import com.logistics.hubservice.domain.hub.HubRepository;
 import com.logistics.hubservice.domain.hubroute.HubRoute;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -103,6 +104,28 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
                 savedRoute.getId());
 
         assertThat(hubRouteRepository.findByIdAndDeletedAtIsNull(savedRoute.getId())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("허브 ID가 출발지 또는 도착지인 활성 경로만 조회한다")
+    void findAllByHubIdReturnsOnlyActiveConnectedRoutes() {
+        Hub targetHub = saveHub("서울 허브");
+        Hub otherHub = saveHub("대전 허브");
+        Hub thirdHub = saveHub("부산 허브");
+        HubRoute outgoingRoute = saveRoute(targetHub.getId(), otherHub.getId());
+        HubRoute incomingRoute = saveRoute(thirdHub.getId(), targetHub.getId());
+        saveRoute(otherHub.getId(), thirdHub.getId());
+        HubRoute deletedRoute = saveRoute(targetHub.getId(), thirdHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                deletedRoute.getId());
+
+        List<HubRoute> result =
+                hubRouteRepository.findAllByHubIdAndDeletedAtIsNull(targetHub.getId());
+
+        assertThat(result)
+                .extracting(HubRoute::getId)
+                .containsExactlyInAnyOrder(outgoingRoute.getId(), incomingRoute.getId());
     }
 
     @Test

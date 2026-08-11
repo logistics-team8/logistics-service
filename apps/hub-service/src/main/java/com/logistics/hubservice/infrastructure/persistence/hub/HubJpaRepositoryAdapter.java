@@ -28,6 +28,11 @@ public class HubJpaRepositoryAdapter implements HubRepository {
     }
 
     @Override
+    public Optional<Hub> findByIdAndDeletedAtIsNullForUpdate(UUID id) {
+        return repository.findByIdAndDeletedAtIsNullForUpdate(id);
+    }
+
+    @Override
     public boolean existsByIdAndDeletedAtIsNull(UUID id) {
         return repository.existsByIdAndDeletedAtIsNull(id);
     }
