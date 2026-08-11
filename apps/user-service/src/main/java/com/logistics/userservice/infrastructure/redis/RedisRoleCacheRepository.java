@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RedisRoleCacheRepository implements RoleCacheRepository {
     private final StringRedisTemplate redisTemplate;
-    private static final String REDIS_KEY = "user:role:";
+    private static final String REDIS_KEY = "user:affiliationType:";
     private static final Duration TTL = Duration.ofMinutes(30);
 
     @Override

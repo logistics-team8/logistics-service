@@ -3,12 +3,12 @@ package com.logistics.userservice.infrastructure.client.delivery;
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.port.DeliveryClientPort;
+import com.logistics.userservice.domain.RequestedRole;
 import feign.FeignException;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.UUID;
 
 @Slf4j
 @Component
@@ -17,13 +17,16 @@ public class DeliveryFeignAdapter implements DeliveryClientPort {
     private final DeliveryFeignClient deliveryFeignClient;
 
     @Override
-    public void createDeliveryManager(UUID userId, DeliveryManagerType managedType, UUID hubId) {
+    public void createDeliveryManager(UUID userId, UUID hubId, RequestedRole managerType) {
         try {
-            CreateDeliveryManagerRequest request = CreateDeliveryManagerRequest.of(userId, managedType, hubId);
+            CreateDeliveryManagerRequest request =
+                    CreateDeliveryManagerRequest.of(userId, hubId, managerType);
             deliveryFeignClient.createDeliveryManager(request);
-            log.info("[SUCCESS] DeliveryService 배송 관리자 생성 성공 userId = {}", userId);
+            log.info("[SUCCESS] 배송 관리자 생성 성공 userId = {}", userId);
+        } catch (FeignException.Conflict e) {
+            log.error("[SUCCESS] 이미 생성된 배송 관리자 userId = {}", userId, e);
         } catch (FeignException e) {
-            log.error("[ERROR] DeliveryService 호출 실패 userId = {}", userId, e);
+            log.error("[ERROR] Delivery-Service 호출 실패 userId = {}", userId, e);
             throw new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR);
         }
     }

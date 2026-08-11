@@ -1,14 +1,21 @@
 package com.logistics.userservice.application;
 
+import static com.logistics.userservice.application.dto.user.AffiliationType.HUB;
+
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.admin.*;
+import com.logistics.userservice.application.dto.company.CompanyInfo;
 import com.logistics.userservice.application.dto.user.UserContext;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.dto.user.UserUpdateCommand;
+import com.logistics.userservice.application.event.UserApprovalEvent;
 import com.logistics.userservice.application.event.UserDeletedEvent;
 import com.logistics.userservice.application.port.AdminUserQueryRepository;
+import com.logistics.userservice.application.port.CompanyClientPort;
+import com.logistics.userservice.application.port.HubClientPort;
 import com.logistics.userservice.application.validator.UserValidator;
+import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
@@ -31,19 +38,28 @@ public class AdminService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AdminUserQueryRepository adminUserQueryRepository;
+    private final HubClientPort hubClientPort;
+    private final CompanyClientPort companyClientPort;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     // ============================== CRUD ==============================
     /**
-     * Admin User 등록
+     * Admin User 등록 OpenFeign 호출로 회원가입 시 실존 허브 / 업체 1차 검증
      *
      * @param approvedBy
      * @param command
      */
     @Transactional
-    public void createUserByAdmin(UUID approvedBy, UserCreateCommand command) {
-        User createdUser = User.createByAdmin(approvedBy, command);
+    public void createUserByAdmin(UserCreateCommand command) {
         validator.validateDuplicate(command);
+        User createdUser = User.create(command);
+
+        if (command.affiliationType() == HUB) {
+            hubClientPort.existsById(command.hubId());
+        } else {
+            CompanyInfo companyInfo = companyClientPort.getCompanyInfo(command.companyId());
+            createdUser.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
+        }
 
         createdUser.encodePassword(passwordEncoder.encode(createdUser.getPassword()));
 
@@ -115,9 +131,10 @@ public class AdminService {
     }
 
     // ============================== Approval ==============================
-
     /**
-     * 회원가입 요청 승인
+     * 회원가입 요청 승인 실존 허브 / 업체 2차 검증 배송이 아닌 경우 바로 APPROVED(승인) 처리 배송 담당자 생성의 경우 Delivery Service 호출이
+     * 필요하므로 상태 값을 PROVISIONING(처리 중)로 처리하여 호출 성공 시 APPROVED 처리 서버 장애 시 회원가입 자체는 완료 -> 스케쥴러를 사용해
+     * 일정주기 재시도
      *
      * @param command
      */
@@ -126,7 +143,22 @@ public class AdminService {
         User user = findUserById(command.userId());
         validateManagerPermission(command.hubId(), command.role(), user);
 
+        if (user.getCompanyId() == null) {
+            hubClientPort.existsById(user.getHubId());
+        } else {
+            companyClientPort.getCompanyInfo(user.getCompanyId());
+        }
         user.approve(command.adminId());
+
+        if (user.getRequestedRole() == RequestedRole.HUB_DELIVERY_MANAGER
+                || user.getRequestedRole() == RequestedRole.COMPANY_DELIVERY_MANAGER) {
+            RequestedRole requestedRole =
+                    user.getCompanyId() == null
+                            ? RequestedRole.HUB_DELIVERY_MANAGER
+                            : RequestedRole.COMPANY_DELIVERY_MANAGER;
+            applicationEventPublisher.publishEvent(
+                    new UserApprovalEvent(user.getId(), user.getHubId(), requestedRole));
+        }
     }
 
     /**

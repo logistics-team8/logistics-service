@@ -1,7 +1,8 @@
 package com.logistics.userservice.application.port;
 
+import com.logistics.userservice.application.dto.company.CompanyInfo;
 import java.util.UUID;
 
 public interface CompanyClientPort {
-    boolean existsById(UUID hubId, UUID companyId);
+    CompanyInfo getCompanyInfo(UUID companyId);
 }

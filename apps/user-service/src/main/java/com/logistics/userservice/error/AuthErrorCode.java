@@ -9,7 +9,9 @@ public enum AuthErrorCode implements ErrorCode {
     TOKEN_EXPIRED("AUTH_101", HttpStatus.UNAUTHORIZED, "인증 정보가 만료되었습니다."),
     TOKEN_INVALID("AUTH_102", HttpStatus.UNAUTHORIZED, "유효하지 않은 인증 정보입니다."),
     PENDING_APPROVAL("AUTH_103", HttpStatus.FORBIDDEN, "승인 대기중인 계정입니다."),
-    APPROVAL_REJECTED("AUTH_104", HttpStatus.FORBIDDEN, "승인 거절된 계정입니다.");
+    APPROVAL_REJECTED("AUTH_104", HttpStatus.FORBIDDEN, "승인 거절된 계정입니다."),
+    HUB_ID_REQUIRED("AUTH_105", HttpStatus.BAD_REQUEST, "허브 소속 회원은 허브 ID를 입력해야 합니다."),
+    COMPANY_ID_REQUIRED("AUTH_106", HttpStatus.BAD_REQUEST, "업체 소속 회원은 업체 ID를 입력해야 합니다");
 
     private final String code;
     private final HttpStatus status;
