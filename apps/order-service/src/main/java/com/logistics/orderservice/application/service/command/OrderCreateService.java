@@ -228,9 +228,7 @@ public class OrderCreateService {
         Set<UUID> productIds = new HashSet<>();
         for (CreateOrderItemCommand item : items) {
             if(!productIds.add(item.productId())){
-                throw new BusinessException(
-                        OrderErrorCode.DUPLICATE_ORDER_PRODUCT
-                );
+                throw new BusinessException(OrderErrorCode.DUPLICATE_ORDER_PRODUCT);
             }
         }
     }
@@ -244,7 +242,7 @@ public class OrderCreateService {
             log.error( "배송 생성 실패 후 재고 복원 실패. orderId={}", orderId, e);
 
             orderStateService.failOrder(orderId, OrderFailureReason.STOCK_RESTORE_FAILED);
-            throw new BusinessException(OrderErrorCode.DELIVERY_STATUS_CHECK_FAILED);
+            throw new BusinessException(OrderErrorCode.STOCK_RESTORE_FAILED);
         }
     }
 
