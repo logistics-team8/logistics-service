@@ -131,6 +131,16 @@ public enum OrderErrorCode implements ErrorCode {
         "이미 취소된 주문상품입니다."
     ),
 
+    PRODUCT_NOT_FOUND(
+            "ORD_022",
+            HttpStatus.NOT_FOUND,
+            "주문 상품을 찾을 수 없습니다."
+    ),
+    DIFFERENT_DEPARTURE_HUB(
+            "ORD_022",
+            HttpStatus.BAD_REQUEST,
+            "하나의 주문에는 동일한 허브에 소속된 상품만 포함할 수 있습니다."
+    ),
     ORDER_AUTHENTICATION_REQUIRED(
             "ORD_401",
             HttpStatus.UNAUTHORIZED,
