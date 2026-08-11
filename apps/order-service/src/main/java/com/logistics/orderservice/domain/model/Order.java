@@ -95,7 +95,7 @@ public class Order extends BaseEntity {
     private LocalDateTime canceledAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "failure_reason", nullable = false, length = 50)
+    @Column(name = "failure_reason", length = 50)
     private OrderFailureReason failureReason;
 
     private Order(
@@ -281,14 +281,15 @@ public class Order extends BaseEntity {
     }
 
     private void validateCancelable(){
-        if (this.status == OrderStatus.CANCELED) {
+        if (this.status == OrderStatus.DELIVERY_CREATED) {
             throw new BusinessException(
-                    OrderErrorCode.ORDER_ALREADY_CANCELED
+                    OrderErrorCode.ORDER_NOT_CANCELABLE
             );
         }
+
         if (this.status != OrderStatus.PENDING
-                && this.status != OrderStatus.CONFIRMED
-                && this.status != OrderStatus.DELIVERY_CREATED) {
+                && this.status != OrderStatus.CONFIRMED) {
+
             throw new BusinessException(
                     OrderErrorCode.ORDER_NOT_CANCELABLE
             );
@@ -326,7 +327,7 @@ public class Order extends BaseEntity {
     }
 
     public boolean requiresStockRestoreForCancel(){
-        return this.status == OrderStatus.CONFIRMED ||  this.status == OrderStatus.DELIVERY_CREATED;
+        return this.status == OrderStatus.CONFIRMED;
     }
 
 }

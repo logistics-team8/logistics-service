@@ -151,6 +151,11 @@ public enum OrderErrorCode implements ErrorCode {
             "ORDER_403",
             HttpStatus.FORBIDDEN,
             "해당 주문에 접근할 권한이 없습니다."
+    ),
+    DELIVERY_CANCEL_NOT_SUPPORTED(
+            "ORD_024",
+            HttpStatus.CONFLICT,
+            "배송이 생성된 주문은 현재 취소할 수 없습니다."
     );
 
 
