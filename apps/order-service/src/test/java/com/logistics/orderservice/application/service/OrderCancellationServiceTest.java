@@ -2,6 +2,7 @@ package com.logistics.orderservice.application.service;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.orderservice.application.service.command.OrderCommandService;
 import com.logistics.orderservice.domain.model.Order;
 import com.logistics.orderservice.domain.model.OrderItem;
 import com.logistics.orderservice.domain.model.OrderItemStatus;

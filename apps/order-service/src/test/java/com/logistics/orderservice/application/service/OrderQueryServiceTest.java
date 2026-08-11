@@ -2,6 +2,7 @@ package com.logistics.orderservice.application.service;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.orderservice.application.service.query.OrderQueryService;
 import com.logistics.orderservice.domain.model.Order;
 import com.logistics.orderservice.domain.repository.OrderRepository;
 import com.logistics.orderservice.error.OrderErrorCode;
