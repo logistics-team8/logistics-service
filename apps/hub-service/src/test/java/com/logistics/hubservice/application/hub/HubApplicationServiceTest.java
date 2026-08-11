@@ -10,7 +10,7 @@ import com.logistics.hubservice.application.hub.command.HubCommandService;
 import com.logistics.hubservice.application.hub.command.UpdateHubCommand;
 import com.logistics.hubservice.application.hub.query.HubQueryService;
 import com.logistics.hubservice.application.hub.dto.HubResponse;
-import com.logistics.hubservice.application.hubroute.HubRouteCacheEvictor;
+import com.logistics.hubservice.application.hubroute.HubRoutesDeletedEvent;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import com.logistics.hubservice.domain.hubroute.HubRoute;
@@ -35,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -46,6 +47,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class HubApplicationServiceTest {
 
     private static final UUID DELETED_BY = UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
+    private static final ApplicationEventPublisher NO_OP_EVENT_PUBLISHER = event -> { };
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
@@ -53,7 +55,7 @@ class HubApplicationServiceTest {
     void createReturnsResponseReadyHubProjection() {
         InMemoryHubRepository repository = new InMemoryHubRepository();
         HubCommandService service = new HubCommandService(
-                repository, new InMemoryHubRouteRepository(), new HubRouteCacheEvictor());
+                repository, new InMemoryHubRouteRepository(), NO_OP_EVENT_PUBLISHER);
 
         HubResponse response = service.create(new CreateHubCommand(
                 "서울 허브",
@@ -81,7 +83,7 @@ class HubApplicationServiceTest {
                 new BigDecimal("127.1122451")
         ));
         HubCommandService service = new HubCommandService(
-                repository, new InMemoryHubRouteRepository(), new HubRouteCacheEvictor());
+                repository, new InMemoryHubRouteRepository(), NO_OP_EVENT_PUBLISHER);
 
         HubResponse response = service.update(existingHub.getId(), new UpdateHubCommand(
                 "동서울 허브",
@@ -133,8 +135,9 @@ class HubApplicationServiceTest {
         UUID previousDeleter = UUID.fromString("a8aa6649-4317-4edc-a059-d34ea7ea761c");
         alreadyDeletedRoute.delete(previousDeleter);
         hubRouteRepository.save(alreadyDeletedRoute);
+        List<Object> publishedEvents = new ArrayList<>();
         HubCommandService service =
-                new HubCommandService(repository, hubRouteRepository, new HubRouteCacheEvictor());
+                new HubCommandService(repository, hubRouteRepository, publishedEvents::add);
 
         service.delete(existingHub.getId(), DELETED_BY);
 
@@ -148,6 +151,11 @@ class HubApplicationServiceTest {
         assertThat(unrelatedRoute.getDeletedAt()).isNull();
         assertThat(unrelatedRoute.getDeletedBy()).isNull();
         assertThat(alreadyDeletedRoute.getDeletedBy()).isEqualTo(previousDeleter);
+        assertThat(publishedEvents)
+                .singleElement()
+                .isInstanceOfSatisfying(HubRoutesDeletedEvent.class, event ->
+                        assertThat(event.hubRouteIds())
+                                .containsExactly(outgoingRoute.getId(), incomingRoute.getId()));
     }
 
     @Test
@@ -286,7 +294,7 @@ class HubApplicationServiceTest {
         repository.save(deletedHub);
         HubCommandService commandService =
                 new HubCommandService(
-                        repository, new InMemoryHubRouteRepository(), new HubRouteCacheEvictor());
+                        repository, new InMemoryHubRouteRepository(), NO_OP_EVENT_PUBLISHER);
         HubQueryService queryService = new HubQueryService(repository);
         UUID missingHubId = UUID.fromString("6f21f2ae-d913-45db-83e5-1a5695536171");
 
@@ -390,6 +398,11 @@ class HubApplicationServiceTest {
         @Override
         public Optional<Hub> findByIdAndDeletedAtIsNull(UUID id) {
             return Optional.ofNullable(hubs.get(id)).filter(hub -> hub.getDeletedAt() == null);
+        }
+
+        @Override
+        public Optional<Hub> findByIdAndDeletedAtIsNullForUpdate(UUID id) {
+            return findByIdAndDeletedAtIsNull(id);
         }
 
         @Override

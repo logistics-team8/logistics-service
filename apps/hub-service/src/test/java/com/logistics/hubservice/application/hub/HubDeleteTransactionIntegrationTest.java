@@ -160,6 +160,11 @@ class HubDeleteTransactionIntegrationTest extends PostgreSqlIntegrationTest {
         }
 
         @Override
+        public Optional<Hub> findByIdAndDeletedAtIsNullForUpdate(UUID id) {
+            return delegate.findByIdAndDeletedAtIsNullForUpdate(id);
+        }
+
+        @Override
         public Page<Hub> findAllByDeletedAtIsNull(Pageable pageable) {
             return delegate.findAllByDeletedAtIsNull(pageable);
         }

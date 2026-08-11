@@ -144,7 +144,7 @@ class HubCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
                 public void evict(Object key) {
                     throw new IllegalStateException("Redis unavailable");
                 }
-            }));
+            }, new ConcurrentMapCache("hubRouteById"), new ConcurrentMapCache("hubRoutePath")));
             return cacheManager;
         }
     }

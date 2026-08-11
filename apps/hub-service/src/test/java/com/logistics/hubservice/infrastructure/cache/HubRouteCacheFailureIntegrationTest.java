@@ -194,7 +194,12 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
         @Primary
         CacheManager failingCacheManager() {
             SimpleCacheManager cacheManager = new SimpleCacheManager();
-            cacheManager.setCaches(List.of(new ConcurrentMapCache("hubRouteById") {
+            cacheManager.setCaches(List.of(new ConcurrentMapCache("hubById") {
+                @Override
+                public void evict(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+            }, new ConcurrentMapCache("hubRouteById") {
                 @Override
                 protected Object lookup(Object key) {
                     throw new IllegalStateException("Redis unavailable");
