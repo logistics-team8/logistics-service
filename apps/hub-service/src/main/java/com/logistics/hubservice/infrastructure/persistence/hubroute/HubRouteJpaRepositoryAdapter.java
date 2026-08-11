@@ -32,6 +32,11 @@ public class HubRouteJpaRepositoryAdapter implements HubRouteRepository {
     }
 
     @Override
+    public List<HubRoute> findAllByDeletedAtIsNull() {
+        return repository.findAllByDeletedAtIsNull();
+    }
+
+    @Override
     public List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId) {
         return repository.findAllByHubIdAndDeletedAtIsNull(hubId);
     }

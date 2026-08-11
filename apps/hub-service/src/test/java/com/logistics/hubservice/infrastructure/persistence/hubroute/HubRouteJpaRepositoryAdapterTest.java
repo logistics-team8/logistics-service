@@ -154,6 +154,26 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    @DisplayName("활성 허브 경로 전체 조회에서 논리 삭제된 경로를 제외한다")
+    void findAllReturnsOnlyActiveRoutes() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        Hub otherHub = saveHub("부산 허브");
+        HubRoute firstActiveRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+        HubRoute secondActiveRoute = saveRoute(destinationHub.getId(), otherHub.getId());
+        HubRoute deletedRoute = saveRoute(otherHub.getId(), sourceHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                deletedRoute.getId());
+
+        List<HubRoute> activeRoutes = hubRouteRepository.findAllByDeletedAtIsNull();
+
+        assertThat(activeRoutes)
+                .extracting(HubRoute::getId)
+                .containsExactlyInAnyOrder(firstActiveRoute.getId(), secondActiveRoute.getId());
+    }
+
+    @Test
     @DisplayName("허브 경로를 수정하면 변경값과 수정 감사 정보를 저장한다")
     void updatePersistsChangedValuesAndAuditMetadata() throws InterruptedException {
         Hub sourceHub = saveHub("서울 허브");

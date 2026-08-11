@@ -305,6 +305,13 @@ class HubRouteCommandServiceTest {
         }
 
         @Override
+        public List<HubRoute> findAllByDeletedAtIsNull() {
+            return routes.values().stream()
+                    .filter(route -> route.getDeletedAt() == null)
+                    .toList();
+        }
+
+        @Override
         public List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId) {
             return routes.values().stream()
                     .filter(route -> route.getDeletedAt() == null)

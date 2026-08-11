@@ -1,6 +1,7 @@
 package com.logistics.hubservice.infrastructure.cache;
 
 import com.logistics.hubservice.application.hub.dto.HubResponse;
+import com.logistics.hubservice.application.hubroute.dto.HubRoutePathResponse;
 import com.logistics.hubservice.application.hubroute.dto.HubRouteResponse;
 import java.time.Duration;
 import java.util.Map;
@@ -25,6 +26,7 @@ public class CacheConfiguration implements CachingConfigurer {
 
     private static final String HUB_BY_ID_CACHE = "hubById";
     private static final String HUB_ROUTE_BY_ID_CACHE = "hubRouteById";
+    private static final String HUB_ROUTE_PATH_CACHE = "hubRoutePath";
     private static final Duration CACHE_TTL = Duration.ofHours(1);
 
     @Bean
@@ -34,6 +36,8 @@ public class CacheConfiguration implements CachingConfigurer {
                 new JacksonJsonRedisSerializer<>(jsonMapper, HubResponse.class);
         JacksonJsonRedisSerializer<HubRouteResponse> hubRouteSerializer =
                 new JacksonJsonRedisSerializer<>(jsonMapper, HubRouteResponse.class);
+        JacksonJsonRedisSerializer<HubRoutePathResponse> hubRoutePathSerializer =
+                new JacksonJsonRedisSerializer<>(jsonMapper, HubRoutePathResponse.class);
 
         RedisCacheConfiguration defaultConfiguration = RedisCacheConfiguration.defaultCacheConfig()
                 .entryTtl(CACHE_TTL)
@@ -42,6 +46,8 @@ public class CacheConfiguration implements CachingConfigurer {
                 .serializeValuesWith(SerializationPair.fromSerializer(hubSerializer));
         RedisCacheConfiguration hubRouteConfiguration = defaultConfiguration
                 .serializeValuesWith(SerializationPair.fromSerializer(hubRouteSerializer));
+        RedisCacheConfiguration hubRoutePathConfiguration = defaultConfiguration
+                .serializeValuesWith(SerializationPair.fromSerializer(hubRoutePathSerializer));
         RedisCacheWriter cacheWriter = RedisCacheWriter.create(
                 connectionFactory,
                 configurer -> configurer.immediateWrites());
@@ -52,7 +58,9 @@ public class CacheConfiguration implements CachingConfigurer {
                         HUB_BY_ID_CACHE,
                         hubConfiguration,
                         HUB_ROUTE_BY_ID_CACHE,
-                        hubRouteConfiguration))
+                        hubRouteConfiguration,
+                        HUB_ROUTE_PATH_CACHE,
+                        hubRoutePathConfiguration))
                 .build();
     }
 

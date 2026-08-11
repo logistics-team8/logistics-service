@@ -14,6 +14,8 @@ public interface HubRouteRepository {
 
     Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id);
 
+    List<HubRoute> findAllByDeletedAtIsNull();
+
     List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId);
 
     Page<HubRoute> search(UUID sourceHubId, UUID destinationHubId, Pageable pageable);

@@ -14,6 +14,8 @@ interface SpringDataHubRouteRepository extends JpaRepository<HubRoute, UUID> {
 
     Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id);
 
+    List<HubRoute> findAllByDeletedAtIsNull();
+
     @Query("""
             SELECT hr
             FROM HubRoute hr
