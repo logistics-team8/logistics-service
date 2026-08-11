@@ -21,7 +21,9 @@ public interface UserRepository {
 
     void deleteAllInBatch();
 
-    Optional<Role> findRoleById(UUID userId);
+    Optional<Role> findRoleByIdDeletedAtIsNull(UUID userId);
 
-    Optional<String> findSlackIdById(UUID userId);
+    Optional<String> findSlackIdByIdDeletedAtIsNull(UUID userId);
+
+    void flush();
 }

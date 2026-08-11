@@ -13,7 +13,7 @@ import org.springframework.http.HttpHeaders;
 @EnableConfigurationProperties(SlackProperties.class)
 public class SlackConfig {
 
-    @Bean
+    @Bean("slackRestClient")
     public RestClient slackRestClient(
             SlackProperties properties
     ) {

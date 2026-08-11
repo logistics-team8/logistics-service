@@ -2,7 +2,7 @@ package com.logistics.gateway.presentation.exception;
 
 import com.logistics.gateway.config.TestFilterConfig;
 import com.logistics.gateway.config.TestRouteConfig;
-import com.logistics.gateway.presentation.error.GatewayErrorCode;
+import com.logistics.gateway.error.GatewayErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,13 +17,17 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-            "spring.cloud.config.enabled=false",
-            "eureka.client.register-with-eureka=false",
-            "eureka.client.fetch-registry=false",
-            "path.whitelist[0]=/business-exception",
-            "path.whitelist[1]=/not-found",
-            "path.whitelist[2]=/bad-request",
-            "path.whitelist[3]=/internal-server-error"
+                "spring.cloud.config.enabled=false",
+                "eureka.client.register-with-eureka=false",
+                "eureka.client.fetch-registry=false",
+                "path.whitelist[0].method=GET",
+                "path.whitelist[0].pattern=/business-exception",
+                "path.whitelist[1].method=GET",
+                "path.whitelist[1].pattern=/not-found",
+                "path.whitelist[2].method=GET",
+                "path.whitelist[2].pattern=/bad-request",
+                "path.whitelist[3].method=GET",
+                "path.whitelist[3].pattern=/internal-server-error"
         })
 class GatewayExceptionHandlerTest {
 
