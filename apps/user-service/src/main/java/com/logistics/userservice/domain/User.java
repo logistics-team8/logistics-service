@@ -4,7 +4,6 @@ import com.github.f4b6a3.uuid.UuidCreator;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.error.AuthErrorCode;
-import com.logistics.userservice.infrastructure.config.BaseEntity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -43,7 +42,11 @@ public class User extends BaseEntity {
 
     @Column private UUID companyId;
 
-    @Column(nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private RequestedRole requestedRole;
+
+    @Column(length = 20)
     @Enumerated(EnumType.STRING)
     private Role role;
 
@@ -55,25 +58,21 @@ public class User extends BaseEntity {
     private String rejectionReason;
 
     public static User create(UserCreateCommand command) {
-        return createBaseUser(command);
-    }
-
-    public static User createByAdmin(UUID approvedBy, UserCreateCommand command) {
-        User user = createBaseUser(command);
-        user.approve(approvedBy);
-        return user;
-    }
-
-    private static User createBaseUser(UserCreateCommand command) {
         User user = new User();
         user.username = command.username();
         user.password = command.password();
         user.name = command.name();
         user.slackId = command.slackId();
         user.userStatus = UserStatus.PENDING;
-        user.hubId = command.hub_id();
-        user.companyId = command.company_id();
-        user.role = command.role();
+        user.hubId = command.hubId();
+        user.companyId = command.companyId();
+        user.requestedRole = command.requestedRole();
+        return user;
+    }
+
+    public static User createByAdmin(UUID approvedBy, UserCreateCommand command) {
+        User user = create(command);
+        user.approve(approvedBy);
         return user;
     }
 
@@ -82,11 +81,16 @@ public class User extends BaseEntity {
     }
 
     public void validateActive() {
-        if (this.userStatus == UserStatus.PENDING) {
+        if (this.userStatus == UserStatus.PENDING || this.userStatus == UserStatus.PROVISIONING) {
             throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
         }
+
         if (this.userStatus == UserStatus.REJECTED) {
             throw new BusinessException(AuthErrorCode.APPROVAL_REJECTED);
+        }
+
+        if (this.role == null) {
+            throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
         }
     }
 
@@ -108,14 +112,38 @@ public class User extends BaseEntity {
     }
 
     /**
-     * 회원 가입 요청 승인
+     * 소속 조회 이후 할당
+     *
+     * @param hubId
+     * @param companyId
+     */
+    public void assignAffiliation(UUID hubId, UUID companyId) {
+        this.hubId = hubId;
+        this.companyId = companyId;
+    }
+
+    /**
+     * 회원 가입 요청 승인 배송 담당자의 경우 Delivery Service를 호출하기에 서버 장애를 대비하여 PROVISIONING 처리
      *
      * @param approvedBy 승인자 UUID
      */
     public void approve(UUID approvedBy) {
-        this.userStatus = UserStatus.APPROVED;
+        if (this.requestedRole == RequestedRole.COMPANY_DELIVERY_MANAGER
+                || this.requestedRole == RequestedRole.HUB_DELIVERY_MANAGER) {
+            this.userStatus = UserStatus.PROVISIONING;
+        } else {
+            this.userStatus = UserStatus.APPROVED;
+            this.role = this.requestedRole.toRole();
+            this.requestedRole = null;
+        }
         this.approvedBy = approvedBy;
         this.approvedAt = LocalDateTime.now();
+    }
+
+    /** 배송 담당자 최종 가입 승인 */
+    public void completeProvisioning() {
+        this.userStatus = UserStatus.APPROVED;
+        this.requestedRole = null;
     }
 
     /**
@@ -126,9 +154,9 @@ public class User extends BaseEntity {
      */
     public void reject(UUID approvedBy, String rejectionReason) {
         this.userStatus = UserStatus.REJECTED;
+        this.rejectionReason = rejectionReason;
         this.approvedBy = approvedBy;
         this.approvedAt = LocalDateTime.now();
-        this.rejectionReason = rejectionReason;
     }
 
     /**
