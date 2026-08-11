@@ -148,6 +148,16 @@ class HubRouteDefaultDataServiceTest {
         }
 
         @Override
+        public Optional<Hub> findByIdAndDeletedAtIsNullForUpdate(UUID id) {
+            return findByIdAndDeletedAtIsNull(id);
+        }
+
+        @Override
+        public boolean existsByIdAndDeletedAtIsNull(UUID id) {
+            return findByIdAndDeletedAtIsNull(id).isPresent();
+        }
+
+        @Override
         public Page<Hub> findAllByDeletedAtIsNull(Pageable pageable) {
             return Page.empty(pageable);
         }
@@ -173,6 +183,12 @@ class HubRouteDefaultDataServiceTest {
         }
 
         @Override
+        public List<HubRoute> saveAll(List<HubRoute> hubRoutes) {
+            hubRoutes.forEach(this::save);
+            return hubRoutes;
+        }
+
+        @Override
         public Optional<HubRoute> findByIdAndDeletedAtIsNull(UUID id) {
             return Optional.empty();
         }
@@ -180,6 +196,15 @@ class HubRouteDefaultDataServiceTest {
         @Override
         public List<HubRoute> findAllByDeletedAtIsNull() {
             return List.copyOf(routes.values());
+        }
+
+        @Override
+        public List<HubRoute> findAllByHubIdAndDeletedAtIsNull(UUID hubId) {
+            return routes.values().stream()
+                    .filter(route -> route.getDeletedAt() == null)
+                    .filter(route -> route.getSourceHubId().equals(hubId)
+                            || route.getDestinationHubId().equals(hubId))
+                    .toList();
         }
 
         @Override
