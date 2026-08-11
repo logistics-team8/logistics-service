@@ -26,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 @ExtendWith(MockitoExtension.class)
 class DeliveryManagerAssignmentCursorRepositoryAdapterTest {
 
+    private static final UUID HUB_ID =
+            UUID.fromString("848c1286-cea6-4b03-8a19-d91f8dddb078");
+
     @Mock
     private DeliveryManagerAssignmentCursorJpaRepository jpaRepository;
 
@@ -34,7 +37,7 @@ class DeliveryManagerAssignmentCursorRepositoryAdapterTest {
 
     @Test
     void insertsCursorIfAbsentAndReturnsLockedCursor() {
-        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery();
+        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID);
         DeliveryManagerAssignmentCursor lockedCursor =
                 DeliveryManagerAssignmentCursor.create(group);
         when(jpaRepository.findByAssignmentGroupKeyForUpdate("HUB_DELIVERY:GLOBAL"))
@@ -47,14 +50,14 @@ class DeliveryManagerAssignmentCursorRepositoryAdapterTest {
                 any(UUID.class),
                 eq("HUB_DELIVERY:GLOBAL"),
                 eq("HUB_DELIVERY"),
-                eq(null)
+                eq(HUB_ID)
         );
         verify(jpaRepository).findByAssignmentGroupKeyForUpdate("HUB_DELIVERY:GLOBAL");
     }
 
     @Test
     void failsWhenCursorCannotBeReadAfterInsert() {
-        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery();
+        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID);
         when(jpaRepository.findByAssignmentGroupKeyForUpdate("HUB_DELIVERY:GLOBAL"))
                 .thenReturn(Optional.empty());
 

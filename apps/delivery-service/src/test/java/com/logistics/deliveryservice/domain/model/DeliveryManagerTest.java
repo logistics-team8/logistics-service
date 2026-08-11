@@ -16,19 +16,17 @@ class DeliveryManagerTest {
             UUID.fromString("b344497b-5e61-4099-958b-dcf485648da5");
 
     @Test
-    void createsHubDeliveryManagerInGlobalGroup() {
+    void createsHubDeliveryManagerInHubGroup() {
         DeliveryManager deliveryManager = DeliveryManager.create(
                 USER_ID,
-                "U01234567",
-                DeliveryManagerAssignmentGroup.hubDelivery(),
+                DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID),
                 0
         );
 
         assertThat(deliveryManager.getUserId()).isEqualTo(USER_ID);
-        assertThat(deliveryManager.getSlackId()).isEqualTo("U01234567");
         assertThat(deliveryManager.getManagerType())
                 .isEqualTo(DeliveryManagerType.HUB_DELIVERY);
-        assertThat(deliveryManager.getHubId()).isNull();
+        assertThat(deliveryManager.getHubId()).isEqualTo(HUB_ID);
         assertThat(deliveryManager.getDeliverySequence()).isZero();
     }
 
@@ -36,7 +34,6 @@ class DeliveryManagerTest {
     void createsCompanyDeliveryManagerInHubGroup() {
         DeliveryManager deliveryManager = DeliveryManager.create(
                 USER_ID,
-                "U01234567",
                 DeliveryManagerAssignmentGroup.companyDelivery(HUB_ID),
                 9
         );
@@ -51,8 +48,7 @@ class DeliveryManagerTest {
     void rejectsMissingUserSnapshot() {
         assertThatThrownBy(() -> DeliveryManager.create(
                 null,
-                " ",
-                DeliveryManagerAssignmentGroup.hubDelivery(),
+                DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID),
                 0
         ))
                 .isInstanceOf(DeliveryException.class)
@@ -64,8 +60,7 @@ class DeliveryManagerTest {
     void rejectsSequenceOutsideAssignmentRange() {
         assertThatThrownBy(() -> DeliveryManager.create(
                 USER_ID,
-                "U01234567",
-                DeliveryManagerAssignmentGroup.hubDelivery(),
+                DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID),
                 -1
         ))
                 .isInstanceOf(DeliveryException.class)

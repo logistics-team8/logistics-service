@@ -15,11 +15,11 @@ class DeliveryManagerAssignmentGroupTest {
             UUID.fromString("848c1286-cea6-4b03-8a19-d91f8dddb078");
 
     @Test
-    void createsGlobalHubDeliveryGroup() {
-        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery();
+    void createsHubDeliveryGroupForHub() {
+        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID);
 
         assertThat(group.managerType()).isEqualTo(DeliveryManagerType.HUB_DELIVERY);
-        assertThat(group.hubId()).isNull();
+        assertThat(group.hubId()).isEqualTo(HUB_ID);
         assertThat(group.assignmentGroupKey()).isEqualTo("HUB_DELIVERY:GLOBAL");
     }
 
@@ -34,10 +34,10 @@ class DeliveryManagerAssignmentGroupTest {
     }
 
     @Test
-    void rejectsManagerTypeAndHubMismatch() {
+    void rejectsMissingHubId() {
         assertThatThrownBy(() -> new DeliveryManagerAssignmentGroup(
                 DeliveryManagerType.HUB_DELIVERY,
-                HUB_ID
+                null
         ))
                 .isInstanceOf(DeliveryException.class)
                 .extracting(exception -> ((DeliveryException) exception).getErrorCode())
@@ -51,7 +51,7 @@ class DeliveryManagerAssignmentGroupTest {
 
     @Test
     void selectsSmallestUnusedSequence() {
-        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery();
+        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID);
 
         assertThat(group.findSmallestAvailableSequence(List.of(0, 2, 3))).isEqualTo(1);
     }
@@ -66,7 +66,7 @@ class DeliveryManagerAssignmentGroupTest {
 
     @Test
     void rejectsGroupWithTenActiveSequences() {
-        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery();
+        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID);
 
         assertThatThrownBy(() -> group.findSmallestAvailableSequence(
                 List.of(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
@@ -78,7 +78,7 @@ class DeliveryManagerAssignmentGroupTest {
 
     @Test
     void enforcesTenManagerLimitEvenIfStoredSequencesAreDuplicated() {
-        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery();
+        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID);
 
         assertThatThrownBy(() -> group.findSmallestAvailableSequence(
                 List.of(0, 0, 1, 1, 2, 2, 3, 3, 4, 4)
@@ -90,7 +90,7 @@ class DeliveryManagerAssignmentGroupTest {
 
     @Test
     void rejectsSequenceOutsideZeroToNine() {
-        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery();
+        DeliveryManagerAssignmentGroup group = DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID);
 
         assertThatThrownBy(() -> group.findSmallestAvailableSequence(List.of(10)))
                 .isInstanceOf(DeliveryException.class)
