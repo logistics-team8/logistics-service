@@ -1,7 +1,5 @@
 package com.logistics.userservice.application;
 
-import static com.logistics.userservice.application.dto.user.AffiliationType.HUB;
-
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.admin.*;
@@ -46,7 +44,6 @@ public class AdminService {
     /**
      * Admin User 등록 OpenFeign 호출로 회원가입 시 실존 허브 / 업체 1차 검증
      *
-     * @param approvedBy
      * @param command
      */
     @Transactional
@@ -54,11 +51,11 @@ public class AdminService {
         validator.validateDuplicate(command);
         User createdUser = User.create(command);
 
-        if (command.affiliationType() == HUB) {
+        if (command.requestedRole() != RequestedRole.COMPANY_MANAGER) {
             hubClientPort.existsById(command.hubId());
         } else {
             CompanyInfo companyInfo = companyClientPort.getCompanyInfo(command.companyId());
-            createdUser.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
+            createdUser.assignAffiliation(companyInfo.hubId(), companyInfo.Id());
         }
 
         createdUser.encodePassword(passwordEncoder.encode(createdUser.getPassword()));
@@ -132,17 +129,20 @@ public class AdminService {
 
     // ============================== Approval ==============================
     /**
-     * 회원가입 요청 승인 실존 허브 / 업체 2차 검증 배송이 아닌 경우 바로 APPROVED(승인) 처리 배송 담당자 생성의 경우 Delivery Service 호출이
-     * 필요하므로 상태 값을 PROVISIONING(처리 중)로 처리하여 호출 성공 시 APPROVED 처리 서버 장애 시 회원가입 자체는 완료 -> 스케쥴러를 사용해
-     * 일정주기 재시도
+     * 회원가입 요청 승인 실존 허브 / 업체 2차 검증 배송이 아닌 경우 바로 APPROVED(승인) 배송 담당자 생성의 경우 Delivery Service 호출 필요로
+     * 인해 필요하므로 상태 값을 PROVISIONING로 한 뒤, 호출 성공 시 APPROVED(승인) 처리 서버 장애 시 회원가입 자체는 완료 -> 스케쥴러를 사용해 일정
+     * 주기 재시도
      *
      * @param command
      */
     @Transactional
     public void approveUser(AdminApprovalCommand command) {
         User user = findUserById(command.userId());
+
+        // 허브 관리자의 경우 본인 담당 허브만 관리 가능
         validateManagerPermission(command.hubId(), command.role(), user);
 
+        // 허브 or 업체 실존 여부 검증
         if (user.getCompanyId() == null) {
             hubClientPort.existsById(user.getHubId());
         } else {
@@ -152,10 +152,9 @@ public class AdminService {
 
         if (user.getRequestedRole() == RequestedRole.HUB_DELIVERY_MANAGER
                 || user.getRequestedRole() == RequestedRole.COMPANY_DELIVERY_MANAGER) {
-            RequestedRole requestedRole =
-                    user.getCompanyId() == null
-                            ? RequestedRole.HUB_DELIVERY_MANAGER
-                            : RequestedRole.COMPANY_DELIVERY_MANAGER;
+            RequestedRole requestedRole = user.getRequestedRole();
+
+            // 배송 담당자가 가입 승인 시 배송 담당자 생성 이벤트 발행
             applicationEventPublisher.publishEvent(
                     new UserApprovalEvent(user.getId(), user.getHubId(), requestedRole));
         }

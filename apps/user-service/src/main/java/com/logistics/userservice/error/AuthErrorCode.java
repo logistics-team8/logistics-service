@@ -1,8 +1,10 @@
 package com.logistics.userservice.error;
 
 import com.logistics.common.error.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
+@RequiredArgsConstructor
 public enum AuthErrorCode implements ErrorCode {
     INVALID_LOGIN("AUTH_001", HttpStatus.UNAUTHORIZED, "아이디가 존재하지 않거나 비밀번호가 올바르지 않습니다."),
 
@@ -16,12 +18,6 @@ public enum AuthErrorCode implements ErrorCode {
     private final String code;
     private final HttpStatus status;
     private final String message;
-
-    AuthErrorCode(String code, HttpStatus status, String message) {
-        this.code = code;
-        this.status = status;
-        this.message = message;
-    }
 
     @Override
     public String code() {

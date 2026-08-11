@@ -55,6 +55,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                         null,
                         RequestedRole.HUB_DELIVERY_MANAGER)
                 .approve(UUID.randomUUID());
+        userRepository.flush();
     }
 
     @Test
@@ -160,7 +161,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
         UserContext userContext = new UserContext(UUID.randomUUID(), Role.MASTER, null);
 
         SearchUsersQuery searchUsersQuery =
-                new SearchUsersQuery(null, null, null, null, null, UserStatus.PENDING);
+                new SearchUsersQuery(null, null, null, null, null, UserStatus.PROCESSING);
 
         Pageable pageable = PageRequest.of(0, 10, Sort.Direction.DESC, "createdAt");
 
@@ -169,7 +170,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                 adminUserQueryRepository.searchUsers(userContext, searchUsersQuery, pageable);
 
         // then
-        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.getTotalElements()).isEqualTo(1);
     }
 
     private User createUser(
@@ -187,8 +188,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                         slackId,
                         hubId,
                         companyId,
-                        requestedRole,
-                        null);
+                        requestedRole);
 
         return userRepository.save(User.create(command));
     }

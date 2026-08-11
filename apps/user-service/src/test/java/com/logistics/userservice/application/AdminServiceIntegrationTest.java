@@ -3,7 +3,6 @@ package com.logistics.userservice.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.logistics.userservice.application.dto.admin.AdminRejectCommand;
-import com.logistics.userservice.application.dto.user.AffiliationType;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.dto.user.UserUpdateCommand;
 import com.logistics.userservice.config.test.AbstractIntegrationTest;
@@ -40,39 +39,38 @@ class AdminServiceIntegrationTest extends AbstractIntegrationTest {
                         "U123456789",
                         null,
                         null,
-                        RequestedRole.COMPANY_MANAGER,
-                        AffiliationType.COMPANY);
+                        RequestedRole.COMPANY_MANAGER);
         dummyUser = userRepository.save(User.create(command));
         userId = dummyUser.getId();
     }
 
     // ============================== CRUD ==============================
     // TODO : 수정해야됨
-//        @Test
-//        @DisplayName("관리자가 회원을 생성한다.")
-//        void createUserByAdmin_success() {
-//            // given
-//            UUID adminId = UUID.randomUUID();
-//
-//            UserCreateCommand command =
-//                    new UserCreateCommand(
-//                            "admin1234",
-//                            passwordEncoder.encode("Testtest123!"),
-//                            "관리자",
-//                            "U111111111",
-//                            null,
-//                            null,
-//                            RequestedRole.COMPANY_MANAGER,
-//                            AffiliationType.COMPANY);
-//
-//            // when
-//            adminService.createUserByAdmin(command);
-//            User savedUser = userRepository.findByUsername(command.username()).get();
-//
-//            // then
-//            assertThat(savedUser.getUsername()).isEqualTo(command.username());
-//            assertThat(savedUser.getName()).isEqualTo(command.name());
-//        }
+    //        @Test
+    //        @DisplayName("관리자가 회원을 생성한다.")
+    //        void createUserByAdmin_success() {
+    //            // given
+    //            UUID adminId = UUID.randomUUID();
+    //
+    //            UserCreateCommand command =
+    //                    new UserCreateCommand(
+    //                            "admin1234",
+    //                            passwordEncoder.encode("Testtest123!"),
+    //                            "관리자",
+    //                            "U111111111",
+    //                            null,
+    //                            null,
+    //                            RequestedRole.COMPANY_MANAGER,
+    //                            AffiliationType.COMPANY);
+    //
+    //            // when
+    //            adminService.createUserByAdmin(command);
+    //            User savedUser = userRepository.findByUsername(command.username()).get();
+    //
+    //            // then
+    //            assertThat(savedUser.getUsername()).isEqualTo(command.username());
+    //            assertThat(savedUser.getName()).isEqualTo(command.name());
+    //        }
 
     @Test
     @DisplayName("관리자가 회원을 수정한다.")

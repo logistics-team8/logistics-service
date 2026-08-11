@@ -10,5 +10,4 @@ public record UserCreateCommand(
         String slackId,
         UUID hubId,
         UUID companyId,
-        RequestedRole requestedRole,
-        AffiliationType affiliationType) {}
+        RequestedRole requestedRole) {}

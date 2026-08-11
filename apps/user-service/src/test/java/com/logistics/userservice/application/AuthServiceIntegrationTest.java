@@ -2,7 +2,6 @@ package com.logistics.userservice.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.logistics.userservice.application.dto.user.AffiliationType;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.token.TokenResult;
 import com.logistics.userservice.config.test.AbstractIntegrationTest;
@@ -37,8 +36,7 @@ class AuthServiceIntegrationTest extends AbstractIntegrationTest {
                         "U123456789",
                         null,
                         null,
-                        RequestedRole.COMPANY_MANAGER,
-                        AffiliationType.COMPANY);
+                        RequestedRole.COMPANY_MANAGER);
         userRepository.save(User.create(command)).approve(UUID.randomUUID());
     }
 

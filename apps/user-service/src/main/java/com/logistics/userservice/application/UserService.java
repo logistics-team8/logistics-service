@@ -1,7 +1,5 @@
 package com.logistics.userservice.application;
 
-import static com.logistics.userservice.application.dto.user.AffiliationType.HUB;
-
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.company.CompanyInfo;
@@ -14,6 +12,7 @@ import com.logistics.userservice.application.event.UserDeletedEvent;
 import com.logistics.userservice.application.port.CompanyClientPort;
 import com.logistics.userservice.application.port.HubClientPort;
 import com.logistics.userservice.application.validator.UserValidator;
+import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
@@ -48,11 +47,11 @@ public class UserService {
         validator.validateDuplicate(command);
         User user = User.create(command);
 
-        if (command.affiliationType() == HUB) {
+        if (command.requestedRole() != RequestedRole.COMPANY_MANAGER) {
             hubClientPort.existsById(command.hubId());
         } else {
             CompanyInfo companyInfo = companyClientPort.getCompanyInfo(command.companyId());
-            user.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
+            user.assignAffiliation(companyInfo.hubId(), companyInfo.Id());
         }
 
         user.encodePassword(passwordEncoder.encode(user.getPassword()));
@@ -132,7 +131,6 @@ public class UserService {
     }
 
     // ============================== Helper Method ====================================
-
     /**
      * 회원 조회 헬퍼 메서드
      *

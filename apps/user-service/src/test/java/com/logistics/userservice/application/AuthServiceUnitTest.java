@@ -8,7 +8,6 @@ import static org.mockito.Mockito.*;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.user.AffiliationType;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.token.TokenPayload;
 import com.logistics.userservice.application.token.TokenProvider;
@@ -80,8 +79,7 @@ class AuthServiceUnitTest {
                             "U123456789",
                             null,
                             null,
-                            RequestedRole.COMPANY_MANAGER,
-                            AffiliationType.COMPANY);
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
 
@@ -114,8 +112,7 @@ class AuthServiceUnitTest {
                             "U123456789",
                             null,
                             null,
-                            RequestedRole.COMPANY_MANAGER,
-                            AffiliationType.COMPANY);
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
             mockUser.approve(UUID.randomUUID());
@@ -150,8 +147,7 @@ class AuthServiceUnitTest {
                             "U123456789",
                             null,
                             null,
-                            RequestedRole.COMPANY_MANAGER,
-                            AffiliationType.COMPANY);
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
             mockUser.approve(UUID.randomUUID());

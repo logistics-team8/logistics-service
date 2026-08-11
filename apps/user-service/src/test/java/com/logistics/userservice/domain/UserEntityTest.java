@@ -21,8 +21,7 @@ class UserEntityTest {
                         "U123456789",
                         null,
                         null,
-                        RequestedRole.COMPANY_MANAGER,
-                        null);
+                        RequestedRole.COMPANY_MANAGER);
 
         user = User.create(command);
 

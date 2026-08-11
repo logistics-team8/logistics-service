@@ -81,7 +81,7 @@ public class User extends BaseEntity {
     }
 
     public void validateActive() {
-        if (this.userStatus == UserStatus.PENDING || this.userStatus == UserStatus.PROVISIONING) {
+        if (this.userStatus == UserStatus.PENDING || this.userStatus == UserStatus.PROCESSING) {
             throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
         }
 
@@ -112,7 +112,7 @@ public class User extends BaseEntity {
     }
 
     /**
-     * 소속 조회 이후 할당
+     * 허브 / 업체 조회 이후 할당
      *
      * @param hubId
      * @param companyId
@@ -123,14 +123,14 @@ public class User extends BaseEntity {
     }
 
     /**
-     * 회원 가입 요청 승인 배송 담당자의 경우 Delivery Service를 호출하기에 서버 장애를 대비하여 PROVISIONING 처리
+     * 회원 가입 요청 승인, 배송 담당자의 경우 Delivery Service를 호출하기에 서버 장애를 대비하여 PROVISIONING 처리
      *
      * @param approvedBy 승인자 UUID
      */
     public void approve(UUID approvedBy) {
         if (this.requestedRole == RequestedRole.COMPANY_DELIVERY_MANAGER
                 || this.requestedRole == RequestedRole.HUB_DELIVERY_MANAGER) {
-            this.userStatus = UserStatus.PROVISIONING;
+            this.userStatus = UserStatus.PROCESSING;
         } else {
             this.userStatus = UserStatus.APPROVED;
             this.role = this.requestedRole.toRole();

@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.userservice.application.AdminService;
-import com.logistics.userservice.application.dto.user.AffiliationType;
 import com.logistics.userservice.config.test.AbstractControllerTest;
 import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.Role;
@@ -75,7 +74,6 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "Test1234!",
                                     "김길동",
                                     "U12345678",
-                                    AffiliationType.COMPANY,
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
                                     RequestedRole.COMPANY_MANAGER)),
@@ -85,7 +83,6 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "!",
                                     "김길동",
                                     "U12345678",
-                                    AffiliationType.COMPANY,
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
                                     RequestedRole.COMPANY_MANAGER)),
@@ -95,7 +92,6 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "Test1234!",
                                     "123456789012345678901234567890123456789012345678901234567890",
                                     "U12345678",
-                                    AffiliationType.COMPANY,
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
                                     RequestedRole.COMPANY_MANAGER)),
@@ -105,7 +101,6 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "Test1234!",
                                     "김길동",
                                     "Q12345678",
-                                    AffiliationType.COMPANY,
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
                                     RequestedRole.COMPANY_MANAGER)),
@@ -115,7 +110,6 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "Test1234!",
                                     "김길동",
                                     "U12345678",
-                                    AffiliationType.COMPANY,
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
                                     null)));

@@ -1,7 +1,6 @@
 package com.logistics.userservice.presentation.dto.user;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.user.AffiliationType;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.error.AuthErrorCode;
@@ -36,39 +35,32 @@ public record UserCreateRequest(
                         message = "올바른 Slack Member ID 형식이 아닙니다. (예: U1234567890)")
                 @Schema(description = "Slack Member ID", example = "U06ABC12345")
                 String slackId,
-        @NotNull(message = "소속 유형을 입력해주세요.") @Schema(description = "회원 소속 유형", example = "HUB")
-                AffiliationType affiliationType,
-        @Schema(
-                        description = "Hub_id(PK) 소속 유형이 HUB일 때 입력",
-                        example = "7974488d-e80a-4de9-ac69-5746330eedd6")
+        @Schema(description = "Hub_id(PK)", example = "7974488d-e80a-4de9-ac69-5746330eedd6")
                 UUID hubId,
-        @Schema(
-                        description = "Company_id(PK) 소속 유형이 COMPANY일 때 입력(배송 관리자의 경우 HUB만 입력)",
-                        example = "09e38839-6573-4de1-848c-77dda78f1926")
-                UUID companyId,
+        @Schema(description = "Company_id(PK) COMPANY_MANAGER일 때 입력(업체 배송 관리자는 X)") UUID companyId,
         @NotNull(message = "요청 권한을 입력해주세요.")
                 @Schema(description = "요청 회원 권한", example = "COMPANY_MANAGER")
                 RequestedRole requestedRole) {
 
     public UserCreateCommand toCommand() {
-        if (AffiliationType.HUB == affiliationType && hubId == null) {
-            throw new BusinessException(AuthErrorCode.HUB_ID_REQUIRED);
+        UUID normalizedHubId = null;
+        UUID normalizedCompanyId = null;
+
+        if (requestedRole == RequestedRole.COMPANY_MANAGER) {
+            if (companyId == null) throw new BusinessException(AuthErrorCode.COMPANY_ID_REQUIRED);
+            normalizedCompanyId = companyId;
+        } else {
+            if (hubId == null) throw new BusinessException(AuthErrorCode.HUB_ID_REQUIRED);
+            normalizedHubId = hubId;
         }
 
-        if (AffiliationType.COMPANY == affiliationType
-                && companyId == null
-                && requestedRole != RequestedRole.HUB_DELIVERY_MANAGER
-                && requestedRole != RequestedRole.COMPANY_DELIVERY_MANAGER) {
-            throw new BusinessException(AuthErrorCode.COMPANY_ID_REQUIRED);
-        }
         return new UserCreateCommand(
                 username,
                 password,
                 name,
                 slackId,
-                hubId,
-                companyId,
-                requestedRole,
-                affiliationType);
+                normalizedHubId,
+                normalizedCompanyId,
+                requestedRole);
     }
 }
