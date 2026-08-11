@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class CreateDeliveryManagerService {
+public class DeliveryManagerService {
 
     private final DeliveryManagerRepository deliveryManagerRepository;
     private final DeliveryManagerUserValidator deliveryManagerUserValidator;
