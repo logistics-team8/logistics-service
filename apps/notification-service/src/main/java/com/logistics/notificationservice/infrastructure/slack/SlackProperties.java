@@ -10,5 +10,4 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SlackProperties {
     private String botToken;
     private String baseUrl;
-    private String channelId;
 }
