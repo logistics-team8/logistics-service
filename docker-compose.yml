@@ -32,6 +32,13 @@ services:
       timeout: 3s
       retries: 10
 
+  zipkin:
+    image: openzipkin/zipkin:3.6.1
+    ports:
+      - "${ZIPKIN_PORT:-9411}:9411"
+    networks:
+      - msa-network
+
   eureka-server:
     build:
       context: .
@@ -39,6 +46,8 @@ services:
       args:
         MODULE: infra:eureka-server
         MODULE_DIR: infra/eureka-server
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
     ports:
       - "8761:8761"
     networks:
@@ -85,6 +94,8 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       CONFIG_SERVER_URL: http://config-server:8888
       GATEWAY_SERVER_PORT: 8080
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "${GATEWAY_SERVER_PORT:-8080}:8080"
     depends_on:
