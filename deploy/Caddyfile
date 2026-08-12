@@ -1,0 +1,12 @@
+{$DEV_DOMAIN} {
+	encode zstd gzip
+
+	@unauthorized_signup {
+		method POST
+		path /api/v1/users
+		not header X-Dev-Provision-Key {$DEV_PROVISION_KEY}
+	}
+	respond @unauthorized_signup "X-Dev-Provision-Key is required" 403
+
+	reverse_proxy gateway:8080
+}
