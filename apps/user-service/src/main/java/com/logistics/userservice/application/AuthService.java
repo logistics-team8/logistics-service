@@ -53,7 +53,6 @@ public class AuthService {
         }
 
         // TODO : 사용자 상태 검증 로직 (PENDING, REJECTED)
-        //        개발 어느정도 진행됐을 시 주석 해제
         // user.validateActive();
 
         TokenClaims tokenClaims =

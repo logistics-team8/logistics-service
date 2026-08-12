@@ -1,4 +1,4 @@
-package com.logistics.userservice.infrastructure.config;
+package com.logistics.userservice.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;

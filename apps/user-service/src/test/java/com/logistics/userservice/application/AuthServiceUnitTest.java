@@ -11,7 +11,7 @@ import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.token.TokenPayload;
 import com.logistics.userservice.application.token.TokenProvider;
-import com.logistics.userservice.domain.Role;
+import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.domain.redis.RefreshTokenRepository;
@@ -79,7 +79,7 @@ class AuthServiceUnitTest {
                             "U123456789",
                             null,
                             null,
-                            Role.COMPANY_MANAGER);
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
 
@@ -112,9 +112,10 @@ class AuthServiceUnitTest {
                             "U123456789",
                             null,
                             null,
-                            Role.COMPANY_MANAGER);
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
+            mockUser.approve(UUID.randomUUID());
 
             given(userRepository.findByUsernameAndDeletedAtIsNull(request.username()))
                     .willReturn(Optional.of(mockUser));
@@ -146,9 +147,10 @@ class AuthServiceUnitTest {
                             "U123456789",
                             null,
                             null,
-                            Role.COMPANY_MANAGER);
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
+            mockUser.approve(UUID.randomUUID());
 
             given(userRepository.findByUsernameAndDeletedAtIsNull(request.username()))
                     .willReturn(Optional.of(mockUser));

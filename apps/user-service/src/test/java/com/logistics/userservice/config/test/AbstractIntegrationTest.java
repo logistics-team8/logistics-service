@@ -12,35 +12,28 @@ import org.testcontainers.utility.DockerImageName;
 @Testcontainers
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
-    // Postgres Testcontainer
-    static PostgreSQLContainer<?> postgres =
+    static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:17")
                     .withDatabaseName("testdb")
                     .withUsername("test")
                     .withPassword("test");
 
-    static {
-        postgres.start();
-    }
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-    }
-
-    // Redis Testcontainer
-    static final GenericContainer<?> REDIS_CONTAINER =
+    static final GenericContainer<?> REDIS =
             new GenericContainer<>(DockerImageName.parse("redis:7-alpine")).withExposedPorts(6379);
 
     static {
-        REDIS_CONTAINER.start();
+        POSTGRES.start();
+        REDIS.start();
     }
 
     @DynamicPropertySource
-    static void redisProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.redis.host", REDIS_CONTAINER::getHost);
-        registry.add("spring.data.redis.port", () -> REDIS_CONTAINER.getMappedPort(6379));
+    static void overrideProps(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+        registry.add("spring.datasource.username", POSTGRES::getUsername);
+        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+
+        registry.add("spring.data.redis.host", REDIS::getHost);
+        registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
     }
 }

@@ -1,6 +1,6 @@
 package com.logistics.userservice.application.dto.user;
 
-import com.logistics.userservice.domain.Role;
+import com.logistics.userservice.domain.RequestedRole;
 import java.util.UUID;
 
 public record UserCreateCommand(
@@ -8,6 +8,6 @@ public record UserCreateCommand(
         String password,
         String name,
         String slackId,
-        UUID hub_id,
-        UUID company_id,
-        Role role) {}
+        UUID hubId,
+        UUID companyId,
+        RequestedRole requestedRole) {}
