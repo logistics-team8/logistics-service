@@ -6,6 +6,7 @@ on:
     paths:
       - "Dockerfile"
       - "docker-compose.yml"
+      - "deploy/**"
       - ".dockerignore"
       - "infra/postgres/**"
       - "config-repo/**"
@@ -15,6 +16,7 @@ on:
     paths:
       - "Dockerfile"
       - "docker-compose.yml"
+      - "deploy/**"
       - ".dockerignore"
       - "infra/postgres/**"
       - "config-repo/**"
@@ -38,5 +40,11 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v6
 
-      - name: Validate configuration
+      - name: Validate local Compose configuration
         run: docker compose config --quiet
+
+      - name: Validate immutable Dev Compose configuration
+        run: docker compose --project-directory "$GITHUB_WORKSPACE" --env-file deploy/base-images.lock --env-file deploy/dev.env.example -f deploy/compose.dev.yml config --quiet --no-interpolate
+
+      - name: Test Dev deployment rollback
+        run: bash deploy/scripts/deploy_test.sh
