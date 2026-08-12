@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
 public class AuthController implements AuthApi {
-    private final AuthService authService;
     private final CookieProvider cookieProvider;
+    private final AuthService authService;
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<TokenResponse>> login(
