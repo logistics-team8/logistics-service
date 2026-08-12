@@ -113,11 +113,13 @@ public class DeliveryManagerService {
     // API 정렬 필드명을 Entity 정렬 필드명으로 변환
     private Pageable mapSortPropertiesToEntityProperties(Pageable pageable) {
         // 필드명 같은지 다른지 삼항연산으로 비교 변환
-        Sort mappedSort = Sort.by(pageable.getSort().stream()
-                .map(order -> "sequenceNumber".equals(order.getProperty())
-                        ? order.withProperty("deliverySequence")
-                        : order)
-                .toList());
+        Sort mappedSort = pageable.getSort().isUnsorted()
+                ? Sort.by(Sort.Order.asc("deliverySequence"))
+                : Sort.by(pageable.getSort().stream()
+                        .map(order -> "sequenceNumber".equals(order.getProperty())
+                                ? order.withProperty("deliverySequence")
+                                : order)
+                        .toList());
         //order 안에는 대략 이렇게 들어있음
         //├─ property  = "sequenceNumber"
         //└─ direction = DESC

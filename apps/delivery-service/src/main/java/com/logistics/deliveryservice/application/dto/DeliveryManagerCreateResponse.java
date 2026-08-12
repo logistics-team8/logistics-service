@@ -8,16 +8,14 @@ import java.util.UUID;
 public record DeliveryManagerCreateResponse(
         UUID userId,
         DeliveryManagerType managerType,
-        UUID hubId,
-        Integer sequenceNumber
+        UUID hubId
 ) {
 
     public static DeliveryManagerCreateResponse from(DeliveryManager deliveryManager) {
         return new DeliveryManagerCreateResponse(
                 deliveryManager.getUserId(),
                 deliveryManager.getManagerType(),
-                deliveryManager.getHubId(),
-                deliveryManager.getDeliverySequence()
+                deliveryManager.getHubId()
         );
     }
 }
