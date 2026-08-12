@@ -12,8 +12,7 @@ public record AdminSearchRequest(
         UUID hubId,
         UUID companyId,
         Role role,
-        UserStatus userStatus
-) {
+        UserStatus userStatus) {
     public SearchUsersQuery toQuery() {
         return new SearchUsersQuery(username, name, hubId, companyId, role, userStatus);
     }
