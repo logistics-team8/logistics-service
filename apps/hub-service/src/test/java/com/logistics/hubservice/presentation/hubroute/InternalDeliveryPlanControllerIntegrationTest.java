@@ -1,7 +1,6 @@
 package com.logistics.hubservice.presentation.hubroute;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -97,7 +96,7 @@ class InternalDeliveryPlanControllerIntegrationTest extends PostgreSqlIntegratio
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody(sourceHub.getId(), destinationHub.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.companyDeliveryManagerId").value(nullValue()))
+                .andExpect(jsonPath("$.companyDeliveryManagerId").doesNotExist())
                 .andExpect(jsonPath("$.routes", hasSize(2)))
                 .andExpect(jsonPath("$.routes[0].sequence").value(1))
                 .andExpect(jsonPath("$.routes[0].departureHubId").value(sourceHub.getId().toString()))
@@ -105,7 +104,7 @@ class InternalDeliveryPlanControllerIntegrationTest extends PostgreSqlIntegratio
                         .value(intermediateHub.getId().toString()))
                 .andExpect(jsonPath("$.routes[0].estimatedDistanceKm").value(0.040))
                 .andExpect(jsonPath("$.routes[0].estimatedDurationMinutes").value(1))
-                .andExpect(jsonPath("$.routes[0].hubDeliveryManagerId").value(nullValue()))
+                .andExpect(jsonPath("$.routes[0].hubDeliveryManagerId").doesNotExist())
                 .andExpect(jsonPath("$.routes[1].sequence").value(2))
                 .andExpect(jsonPath("$.routes[1].departureHubId")
                         .value(intermediateHub.getId().toString()))

@@ -38,22 +38,19 @@ class DeliveryPlanResponseDtoTest {
 
         DeliveryPlanResponseDto response = DeliveryPlanResponseDto.from(path);
 
-        assertThat(response.companyDeliveryManagerId()).isNull();
         assertThat(response.routes()).hasSize(2);
         assertThat(response.routes().get(0)).isEqualTo(new DeliveryPlanResponseDto.RouteResponse(
                 1,
                 SOURCE_HUB_ID,
                 MIDDLE_HUB_ID,
                 new BigDecimal("0.040"),
-                1,
-                null));
+                1));
         assertThat(response.routes().get(1)).isEqualTo(new DeliveryPlanResponseDto.RouteResponse(
                 2,
                 MIDDLE_HUB_ID,
                 DESTINATION_HUB_ID,
                 new BigDecimal("0.060"),
-                2,
-                null));
+                2));
     }
 
     @Test
@@ -69,6 +66,5 @@ class DeliveryPlanResponseDtoTest {
         DeliveryPlanResponseDto response = DeliveryPlanResponseDto.from(path);
 
         assertThat(response.routes()).isEmpty();
-        assertThat(response.companyDeliveryManagerId()).isNull();
     }
 }

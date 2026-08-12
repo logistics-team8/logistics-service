@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public record DeliveryPlanResponseDto(
-        UUID companyDeliveryManagerId,
         List<RouteResponse> routes
 ) {
 
@@ -19,7 +18,6 @@ public record DeliveryPlanResponseDto(
 
     public static DeliveryPlanResponseDto from(HubRoutePathResponse path) {
         return new DeliveryPlanResponseDto(
-                null,
                 path.segments().stream()
                         .map(RouteResponse::from)
                         .toList());
@@ -30,8 +28,7 @@ public record DeliveryPlanResponseDto(
             UUID departureHubId,
             UUID arrivalHubId,
             BigDecimal estimatedDistanceKm,
-            Integer estimatedDurationMinutes,
-            UUID hubDeliveryManagerId
+            Integer estimatedDurationMinutes
     ) {
 
         private static RouteResponse from(HubRoutePathResponse.Segment segment) {
@@ -40,8 +37,7 @@ public record DeliveryPlanResponseDto(
                     segment.sourceHubId(),
                     segment.destinationHubId(),
                     toKilometers(segment.distanceMeters()),
-                    toMinutes(segment.durationSeconds()),
-                    null);
+                    toMinutes(segment.durationSeconds()));
         }
 
         private static BigDecimal toKilometers(long distanceMeters) {
