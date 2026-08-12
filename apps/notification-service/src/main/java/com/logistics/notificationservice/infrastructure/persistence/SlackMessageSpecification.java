@@ -47,6 +47,18 @@ public final class SlackMessageSpecification {
             );
         }
 
+        if (condition.recipientSlackId() != null
+                && !condition.recipientSlackId().isBlank()) {
+
+            spec = spec.and(
+                    (root, query, cb) ->
+                            cb.equal(
+                                    root.get("recipientSlackId"),
+                                    condition.recipientSlackId()
+                            )
+            );
+        }
+
         if (condition.keyword() != null
                 && !condition.keyword().isBlank()) {
 
