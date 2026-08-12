@@ -11,11 +11,12 @@ import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.token.TokenPayload;
 import com.logistics.userservice.application.token.TokenProvider;
-import com.logistics.userservice.domain.Role;
+import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.domain.redis.RefreshTokenRepository;
 import com.logistics.userservice.domain.redis.RoleCacheRepository;
+import com.logistics.userservice.domain.redis.SessionRepository;
 import com.logistics.userservice.error.AuthErrorCode;
 import com.logistics.userservice.error.UserErrorCode;
 import com.logistics.userservice.presentation.dto.auth.LoginRequest;
@@ -41,6 +42,7 @@ class AuthServiceUnitTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private TokenProvider tokenProvider;
     @Mock private RefreshTokenRepository refreshTokenRepository;
+    @Mock private SessionRepository sessionRepository;
     @Mock private RoleCacheRepository roleCacheRepository;
     @InjectMocks private AuthService authService;
 
@@ -78,8 +80,8 @@ class AuthServiceUnitTest {
                             "김철수",
                             "U123456789",
                             null,
-                            null,
-                            Role.COMPANY_MANAGER);
+                            UUID.randomUUID(),
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
 
@@ -111,10 +113,11 @@ class AuthServiceUnitTest {
                             "김철수",
                             "U123456789",
                             null,
-                            null,
-                            Role.COMPANY_MANAGER);
+                            UUID.randomUUID(),
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
+            mockUser.approve(UUID.randomUUID());
 
             given(userRepository.findByUsernameAndDeletedAtIsNull(request.username()))
                     .willReturn(Optional.of(mockUser));
@@ -124,7 +127,7 @@ class AuthServiceUnitTest {
 
             willThrow(new DataAccessException("Redis Error") {})
                     .given(refreshTokenRepository)
-                    .save(any(), any());
+                    .save(any(), any(), any());
 
             // when & then
             assertThatThrownBy(() -> authService.login(request.toCommand()))
@@ -145,10 +148,11 @@ class AuthServiceUnitTest {
                             "김철수",
                             "U123456789",
                             null,
-                            null,
-                            Role.COMPANY_MANAGER);
+                            UUID.randomUUID(),
+                            RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
+            mockUser.approve(UUID.randomUUID());
 
             given(userRepository.findByUsernameAndDeletedAtIsNull(request.username()))
                     .willReturn(Optional.of(mockUser));
@@ -163,7 +167,7 @@ class AuthServiceUnitTest {
             // when & then
             assertThatCode(() -> authService.login(request.toCommand())).doesNotThrowAnyException();
 
-            verify(refreshTokenRepository).save(any(), any());
+            verify(refreshTokenRepository).save(any(), any(), any());
             verify(roleCacheRepository).save(any(), any());
         }
     }
@@ -172,14 +176,16 @@ class AuthServiceUnitTest {
     @DisplayName("로그아웃 실패 테스트")
     class Logout {
         @Test
-        @DisplayName("로그아웃 시 만료된 액세스 토큰을 보내도 성공한다.")
+        @DisplayName("로그아웃 시 만료된 액세스 토큰을 보내도 로그아웃에 성공한다.")
         void logout_success_when_token_expired() {
             // given
             String accessToken = "accessToken";
             UUID userId = UUID.randomUUID();
+            UUID sessionId = UUID.randomUUID();
 
             Claims claims = mock(Claims.class);
             given(claims.getSubject()).willReturn(userId.toString());
+            given(claims.get("sessionId", String.class)).willReturn(userId.toString());
 
             given(tokenProvider.getAllClaimsFromAccessToken(accessToken))
                     .willThrow(new ExpiredJwtException(null, claims, "토큰 만료"));
@@ -187,8 +193,8 @@ class AuthServiceUnitTest {
             // when & then
             assertThatCode(() -> authService.logout(accessToken)).doesNotThrowAnyException();
 
-            verify(refreshTokenRepository).delete(userId);
-            verify(roleCacheRepository).delete(userId);
+            verify(sessionRepository).delete(any(), any());
+            verify(roleCacheRepository).delete(any());
         }
 
         @Test
@@ -220,14 +226,17 @@ class AuthServiceUnitTest {
             String refreshToken = "refreshToken";
             String redisToken = "redisToken";
             UUID userId = UUID.randomUUID();
+            UUID sessionId = UUID.randomUUID();
             TokenPayload tokenPayload = mock(TokenPayload.class);
 
             given(tokenProvider.getAllClaimsFromRefreshToken(refreshToken))
                     .willReturn(tokenPayload);
 
             given(tokenPayload.userId()).willReturn(userId);
+            given(tokenPayload.sessionId()).willReturn(sessionId);
 
-            given(refreshTokenRepository.findByUserId(userId)).willReturn(Optional.of(redisToken));
+            given(refreshTokenRepository.findByUserId(userId, sessionId))
+                    .willReturn(Optional.of(redisToken));
 
             // when & then
             assertThatThrownBy(() -> authService.reissue(refreshToken))
@@ -271,15 +280,18 @@ class AuthServiceUnitTest {
             // given
             String refreshToken = "refreshToken";
             UUID userId = UUID.randomUUID();
+            UUID sessionId = UUID.randomUUID();
             TokenPayload tokenPayload = mock(TokenPayload.class);
 
             given(tokenProvider.getAllClaimsFromRefreshToken(refreshToken))
                     .willReturn(tokenPayload);
 
             given(tokenPayload.userId()).willReturn(userId);
+            given(tokenPayload.sessionId()).willReturn(sessionId);
 
-            given(refreshTokenRepository.findByUserId(userId))
+            given(refreshTokenRepository.findByUserId(userId, sessionId))
                     .willReturn(Optional.of(refreshToken));
+            given(sessionRepository.exists(userId, sessionId)).willReturn(true);
 
             given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
 

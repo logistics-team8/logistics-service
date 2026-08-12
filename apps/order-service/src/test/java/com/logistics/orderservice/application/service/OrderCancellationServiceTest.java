@@ -2,26 +2,28 @@ package com.logistics.orderservice.application.service;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.orderservice.application.authorization.OrderAuthorization;
+import com.logistics.orderservice.application.port.ProductPort;
+import com.logistics.orderservice.application.service.command.OrderCancelService;
+import com.logistics.orderservice.application.service.command.OrderStateService;
+import com.logistics.orderservice.application.service.command.StockProcessService;
 import com.logistics.orderservice.domain.model.Order;
-import com.logistics.orderservice.domain.model.OrderItem;
-import com.logistics.orderservice.domain.model.OrderItemStatus;
 import com.logistics.orderservice.domain.model.OrderStatus;
 import com.logistics.orderservice.domain.repository.OrderRepository;
 import com.logistics.orderservice.error.OrderErrorCode;
-import com.logistics.orderservice.presentation.dto.response.CancelOrderItemResponse;
-import com.logistics.orderservice.presentation.dto.response.CancelOrderResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,137 +32,84 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class OrderCancellationServiceTest {
 
-    @Mock private OrderRepository orderRepository;
-    @Mock private Order order;
-    @Mock private OrderItem orderItem;
+    @Mock OrderRepository orderRepository;
+    @Mock OrderAuthorization orderAuthorization;
+    @Mock StockProcessService stockProcessService;
+    @Mock OrderStateService orderStateService;
 
-    private OrderCommandService orderCommandService;
+    private OrderCancelService service;
     private UUID orderId;
-    private UUID orderItemId;
     private UUID userId;
-    private CustomUserDetails requester;
+    private LocalDateTime now;
+    private CustomUserDetails user;
 
     @BeforeEach
     void setUp() {
         orderId = UUID.randomUUID();
-        orderItemId = UUID.randomUUID();
         userId = UUID.randomUUID();
-        requester = CustomUserDetails.from(
-                userId, UUID.randomUUID(), UUID.randomUUID(), "COMPANY_MANAGER"
-        );
-        Clock clock = Clock.fixed(
-                Instant.parse("2026-08-09T03:00:00Z"), ZoneId.of("Asia/Seoul")
-        );
-        orderCommandService = new OrderCommandService(orderRepository, clock);
+        now = LocalDateTime.of(2026, 8, 12, 12, 0);
+        Clock clock = Clock.fixed(now.atZone(ZoneId.of("Asia/Seoul")).toInstant(), ZoneId.of("Asia/Seoul"));
+        service = new OrderCancelService(orderRepository, orderAuthorization, stockProcessService, orderStateService, clock);
+        user = CustomUserDetails.from(userId, UUID.randomUUID(), UUID.randomUUID(), "COMPANY_MANAGER");
     }
 
-    @Nested
-    @DisplayName("주문 취소")
-    class CancelOrderTest {
+    @Test
+    @DisplayName("CONFIRMED 주문 취소 시 활성 상품 재고를 복원하고 주문을 취소한다")
+    void cancelOrder_confirmed() {
+        Order order = order(OrderStatus.CONFIRMED);
+        UUID productId = UUID.randomUUID();
+        order.addOrderItem(productId, "상품", UUID.randomUUID(), UUID.randomUUID(), 3);
+        Order canceled = order(OrderStatus.CANCELED);
+        given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.of(order));
+        given(orderStateService.cancelOrder(orderId, userId, now)).willReturn(canceled);
 
-        @Test
-        @DisplayName("주문자는 자신의 주문을 취소할 수 있다")
-        void cancelOrder_requester_success() {
-            LocalDateTime canceledAt = LocalDateTime.of(2026, 8, 9, 12, 0);
-            given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.of(order));
-            given(order.getRequesterId()).willReturn(userId);
-            given(order.getId()).willReturn(orderId);
-            given(order.getOrderNumber()).willReturn("ORD-20260809-ABCDEF123456");
-            given(order.getStatus()).willReturn(OrderStatus.CANCELED);
-            given(order.getCanceledAt()).willReturn(canceledAt);
+        service.cancelOrder(user, orderId);
 
-            CancelOrderResponse response = orderCommandService.cancelOrder(requester, orderId);
-
-            verify(order).cancel(userId);
-            assertThat(response.orderId()).isEqualTo(orderId);
-            assertThat(response.status()).isEqualTo(OrderStatus.CANCELED);
-            assertThat(response.canceledAt()).isEqualTo(canceledAt);
-        }
-
-        @Test
-        @DisplayName("MASTER는 다른 사용자의 주문도 취소할 수 있다")
-        void cancelOrder_master_success() {
-            CustomUserDetails master = CustomUserDetails.from(userId, null, null, "MASTER");
-            given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.of(order));
-
-            orderCommandService.cancelOrder(master, orderId);
-
-            verify(order).cancel(userId);
-        }
-
-        @Test
-        @DisplayName("취소 권한이 없으면 ORDER_ACCESS_DENIED 예외가 발생한다")
-        void cancelOrder_accessDenied() {
-            given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.of(order));
-            given(order.getRequesterId()).willReturn(UUID.randomUUID());
-
-            assertThatThrownBy(() -> orderCommandService.cancelOrder(requester, orderId))
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> assertThat(((BusinessException) exception).getErrorCode())
-                            .isEqualTo(OrderErrorCode.ORDER_ACCESS_DENIED));
-
-            verify(order, never()).cancel(userId);
-        }
-
-        @Test
-        @DisplayName("취소할 주문이 없으면 ORDER_NOT_FOUND 예외가 발생한다")
-        void cancelOrder_notFound() {
-            given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.empty());
-
-            assertThatThrownBy(() -> orderCommandService.cancelOrder(requester, orderId))
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> assertThat(((BusinessException) exception).getErrorCode())
-                            .isEqualTo(OrderErrorCode.ORDER_NOT_FOUND));
-
-            verifyNoInteractions(order);
-        }
+        ArgumentCaptor<List<ProductPort.StockItem>> captor = ArgumentCaptor.forClass(List.class);
+        verify(stockProcessService).restoreStockForCancel(org.mockito.ArgumentMatchers.eq(orderId), captor.capture());
+        assertThat(captor.getValue()).containsExactly(new ProductPort.StockItem(productId, 3));
+        verify(orderStateService).cancelOrder(orderId, userId, now);
     }
 
-    @Nested
-    @DisplayName("주문상품 취소")
-    class CancelOrderItemTest {
+    @Test
+    @DisplayName("PENDING 주문 취소 시 재고 복원을 요청하지 않는다")
+    void cancelOrder_pending() {
+        Order order = order(OrderStatus.PENDING);
+        Order canceled = order(OrderStatus.CANCELED);
+        given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.of(order));
+        given(orderStateService.cancelOrder(orderId, userId, now)).willReturn(canceled);
 
-        @Test
-        @DisplayName("주문자는 자신의 주문상품을 취소할 수 있다")
-        void cancelOrderItem_requester_success() {
-            LocalDateTime canceledAt = LocalDateTime.of(2026, 8, 9, 12, 0);
-            given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.of(order));
-            given(order.getRequesterId()).willReturn(userId);
-            given(order.cancelOrderItem(orderItemId, userId)).willReturn(orderItem);
-            given(order.getId()).willReturn(orderId);
-            given(order.getStatus()).willReturn(OrderStatus.PENDING);
-            given(orderItem.getId()).willReturn(orderItemId);
-            given(orderItem.getStatus()).willReturn(OrderItemStatus.CANCELED);
-            given(orderItem.getCanceledAt()).willReturn(canceledAt);
+        service.cancelOrder(user, orderId);
 
-            CancelOrderItemResponse response =
-                    orderCommandService.cancelOrderItem(requester, orderId, orderItemId);
+        verify(stockProcessService, never()).restoreStockForCancel(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+        verify(orderStateService).cancelOrder(orderId, userId, now);
+    }
 
-            verify(order).cancelOrderItem(orderItemId, userId);
-            assertThat(response.orderId()).isEqualTo(orderId);
-            assertThat(response.orderItemId()).isEqualTo(orderItemId);
-            assertThat(response.orderStatus()).isEqualTo(OrderStatus.PENDING);
-            assertThat(response.orderItemStatus()).isEqualTo(OrderItemStatus.CANCELED);
-            assertThat(response.canceledAt()).isEqualTo(canceledAt);
-        }
+    @Test
+    @DisplayName("존재하지 않는 주문은 취소할 수 없다")
+    void cancelOrder_notFound() {
+        given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.empty());
 
-        @Test
-        @DisplayName("권한이 없으면 주문상품 취소 도메인 메서드를 호출하지 않는다")
-        void cancelOrderItem_accessDenied() {
-            given(orderRepository.findByIdAndDeletedAtIsNull(orderId)).willReturn(Optional.of(order));
-            given(order.getRequesterId()).willReturn(UUID.randomUUID());
+        assertThatThrownBy(() -> service.cancelOrder(user, orderId))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(OrderErrorCode.ORDER_NOT_FOUND));
+        verify(orderStateService, never()).cancelOrder(
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
 
-            assertThatThrownBy(() -> orderCommandService.cancelOrderItem(requester, orderId, orderItemId))
-                    .isInstanceOf(BusinessException.class)
-                    .satisfies(exception -> assertThat(((BusinessException) exception).getErrorCode())
-                            .isEqualTo(OrderErrorCode.ORDER_ACCESS_DENIED));
-
-            verify(order, never()).cancelOrderItem(orderItemId, userId);
-        }
+    private Order order(OrderStatus status) {
+        Order order = Order.create(
+                "ORD-20260812-ABCDEF123456", userId, UUID.randomUUID(), UUID.randomUUID(),
+                "서울", "홍길동", "hong.slack", null, now.plusDays(3), now
+        );
+        ReflectionTestUtils.setField(order, "id", orderId);
+        ReflectionTestUtils.setField(order, "status", status);
+        return order;
     }
 }

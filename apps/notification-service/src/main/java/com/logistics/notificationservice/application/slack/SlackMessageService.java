@@ -1,9 +1,13 @@
 package com.logistics.notificationservice.application.slack;
 
+import com.logistics.notificationservice.domain.common.exception.NotificationErrorCode;
+import com.logistics.notificationservice.domain.common.exception.NotificationException;
 import com.logistics.notificationservice.domain.slack.SlackMessage;
 import com.logistics.notificationservice.domain.slack.SlackMessageRepository;
-import com.logistics.notificationservice.infrastructure.persistence.SlackMessageJpaRepository;
+import com.logistics.notificationservice.presentation.slack.dto.SlackMessageResponseDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,6 +76,32 @@ public class SlackMessageService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public SlackMessageResponseDto getSlackMessage(
+            UUID slackMessageId
+    ) {
+
+        SlackMessage slackMessage = slackMessageRepository
+                        .findById(slackMessageId)
+                        .orElseThrow(() ->
+                                new NotificationException(NotificationErrorCode.SLACK_MESSAGE_NOT_FOUND));
+
+        return SlackMessageResponseDto.from(
+                slackMessage
+        );
+    }
+
+    /** Slack Message 전체 조회 **/
+    @Transactional(readOnly = true)
+    public Page<SlackMessageResponseDto> getSlackMessages(
+            SlackMessageSearchCondition condition,
+            Pageable pageable
+    ) {
+
+        return slackMessageRepository
+                .search(condition, pageable)
+                .map(SlackMessageResponseDto::from);
+    }
 
     /**
      * Scheduler에서 호출

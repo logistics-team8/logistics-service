@@ -9,9 +9,10 @@ import com.logistics.userservice.application.dto.admin.AdminApprovalCommand;
 import com.logistics.userservice.application.dto.admin.AdminUserInfo;
 import com.logistics.userservice.application.dto.admin.UserApprovalInfo;
 import com.logistics.userservice.application.dto.user.UserContext;
+import com.logistics.userservice.presentation.dto.admin.AdminApproveSearchRequest;
+import com.logistics.userservice.presentation.dto.admin.AdminSearchRequest;
 import com.logistics.userservice.presentation.dto.admin.AdminUserInfoResponse;
 import com.logistics.userservice.presentation.dto.admin.RejectRequest;
-import com.logistics.userservice.presentation.dto.admin.UserApprovalSearchRequest;
 import com.logistics.userservice.presentation.dto.user.UserCreateRequest;
 import com.logistics.userservice.presentation.dto.user.UserUpdateRequest;
 import com.logistics.userservice.presentation.swagger.AdminApi;
@@ -42,14 +43,14 @@ public class AdminController implements AdminApi {
     public ResponseEntity<ApiResponse<Void>> createUser(
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody UserCreateRequest signUpRequest) {
-        adminService.createUserByAdmin(principal.getId(), signUpRequest.toCommand());
+        adminService.createUserByAdmin(signUpRequest.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(null));
     }
 
     @GetMapping
     public ApiResponse<PageResponse<AdminUserInfoResponse>> searchUsers(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @ParameterObject @Valid @ModelAttribute UserApprovalSearchRequest request,
+            @ParameterObject @Valid @ModelAttribute AdminSearchRequest request,
             @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC)
                     Pageable pageable) {
         Pageable normalizedPageable = normalizeSort(PageableUtil.normalize(pageable));
@@ -103,7 +104,7 @@ public class AdminController implements AdminApi {
     @GetMapping("/pending-approvals")
     public ApiResponse<PageResponse<UserApprovalInfo>> getPendingUsers(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @ParameterObject @Valid @ModelAttribute UserApprovalSearchRequest request,
+            @ParameterObject @Valid @ModelAttribute AdminApproveSearchRequest request,
             @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC)
                     Pageable pageable) {
         Pageable normalizedPageable = normalizeSort(PageableUtil.normalize(pageable));

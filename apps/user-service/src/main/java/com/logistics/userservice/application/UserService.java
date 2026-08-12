@@ -2,13 +2,17 @@ package com.logistics.userservice.application;
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
+import com.logistics.userservice.application.dto.company.CompanyInfo;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.dto.user.UserInfo;
 import com.logistics.userservice.application.dto.user.UserRoleInfo;
 import com.logistics.userservice.application.dto.user.UserSlackInfo;
 import com.logistics.userservice.application.dto.user.UserUpdateCommand;
 import com.logistics.userservice.application.event.UserDeletedEvent;
+import com.logistics.userservice.application.port.CompanyClientPort;
+import com.logistics.userservice.application.port.HubClientPort;
 import com.logistics.userservice.application.validator.UserValidator;
+import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
@@ -26,20 +30,29 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class UserService {
-    private final UserValidator userValidator;
+    private final UserValidator validator;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final HubClientPort hubClientPort;
+    private final CompanyClientPort companyClientPort;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
-     * User 회원가입
+     * User 회원가입 OpenFeign 호출로 회원가입 시 실존 허브 / 업체 1차 검증
      *
      * @param command
      */
     @Transactional
     public void createUser(UserCreateCommand command) {
+        validator.validateDuplicate(command);
         User user = User.create(command);
-        userValidator.validateDuplicate(command);
+
+        if (command.requestedRole() != RequestedRole.COMPANY_MANAGER) {
+            hubClientPort.existsById(command.hubId());
+        } else {
+            CompanyInfo companyInfo = companyClientPort.getCompanyInfo(command.companyId());
+            user.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
+        }
 
         user.encodePassword(passwordEncoder.encode(user.getPassword()));
 
@@ -118,7 +131,6 @@ public class UserService {
     }
 
     // ============================== Helper Method ====================================
-
     /**
      * 회원 조회 헬퍼 메서드
      *

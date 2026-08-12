@@ -119,7 +119,7 @@ class AuthControllerUnitTest extends AbstractControllerTest {
 
         @Test
         @DisplayName("AccessToken이 Null일 시 401 예외가 발생한다. ")
-        void login_fail_when_token_invalid() throws Exception {
+        void logout_fail_when_token_invalid() throws Exception {
             // given
             String accessToken = "";
 

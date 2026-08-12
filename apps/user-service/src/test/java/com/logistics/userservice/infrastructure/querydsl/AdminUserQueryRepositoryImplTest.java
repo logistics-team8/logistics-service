@@ -7,10 +7,7 @@ import com.logistics.userservice.application.dto.user.UserContext;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.port.AdminUserQueryRepository;
 import com.logistics.userservice.config.test.AbstractIntegrationTest;
-import com.logistics.userservice.domain.Role;
-import com.logistics.userservice.domain.User;
-import com.logistics.userservice.domain.UserRepository;
-import com.logistics.userservice.domain.UserStatus;
+import com.logistics.userservice.domain.*;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
 @SpringBootTest
-class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
+class AdminUserQueryRepositoryImplTest extends AbstractIntegrationTest {
     @Autowired private AdminUserQueryRepository adminUserQueryRepository;
     @Autowired private UserRepository userRepository;
 
@@ -40,12 +37,20 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
         dummyUserHubId2 = UUID.randomUUID();
         dummyUserCompany = UUID.randomUUID();
 
-        createUser("test1234", "U111111111", dummyUserHubId, null, Role.HUB_MANAGER);
+        createUser("test1234", "U111111111", dummyUserHubId, null, RequestedRole.HUB_MANAGER)
+                .approve(UUID.randomUUID());
 
         createUser(
-                "test2345", "U222222222", dummyUserHubId, dummyUserCompany, Role.COMPANY_MANAGER);
+                        "test2345",
+                        "U222222222",
+                        dummyUserHubId,
+                        dummyUserCompany,
+                        RequestedRole.COMPANY_MANAGER)
+                .approve(UUID.randomUUID());
 
-        createUser("test3456", "U333333333", dummyUserHubId2, null, Role.DELIVERY_MANAGER);
+        createUser("test3456", "U333333333", dummyUserHubId2, null, RequestedRole.HUB_DELIVERY)
+                .approve(UUID.randomUUID());
+        userRepository.flush();
     }
 
     @Test
@@ -72,7 +77,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
     void searchUsers_success_when_search_by_hub_manager() {
         // given
         UserContext userContext =
-                new UserContext(UUID.randomUUID(), Role.HUB_MANAGER, dummyUserHubId2);
+                new UserContext(UUID.randomUUID(), Role.HUB_MANAGER, dummyUserHubId);
 
         SearchUsersQuery searchUsersQuery =
                 new SearchUsersQuery(null, null, null, null, null, null);
@@ -84,7 +89,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                 adminUserQueryRepository.searchUsers(userContext, searchUsersQuery, pageable);
 
         // then
-        assertThat(result.getContent()).extracting(User::getUsername).containsExactly("test3456");
+        assertThat(result.getContent()).extracting(User::getUsername).containsExactly("test1234");
     }
 
     @Test
@@ -94,7 +99,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
         UserContext userContext = new UserContext(UUID.randomUUID(), Role.MASTER, null);
 
         SearchUsersQuery searchUsersQuery =
-                new SearchUsersQuery(null, null, dummyUserHubId2, null, null, null);
+                new SearchUsersQuery(null, null, dummyUserHubId, null, null, null);
 
         Pageable pageable = PageRequest.of(0, 10, Sort.Direction.DESC, "createdAt");
 
@@ -103,7 +108,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                 adminUserQueryRepository.searchUsers(userContext, searchUsersQuery, pageable);
 
         // then
-        assertThat(result.getContent()).extracting(User::getUsername).containsExactly("test3456");
+        assertThat(result.getContent()).extracting(User::getUsername).containsExactly("test1234");
     }
 
     @Test
@@ -151,7 +156,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
         UserContext userContext = new UserContext(UUID.randomUUID(), Role.MASTER, null);
 
         SearchUsersQuery searchUsersQuery =
-                new SearchUsersQuery(null, null, null, null, null, UserStatus.PENDING);
+                new SearchUsersQuery(null, null, null, null, null, UserStatus.PROCESSING);
 
         Pageable pageable = PageRequest.of(0, 10, Sort.Direction.DESC, "createdAt");
 
@@ -160,11 +165,15 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                 adminUserQueryRepository.searchUsers(userContext, searchUsersQuery, pageable);
 
         // then
-        assertThat(result.getTotalElements()).isEqualTo(3);
+        assertThat(result.getTotalElements()).isEqualTo(1);
     }
 
     private User createUser(
-            String username, String slackId, UUID hubId, UUID companyId, Role role) {
+            String username,
+            String slackId,
+            UUID hubId,
+            UUID companyId,
+            RequestedRole requestedRole) {
 
         UserCreateCommand command =
                 new UserCreateCommand(
@@ -174,7 +183,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                         slackId,
                         hubId,
                         companyId,
-                        role);
+                        requestedRole);
 
         return userRepository.save(User.create(command));
     }

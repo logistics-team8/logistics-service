@@ -7,7 +7,9 @@ import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.companyproductservice.application.dto.ProductInfo;
 import com.logistics.companyproductservice.application.error.ProductErrorCode;
 import com.logistics.companyproductservice.domain.model.Product;
+import com.logistics.companyproductservice.domain.model.StockTransactionType;
 import com.logistics.companyproductservice.domain.repository.ProductRepository;
+import com.logistics.companyproductservice.domain.repository.StockTransactionRepository;
 import com.logistics.companyproductservice.presentation.dto.request.ProductCreateRequest;
 import com.logistics.companyproductservice.presentation.dto.request.ProductUpdateRequest;
 import com.logistics.companyproductservice.presentation.dto.request.StockBatchAdjustRequest;
@@ -30,6 +32,8 @@ public class ProductService {
     private static final Set<String> ALLOWED_SORT = Set.of("createdAt", "updatedAt");
 
     private final ProductRepository productRepository;
+    private final StockTransactionRepository stockTransactionRepository;
+    private final StockTransactionService stockTransactionService;
 
     @Transactional
     public Product create(ProductCreateRequest request, CustomUserDetails userDetails) {
@@ -105,6 +109,11 @@ public class ProductService {
 
     @Transactional
     public void decreaseStockBatch(StockBatchAdjustRequest request) {
+        boolean isNewRequest = stockTransactionService.tryClaim(request.getOrderId(), StockTransactionType.DECREASE);
+        if (!isNewRequest) {
+            return; // 이미 처리된 요청 - 멱등 처리
+        }
+
         for (StockBatchAdjustRequest.Item item : request.getItems()) {
             Product product = productRepository.findByIdForUpdate(item.getProductId())
                     .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
@@ -119,6 +128,11 @@ public class ProductService {
 
     @Transactional
     public void restoreStockBatch(StockBatchAdjustRequest request) {
+        boolean isNewRequest = stockTransactionService.tryClaim(request.getOrderId(), StockTransactionType.RESTORE);
+        if (!isNewRequest) {
+            return; // 이미 처리된 요청 - 멱등 처리
+        }
+
         for (StockBatchAdjustRequest.Item item : request.getItems()) {
             Product product = productRepository.findByIdForUpdate(item.getProductId())
                     .orElseThrow(() -> new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND));
@@ -133,6 +147,10 @@ public class ProductService {
             throw new BusinessException(CommonErrorCode.RESOURCE_NOT_FOUND);
         }
         return products.stream().map(ProductInfo::from).toList();
+    }
+
+    public boolean isStockTransactionProcessed(UUID orderId, StockTransactionType type) {
+        return stockTransactionRepository.findByOrderIdAndType(orderId, type).isPresent();
     }
 
     private void validateScope(UUID companyId, UUID hubId, CustomUserDetails userDetails) {

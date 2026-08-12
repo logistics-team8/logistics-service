@@ -27,8 +27,6 @@ class HubDeliveryPlanClientAdapterTest {
     private static final UUID ORDER_ID = UUID.fromString("aacdd677-e9a5-4053-9c29-a455dfe48a92");
     private static final UUID DEPARTURE_HUB_ID = UUID.fromString("c5187423-653a-4203-a581-19e7124fe295");
     private static final UUID ARRIVAL_HUB_ID = UUID.fromString("68631ad3-f9f3-458b-8dd0-10d60257dc50");
-    private static final UUID COMPANY_MANAGER_ID = UUID.fromString("78d98495-e002-4321-ad98-a32e7743f9dd");
-    private static final UUID HUB_MANAGER_ID = UUID.fromString("1f78ec10-56d3-4a3c-8c0b-e46f165b064a");
 
     @Mock
     private HubDeliveryPlanFeignClient feignClient;
@@ -44,14 +42,12 @@ class HubDeliveryPlanClientAdapterTest {
                 ARRIVAL_HUB_ID
         );
         HubDeliveryPlanResponse response = new HubDeliveryPlanResponse(
-                COMPANY_MANAGER_ID,
                 List.of(new HubDeliveryPlanResponse.RouteResponse(
                         1,
                         DEPARTURE_HUB_ID,
                         ARRIVAL_HUB_ID,
                         new BigDecimal("14.5"),
-                        35,
-                        HUB_MANAGER_ID
+                        35
                 ))
         );
         when(feignClient.createDeliveryPlan(request)).thenReturn(response);
@@ -62,10 +58,14 @@ class HubDeliveryPlanClientAdapterTest {
                 ARRIVAL_HUB_ID
         );
 
-        assertThat(plan.companyDeliveryManagerId()).isEqualTo(COMPANY_MANAGER_ID);
+        assertThat(plan.companyDeliveryManagerId()).isNull();
         assertThat(plan.routes()).singleElement().satisfies(route -> {
             assertThat(route.sequence()).isEqualTo(1);
-            assertThat(route.hubDeliveryManagerId()).isEqualTo(HUB_MANAGER_ID);
+            assertThat(route.departureHubId()).isEqualTo(DEPARTURE_HUB_ID);
+            assertThat(route.arrivalHubId()).isEqualTo(ARRIVAL_HUB_ID);
+            assertThat(route.estimatedDistanceKm()).isEqualByComparingTo("14.5");
+            assertThat(route.estimatedDurationMinutes()).isEqualTo(35);
+            assertThat(route.hubDeliveryManagerId()).isNull();
         });
         verify(feignClient).createDeliveryPlan(request);
     }

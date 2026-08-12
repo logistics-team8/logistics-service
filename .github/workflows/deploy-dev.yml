@@ -1,0 +1,59 @@
+name: Deploy Development
+
+on:
+  schedule:
+    - cron: "0 4 * * *" # 13:00 KST (UTC+09:00)
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit SHA or branch to build as the development candidate
+        required: false
+        default: develop
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: logistics-dev-deploy
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    name: Build development candidate
+    uses: ./.github/workflows/dev-candidate.yml
+    with:
+      ref: ${{ inputs.ref || 'develop' }}
+    secrets: inherit
+
+  deploy:
+    name: Deploy immutable images on my-instance-1
+    needs: candidate
+    runs-on: [self-hosted, linux, arm64, logistics-dev-deploy]
+    timeout-minutes: 20
+    environment: development
+    env:
+      DEV_DOMAIN: ${{ vars.DEV_DOMAIN }}
+      DEV_DB_PASSWORD_SECRET_OCID: ${{ secrets.DEV_DB_PASSWORD_SECRET_OCID }}
+      DEV_JWT_ACCESS_SECRET_OCID: ${{ secrets.DEV_JWT_ACCESS_SECRET_OCID }}
+      DEV_JWT_REFRESH_SECRET_OCID: ${{ secrets.DEV_JWT_REFRESH_SECRET_OCID }}
+      DEV_PROVISION_KEY_SECRET_OCID: ${{ secrets.DEV_PROVISION_KEY_SECRET_OCID }}
+      DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID: ${{ secrets.DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID }}
+      DEV_NAVER_MAPS_API_KEY_SECRET_OCID: ${{ secrets.DEV_NAVER_MAPS_API_KEY_SECRET_OCID }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dev-release-manifest
+          path: .deploy
+
+      - name: Pull, start, validate, or roll back
+        run: |
+          bash deploy/scripts/deploy.sh \
+            --manifest .deploy/candidate.json \
+            --compose deploy/compose.dev.yml \
+            --base-images deploy/base-images.lock \
+            --state-dir /opt/logistics

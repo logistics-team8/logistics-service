@@ -30,12 +30,14 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-zipkin'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
     // Spring Cloud
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    implementation 'io.github.openfeign:feign-micrometer'
 
     // Database & Cache
     runtimeOnly 'org.postgresql:postgresql'
@@ -70,6 +72,9 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
+
+    // MockWebServer
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 
     // Testcontainers
     testImplementation 'org.testcontainers:testcontainers:1.21.4'

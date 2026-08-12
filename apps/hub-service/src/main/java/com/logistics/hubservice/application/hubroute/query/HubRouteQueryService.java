@@ -45,7 +45,6 @@ public class HubRouteQueryService {
                 .map(HubRouteResponse::from);
     }
 
-    @PreAuthorize("isAuthenticated()")
     @Cacheable(
             cacheNames = "hubRoutePath",
             key = "#sourceHubId + ':' + #destinationHubId")

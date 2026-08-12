@@ -16,23 +16,26 @@ public class RedisRefreshTokenRepository implements RefreshTokenRepository {
     private static final String REDIS_KEY = "user:refresh:";
 
     @Override
-    public void save(UUID userId, String refreshToken) {
+    public void save(UUID userId, UUID sessionId, String refreshToken) {
         redisTemplate
                 .opsForValue()
-                .set(generateKey(userId), refreshToken, jwtProperties.refreshTokenExpiration());
+                .set(
+                        generateKey(userId, sessionId),
+                        refreshToken,
+                        jwtProperties.refreshTokenExpiration());
     }
 
     @Override
-    public Optional<String> findByUserId(UUID userId) {
-        return Optional.ofNullable(redisTemplate.opsForValue().get(generateKey(userId)));
+    public Optional<String> findByUserId(UUID userId, UUID sessionId) {
+        return Optional.ofNullable(redisTemplate.opsForValue().get(generateKey(userId, sessionId)));
     }
 
     @Override
-    public void delete(UUID userId) {
-        redisTemplate.delete(generateKey(userId));
+    public void delete(UUID userId, UUID sessionId) {
+        redisTemplate.delete(generateKey(userId, sessionId));
     }
 
-    private String generateKey(UUID userId) {
-        return REDIS_KEY + userId;
+    private String generateKey(UUID userId, UUID sessionId) {
+        return REDIS_KEY + "{" + userId + "}:" + sessionId;
     }
 }

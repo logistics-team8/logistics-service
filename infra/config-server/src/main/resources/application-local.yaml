@@ -4,3 +4,11 @@ spring:
       server:
         native:
           search-locations: file:${CONFIG_REPO_PATH:${user.dir}/config-repo}
+
+management:
+  tracing:
+    export:
+      zipkin:
+        endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}

@@ -217,6 +217,23 @@ nbdist/
 .history
 .ionide
 
+# Dev 배포 런타임 파일이다. CI workflow가 VM에서만 작성한다.
+deploy/runtime/
+
+# 로컬 전용 인프라와 최초 설정 파일이다. 앱 배포 workflow에서는 사용하지 않는다.
+deploy/local-setup/
+deploy/README.md
+deploy/README-prod.md
+infra/terraform/
+
+# state, backend, tfvars가 infra/terraform/ 외부에 생성되는 경우도 추가로 차단한다.
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+**/backend.hcl
+**/__pycache__/
+*.pyc
+
 ### Windows ###
 # Windows thumbnail cache files
 Thumbs.db
@@ -288,3 +305,5 @@ GEMINI.md
 .grok/
 
 docs/
+
+skills-lock.json

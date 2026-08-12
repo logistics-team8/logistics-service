@@ -12,13 +12,15 @@ import java.util.UUID;
 @Getter
 public class StockBatchAdjustRequest {
 
+    @NotNull
+    private UUID orderId;
+
     @NotEmpty
     @Valid
     private List<Item> items;
 
     @Getter
     public static class Item {
-
         @NotNull
         private UUID productId;
 
