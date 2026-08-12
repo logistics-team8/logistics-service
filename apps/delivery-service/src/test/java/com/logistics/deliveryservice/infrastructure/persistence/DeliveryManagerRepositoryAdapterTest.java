@@ -44,13 +44,13 @@ class DeliveryManagerRepositoryAdapterTest {
         UUID hubId = UUID.fromString("9fd130f7-4c66-4ca4-8db6-f8cb1cbb048f");
         DeliveryManagerAssignmentGroup group =
                 DeliveryManagerAssignmentGroup.companyDelivery(hubId);
-        when(jpaRepository.findActiveDeliverySequences(
+        when(jpaRepository.findActiveDeliverySequencesByManagerTypeAndHubId(
                 DeliveryManagerType.COMPANY_DELIVERY,
                 hubId
         )).thenReturn(List.of(0, 2));
 
         assertThat(adapter.findActiveDeliverySequences(group)).containsExactly(0, 2);
-        verify(jpaRepository).findActiveDeliverySequences(
+        verify(jpaRepository).findActiveDeliverySequencesByManagerTypeAndHubId(
                 DeliveryManagerType.COMPANY_DELIVERY,
                 hubId
         );

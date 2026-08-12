@@ -31,13 +31,19 @@ public class DeliveryManagerRepositoryAdapter implements DeliveryManagerReposito
         return deliveryManagerJpaRepository.findById(userId);
     }
 
-    // 배정 그룹의 타입과 허브 ID를 JPA Repository에 전달
+    // 현재 활동 중인 배송 담당자들이 사용하고 있는 순번(번호표) 목록을 데이터베이스에서 찾음
     @Override
     public List<Integer> findActiveDeliverySequences(
             DeliveryManagerAssignmentGroup assignmentGroup
     ) {
-        return deliveryManagerJpaRepository.findActiveDeliverySequences(
-                assignmentGroup.managerType(),
+        // 허브 배송원은 전역 조회, 업체 배송원은 소속 허브별로 격리하여 사용 중인 순번 목록 조회
+        if (assignmentGroup.managerType() == DeliveryManagerType.HUB_DELIVERY) {
+            return deliveryManagerJpaRepository.findActiveDeliverySequencesByManagerType(
+                    DeliveryManagerType.HUB_DELIVERY
+            );
+        }
+        return deliveryManagerJpaRepository.findActiveDeliverySequencesByManagerTypeAndHubId(
+                DeliveryManagerType.COMPANY_DELIVERY,
                 assignmentGroup.hubId()
         );
     }

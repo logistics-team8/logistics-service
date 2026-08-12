@@ -16,7 +16,17 @@ interface DeliveryManagerJpaRepository extends JpaRepository<DeliveryManager, UU
 
     Optional<DeliveryManager> findByUserIdAndDeletedAtIsNull(UUID userId);
 
-    // 동적 메서드
+    @Query("""
+            select manager.deliverySequence
+            from DeliveryManager manager
+            where manager.managerType = :managerType
+              and manager.deletedAt is null
+            order by manager.deliverySequence asc
+            """)
+    List<Integer> findActiveDeliverySequencesByManagerType(
+            @Param("managerType") DeliveryManagerType managerType
+    );
+
     @Query("""
             select manager.deliverySequence
             from DeliveryManager manager
@@ -25,13 +35,11 @@ interface DeliveryManagerJpaRepository extends JpaRepository<DeliveryManager, UU
               and manager.deletedAt is null
             order by manager.deliverySequence asc
             """)
-    List<Integer> findActiveDeliverySequences(
+    List<Integer> findActiveDeliverySequencesByManagerTypeAndHubId(
             @Param("managerType") DeliveryManagerType managerType,
             @Param("hubId") UUID hubId
     );
 
-
-    // 동적 메서드
     @Query("""
             select manager
             from DeliveryManager manager

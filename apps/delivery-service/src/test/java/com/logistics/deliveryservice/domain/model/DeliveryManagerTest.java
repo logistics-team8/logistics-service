@@ -19,7 +19,8 @@ class DeliveryManagerTest {
     void createsHubDeliveryManagerInHubGroup() {
         DeliveryManager deliveryManager = DeliveryManager.create(
                 USER_ID,
-                DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID),
+                DeliveryManagerType.HUB_DELIVERY,
+                HUB_ID,
                 0
         );
 
@@ -34,7 +35,8 @@ class DeliveryManagerTest {
     void createsCompanyDeliveryManagerInHubGroup() {
         DeliveryManager deliveryManager = DeliveryManager.create(
                 USER_ID,
-                DeliveryManagerAssignmentGroup.companyDelivery(HUB_ID),
+                DeliveryManagerType.COMPANY_DELIVERY,
+                HUB_ID,
                 9
         );
 
@@ -48,7 +50,8 @@ class DeliveryManagerTest {
     void rejectsMissingUserSnapshot() {
         assertThatThrownBy(() -> DeliveryManager.create(
                 null,
-                DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID),
+                DeliveryManagerType.HUB_DELIVERY,
+                HUB_ID,
                 0
         ))
                 .isInstanceOf(DeliveryException.class)
@@ -60,7 +63,8 @@ class DeliveryManagerTest {
     void rejectsSequenceOutsideAssignmentRange() {
         assertThatThrownBy(() -> DeliveryManager.create(
                 USER_ID,
-                DeliveryManagerAssignmentGroup.hubDelivery(HUB_ID),
+                DeliveryManagerType.HUB_DELIVERY,
+                HUB_ID,
                 -1
         ))
                 .isInstanceOf(DeliveryException.class)
