@@ -3,6 +3,7 @@ package com.logistics.deliveryservice.infrastructure.persistence;
 import com.logistics.deliveryservice.domain.model.DeliveryManager;
 import com.logistics.deliveryservice.domain.model.DeliveryManagerType;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 
 // Spring Data JPA가 실제 DB 작업을 수행하는 인터페이스
 interface DeliveryManagerJpaRepository extends JpaRepository<DeliveryManager, UUID> {
+
+    Optional<DeliveryManager> findByUserIdAndDeletedAtIsNull(UUID userId);
 
     // 동적 메서드
     @Query("""

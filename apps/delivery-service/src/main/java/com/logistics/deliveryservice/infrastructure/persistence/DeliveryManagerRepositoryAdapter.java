@@ -51,4 +51,11 @@ public class DeliveryManagerRepositoryAdapter implements DeliveryManagerReposito
     ) {
         return deliveryManagerJpaRepository.search(hubId, managerType, pageable);
     }
+
+    // 담당자 단건 조회(삭제되지 않은)
+    @Override
+    public Optional<DeliveryManager> findActiveByUserId(UUID userId) {
+        return deliveryManagerJpaRepository.findByUserIdAndDeletedAtIsNull(userId);
+    }
+
 }

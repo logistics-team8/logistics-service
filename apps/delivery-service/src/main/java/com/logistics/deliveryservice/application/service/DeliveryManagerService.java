@@ -2,12 +2,14 @@ package com.logistics.deliveryservice.application.service;
 
 import com.logistics.deliveryservice.application.command.DeliveryManagerCreateCommand;
 import com.logistics.deliveryservice.application.dto.DeliveryManagerCreateResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryManagerDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryManagerSearchResponse;
 import com.logistics.common.response.PageableUtil;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.DeliveryManager;
 import com.logistics.deliveryservice.domain.model.DeliveryManagerAssignmentGroup;
+import com.logistics.deliveryservice.domain.port.UserSlackProvider;
 import com.logistics.deliveryservice.domain.repository.DeliveryManagerRepository;
 import com.logistics.deliveryservice.presentation.dto.DeliveryManagerSearchRequest;
 import com.logistics.common.security.principal.CustomUserDetails;
@@ -38,6 +40,7 @@ public class DeliveryManagerService {
     );
 
     private final DeliveryManagerRepository deliveryManagerRepository;
+    private final UserSlackProvider userSlackProvider;
 
     /**
      * 배송 담당자 생성
@@ -109,6 +112,50 @@ public class DeliveryManagerService {
                 entityPageable
         ).map(DeliveryManagerSearchResponse::from);
     }
+
+    /**
+     * 배송 담당자 단건 조회
+     **/
+    @Transactional(readOnly = true)
+    public DeliveryManagerDetailResponse getByUserId(
+            UUID userId,
+            CustomUserDetails userDetails
+    ) {
+        DeliveryManager deliveryManager = deliveryManagerRepository.findActiveByUserId(userId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+
+        // 담당자 역할 권한 확인
+        validateDetailReadPermission(deliveryManager, userDetails);
+
+        String slackId = userSlackProvider.getSlackId(deliveryManager.getUserId());
+        return DeliveryManagerDetailResponse.from(deliveryManager, slackId);
+    }
+
+    // 담당자 역할 권한 확인
+    private void validateDetailReadPermission(
+            DeliveryManager deliveryManager,
+            CustomUserDetails userDetails
+    ) {
+        // TODO : permitAll 어떻게 할지
+        if ("MASTER".equals(userDetails.getRole())) {
+            return;
+        }
+
+        if ("HUB_MANAGER".equals(userDetails.getRole())
+                && userDetails.getHubId() != null
+                && userDetails.getHubId().equals(deliveryManager.getHubId())) {
+            return;
+        }
+
+        if ("DELIVERY_MANAGER".equals(userDetails.getRole())
+                && userDetails.getId().equals(deliveryManager.getUserId())) {
+            return;
+        }
+
+        throw new AccessDeniedException("배송 담당자 조회 권한이 없습니다.");
+    }
+
+
 
     // API 정렬 필드명을 Entity 정렬 필드명으로 변환
     private Pageable mapSortPropertiesToEntityProperties(Pageable pageable) {

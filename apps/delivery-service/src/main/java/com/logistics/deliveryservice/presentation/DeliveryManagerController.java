@@ -3,15 +3,18 @@ package com.logistics.deliveryservice.presentation;
 import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.deliveryservice.application.dto.DeliveryManagerDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryManagerSearchResponse;
 import com.logistics.deliveryservice.application.service.DeliveryManagerService;
 import com.logistics.deliveryservice.presentation.dto.DeliveryManagerSearchRequest;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -37,6 +40,16 @@ public class DeliveryManagerController {
                                 deliveryManagerService.search(request, pageable, userDetails)
                         )
                 )
+        );
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<ApiResponse<DeliveryManagerDetailResponse>> getDeliveryManager(
+            @PathVariable UUID userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(deliveryManagerService.getByUserId(userId, userDetails))
         );
     }
 }
