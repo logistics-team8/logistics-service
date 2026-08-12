@@ -4,6 +4,7 @@ import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.userservice.application.dto.admin.UserApprovalInfo;
+import com.logistics.userservice.presentation.dto.admin.AdminApproveSearchRequest;
 import com.logistics.userservice.presentation.dto.admin.AdminSearchRequest;
 import com.logistics.userservice.presentation.dto.admin.AdminUserInfoResponse;
 import com.logistics.userservice.presentation.dto.admin.RejectRequest;
@@ -81,7 +82,7 @@ public interface AdminApi {
     @Operation(summary = "회원가입 요청 리스트 검색", description = "관리자가 회원가입 요청 목록을 조회합니다.")
     public ApiResponse<PageResponse<UserApprovalInfo>> getPendingUsers(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @ParameterObject @Valid @ModelAttribute AdminSearchRequest request,
+            @ParameterObject @Valid @ModelAttribute AdminApproveSearchRequest request,
             @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC)
                     Pageable pageable);
 }

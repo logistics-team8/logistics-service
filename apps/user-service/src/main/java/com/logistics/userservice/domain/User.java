@@ -128,6 +128,8 @@ public class User extends BaseEntity {
      * @param approvedBy 승인자 UUID
      */
     public void approve(UUID approvedBy) {
+        this.userStatus.validateStatus();
+
         if (this.requestedRole == RequestedRole.COMPANY_DELIVERY
                 || this.requestedRole == RequestedRole.HUB_DELIVERY) {
             this.userStatus = UserStatus.PROCESSING;
@@ -153,6 +155,8 @@ public class User extends BaseEntity {
      * @param rejectionReason 거절 사유
      */
     public void reject(UUID approvedBy, String rejectionReason) {
+        this.userStatus.validateStatus();
+
         this.userStatus = UserStatus.REJECTED;
         this.rejectionReason = rejectionReason;
         this.approvedBy = approvedBy;
