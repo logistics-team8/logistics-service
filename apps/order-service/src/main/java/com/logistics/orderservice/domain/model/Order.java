@@ -94,17 +94,28 @@ public class Order extends BaseEntity {
     @Column(name = "canceled_at")
     private LocalDateTime canceledAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "failure_reason", length = 50)
+    private OrderFailureReason failureReason;
 
     private Order(
             String orderNumber,
             UUID requesterId,
             UUID receiverCompanyId,
+            UUID destinationHubId,
+            String deliveryAddress,
+            String receiverName,
+            String receiverSlackId,
             String requestMessage,
             LocalDateTime requestedDeliveryAt
     ) {
         this.orderNumber = orderNumber;
         this.requesterId = requesterId;
         this.receiverCompanyId = receiverCompanyId;
+        this.destinationHubId = destinationHubId;
+        this.deliveryAddress = deliveryAddress;
+        this.receiverName = receiverName;
+        this.receiverSlackId = receiverSlackId;
         this.requestMessage = requestMessage;
         this.requestedDeliveryAt = requestedDeliveryAt;
         this.status = OrderStatus.PENDING;
@@ -114,6 +125,10 @@ public class Order extends BaseEntity {
             String orderNumber,
             UUID requesterId,
             UUID receiverCompanyId,
+            UUID destinationHubId,
+            String deliveryAddress,
+            String receiverName,
+            String receiverSlackId,
             String requestMessage,
             LocalDateTime requestedDeliveryAt,
             LocalDateTime now
@@ -124,17 +139,33 @@ public class Order extends BaseEntity {
                 orderNumber,
                 requesterId,
                 receiverCompanyId,
+                destinationHubId,
+                deliveryAddress,
+                receiverName,
+                receiverSlackId,
                 requestMessage,
                 requestedDeliveryAt
         );
     }
 
 
-    public void addOrderItem(UUID productId, Integer quantity){
+    public void addOrderItem(
+            UUID productId,
+            String productName,
+            UUID supplierCompanyId,
+            UUID departureHubId,
+            Integer quantity
+    ){
         validateDuplicateProduct(productId);
 
-        OrderItem orderItem =
-                OrderItem.create(this, productId, quantity);
+        OrderItem orderItem = OrderItem.create(
+                this,
+                productId,
+                productName,
+                supplierCompanyId,
+                departureHubId,
+                quantity
+        );
         this.orderItems.add(orderItem);
     }
 
@@ -173,7 +204,7 @@ public class Order extends BaseEntity {
     }
 
 
-    public void cancel(UUID canceledBy){
+    public void cancel(UUID canceledBy, LocalDateTime canceledAt){
         validateCancelable();
 
         this.orderItems.stream()
@@ -192,7 +223,7 @@ public class Order extends BaseEntity {
                 );
         this.status = OrderStatus.CANCELED;
         this.canceledBy = canceledBy;
-        this.canceledAt = LocalDateTime.now();
+        this.canceledAt = canceledAt;
     }
 
 
@@ -249,17 +280,81 @@ public class Order extends BaseEntity {
         }
     }
 
-    private void validateCancelable(){
-        if (status == OrderStatus.CANCELED) {
+    public void validateCancelable(){
+
+        //재고 차감 결과를 알 수 없는 주문은 실제 Product 재고가 이미 감소했을 수도 있다.
+        if (this.failureReason == OrderFailureReason.STOCK_DECREASE_UNKNOWN) {
             throw new BusinessException(
-                    OrderErrorCode.ORDER_ALREADY_CANCELED
+                    OrderErrorCode.ORDER_STOCK_STATUS_UNKNOWN
             );
         }
-        if (this.status != OrderStatus.PENDING) {
+        if (this.status == OrderStatus.DELIVERY_CREATED) {
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_NOT_CANCELABLE
+            );
+        }
+
+        if (this.status != OrderStatus.PENDING
+                && this.status != OrderStatus.CONFIRMED) {
+
             throw new BusinessException(
                     OrderErrorCode.ORDER_NOT_CANCELABLE
             );
         }
     }
 
+    public void confirm() {
+        if(this.status != OrderStatus.PENDING){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.CONFIRMED;
+        this.failureReason = null;
+
+    }
+
+    public void markDeliveryCreated(){
+        if(this.status != OrderStatus.CONFIRMED){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.DELIVERY_CREATED;
+        this.failureReason = null;
+    }
+
+    public void fail(OrderFailureReason failureReason) {
+        if(this.status != OrderStatus.PENDING && this.status != OrderStatus.CONFIRMED){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.FAILED;
+        this.failureReason = failureReason;
+    }
+
+    public boolean requiresStockRestoreForCancel(){
+        return this.status == OrderStatus.CONFIRMED;
+    }
+
+
+    public void markStockDecreaseUnknown(){
+       if (this.status != OrderStatus.PENDING) {
+           throw new BusinessException(
+                   OrderErrorCode.INVALID_ORDER_STATUS
+           );
+       }
+       this.failureReason = OrderFailureReason.STOCK_DECREASE_UNKNOWN;
+    }
+
+    public void markDeliveryStatusCheckFailed(){
+        if (this.status != OrderStatus.CONFIRMED) {
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+
+        this.failureReason = OrderFailureReason.DELIVERY_STATUS_CHECK_FAILED;
+    }
 }

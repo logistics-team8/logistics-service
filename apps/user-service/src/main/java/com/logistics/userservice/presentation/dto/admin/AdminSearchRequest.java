@@ -11,8 +11,9 @@ public record AdminSearchRequest(
         @Size(max = 50, message = "이름은 50자 이하로 입력해 주세요.") String name,
         UUID hubId,
         UUID companyId,
-        Role role) {
+        Role role,
+        UserStatus userStatus) {
     public SearchUsersQuery toQuery() {
-        return new SearchUsersQuery(username, name, hubId, companyId, role, UserStatus.PENDING);
+        return new SearchUsersQuery(username, name, hubId, companyId, role, userStatus);
     }
 }

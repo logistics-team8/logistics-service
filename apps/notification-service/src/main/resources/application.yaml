@@ -21,6 +21,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-service:
+            connect-timeout: 3000
+            read-timeout: 5000
 
 server:
   port: 8086
