@@ -45,7 +45,7 @@ class UserServiceUnitTest {
                             "Testtest123!",
                             "김철수",
                             "U123456789",
-                            UUID.randomUUID(),
+                            null,
                             UUID.randomUUID(),
                             RequestedRole.COMPANY_MANAGER);
 

@@ -1,6 +1,5 @@
 package com.logistics.userservice.application.token;
 
-import java.util.Date;
 import java.util.UUID;
 
 public interface TokenProvider {
@@ -11,6 +10,4 @@ public interface TokenProvider {
     TokenPayload getAllClaimsFromAccessToken(String accessToken);
 
     TokenPayload getAllClaimsFromRefreshToken(String refreshToken);
-
-    Date getExpirationFromAccessToken(String accessToken);
 }

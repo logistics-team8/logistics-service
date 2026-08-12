@@ -1,14 +1,15 @@
 package com.logistics.gateway.filter;
 
 import com.logistics.gateway.config.PathProperties;
-import com.logistics.gateway.redis.RedisUserRoleCache;
-import com.logistics.gateway.security.JwtTokenProvider;
-import com.logistics.gateway.error.GatewayErrorCode;
 import com.logistics.gateway.error.BusinessException;
+import com.logistics.gateway.error.GatewayErrorCode;
+import com.logistics.gateway.redis.RedisUserRoleCache;
 import com.logistics.gateway.response.UserRoleResponse;
+import com.logistics.gateway.security.JwtTokenProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
+import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -23,8 +24,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
-
-import java.time.Duration;
 
 @Slf4j
 @Component
@@ -42,14 +41,17 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
         HttpMethod httpMethod = request.getMethod();
 
-        boolean isWhitelisted = pathProperties.whitelist().stream()
-                .anyMatch(whitelist ->
-                        httpMethod.name().equalsIgnoreCase(whitelist.method()) && pathMatcher.match(whitelist.pattern(), path)
-                );
+        boolean isWhitelisted =
+                pathProperties.whitelist().stream()
+                        .anyMatch(
+                                whitelist ->
+                                        httpMethod.name().equalsIgnoreCase(whitelist.method())
+                                                && pathMatcher.match(whitelist.pattern(), path));
 
         // Whitelist 체크
         if (isWhitelisted) {
-            ServerHttpRequest sanitizedRequest = request.mutate()
+            ServerHttpRequest sanitizedRequest =
+                    request.mutate()
                             // 헤더 스푸핑 방지
                             .headers(
                                     httpHeaders -> {
@@ -131,9 +133,9 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
     }
 
-    /** TODO : Redis 장애 시 트래픽이 집중될 수 있으므로 timeout과 circuit breaker 고려
-     *        우선순위 낮음.
-     * 회원 권한 Redis에서 조회, 캐시 미스 시 User Service에서 조회
+    /**
+     * TODO : Redis 장애 시 트래픽이 집중될 수 있으므로 timeout과 circuit breaker 고려 우선순위 낮음. 회원 권한 Redis에서 조회, 캐시
+     * 미스 시 User Service에서 조회
      *
      * @param userId 회원 PK
      * @return 회원 권한
@@ -143,10 +145,11 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 .findByUserId(userId)
                 .timeout(Duration.ofMillis(300))
                 // Error 시 Empty로 처리하여 switchIfEmpty 작동
-                .onErrorResume(e -> {
-                    log.warn("[Cache] Role Cache 조회 실패 userId = {}", userId, e);
-                    return Mono.empty();
-                })
+                .onErrorResume(
+                        e -> {
+                            log.warn("[Cache] Role Cache 조회 실패 userId = {}", userId, e);
+                            return Mono.empty();
+                        })
                 // switchIfEmpty 웹플럭스 스트림 형태 IF문 앞의 메서드가 Empty 상태로 완료될 시 후속 메서드 실행
                 // Mono.defer() 생성 시간 지연 - 메서드의 인자로 넘어갈 시 즉시 실행 방지
                 .switchIfEmpty(Mono.defer(() -> fetchAndCacheUserRole(userId)));
@@ -162,12 +165,19 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         return verifyRoleFromUserService(userId)
                 // flatMap 비동기 작업 체이닝 -> 앞의 비동기 작업 끝나면 다음 비동기 작업을 이어받음.
                 // verifyRoleFromUserService -> roleCache.save 형태
-                .flatMap(role -> roleCache.save(userId, role)
-                        // Redis 저장 실패 시 User Service에서 받아온 Role 반환
-                        .onErrorResume(e -> {
-                            log.warn("[Cache] Role Cache 저장 실패 userId = {}", userId, e);
-                            return Mono.just(role);
-                        }));
+                .flatMap(
+                        role ->
+                                roleCache
+                                        .save(userId, role)
+                                        // Redis 저장 실패 시 User Service에서 받아온 Role 반환
+                                        .onErrorResume(
+                                                e -> {
+                                                    log.warn(
+                                                            "[Cache] Role Cache 저장 실패 userId = {}",
+                                                            userId,
+                                                            e);
+                                                    return Mono.just(role);
+                                                }));
     }
 
     /**
@@ -189,20 +199,28 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                                         .path("/internal/v1/users/{userId}/role")
                                         .build(userId))
                 .retrieve()
-                .onStatus(status -> status.equals(HttpStatus.NOT_FOUND), response -> {
-                    log.warn("[Fail] 해당 유저를 찾을 수 없음 userId = {}", userId);
-                    return Mono.error(new BusinessException(GatewayErrorCode.USER_NOT_FOUND)); // 또는 401/403 처리
-                })
+                .onStatus(
+                        status -> status.equals(HttpStatus.NOT_FOUND),
+                        response -> {
+                            log.warn("[Fail] 해당 유저를 찾을 수 없음 userId = {}", userId);
+                            return Mono.error(
+                                    new BusinessException(
+                                            GatewayErrorCode.USER_NOT_FOUND)); // 또는 401/403 처리
+                        })
                 .bodyToMono(UserRoleResponse.class)
                 .map(UserRoleResponse::role)
-                .onErrorMap(e -> {
-                    if (e instanceof BusinessException) {
-                        return e;
-                    }
+                .onErrorMap(
+                        e -> {
+                            if (e instanceof BusinessException) {
+                                return e;
+                            }
 
-                    // User 호출 실패 시
-                    log.error("[ERROR] User Service 호출 실패 userId = {}, message = {}", userId, e.getMessage());
-                    return new BusinessException(GatewayErrorCode.INTERNAL_SERVER_ERROR);
-                });
+                            // User 호출 실패 시
+                            log.error(
+                                    "[ERROR] User Service 호출 실패 userId = {}, message = {}",
+                                    userId,
+                                    e.getMessage());
+                            return new BusinessException(GatewayErrorCode.INTERNAL_SERVER_ERROR);
+                        });
     }
 }

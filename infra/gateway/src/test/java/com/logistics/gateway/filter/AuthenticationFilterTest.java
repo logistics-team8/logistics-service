@@ -1,11 +1,15 @@
 package com.logistics.gateway.filter;
 
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+
 import com.logistics.gateway.config.PathProperties;
+import com.logistics.gateway.error.BusinessException;
+import com.logistics.gateway.error.GatewayErrorCode;
 import com.logistics.gateway.redis.RedisUserRoleCache;
 import com.logistics.gateway.security.JwtTokenProvider;
-import com.logistics.gateway.error.GatewayErrorCode;
-import com.logistics.gateway.error.BusinessException;
 import io.jsonwebtoken.ExpiredJwtException;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,15 +23,9 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.util.List;
-
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
-
 @ExtendWith(MockitoExtension.class)
 class AuthenticationFilterTest {
-    @Mock
-    RedisUserRoleCache roleCache;
+    @Mock RedisUserRoleCache roleCache;
 
     @Mock WebClient.Builder webClientBuilder;
 
@@ -55,8 +53,7 @@ class AuthenticationFilterTest {
                 .willReturn(List.of(new PathProperties.PathPattern("GET", "/auth/**")));
 
         // when & then
-        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty()))
-                .verifyComplete();
+        StepVerifier.create(filter.filter(exchange, chain -> Mono.empty())).verifyComplete();
     }
 
     @Test
@@ -75,7 +72,6 @@ class AuthenticationFilterTest {
                 .expectError(BusinessException.class)
                 .verify();
     }
-
 
     @Test
     @DisplayName("만료된 token이면 예외 반환")

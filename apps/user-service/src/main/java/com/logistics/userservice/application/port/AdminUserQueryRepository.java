@@ -9,4 +9,7 @@ import org.springframework.data.domain.Pageable;
 public interface AdminUserQueryRepository {
     Page<User> searchUsers(
             UserContext userContext, SearchUsersQuery searchUsersQuery, Pageable pageable);
+
+    Page<User> searchPendingUsers(
+            UserContext userContext, SearchUsersQuery searchUsersQuery, Pageable pageable);
 }

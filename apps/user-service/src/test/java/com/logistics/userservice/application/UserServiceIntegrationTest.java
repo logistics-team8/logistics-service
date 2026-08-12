@@ -9,6 +9,7 @@ import com.logistics.userservice.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.domain.*;
 import com.logistics.userservice.domain.redis.RefreshTokenRepository;
 import com.logistics.userservice.domain.redis.RoleCacheRepository;
+import com.logistics.userservice.domain.redis.SessionRepository;
 import com.logistics.userservice.error.UserErrorCode;
 import java.util.UUID;
 import org.junit.jupiter.api.*;
@@ -22,6 +23,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
     @Autowired private UserRepository userRepository;
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private RefreshTokenRepository refreshTokenRepository;
+    @Autowired private SessionRepository sessionRepository;
     @Autowired private RoleCacheRepository roleCacheRepository;
     @Autowired private UserService userService;
 
@@ -29,6 +31,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
     private User dummyUser2;
     private UUID userId;
     private UUID userId2;
+    UUID sessionId = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -39,7 +42,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
                         "김철수",
                         "U33333333",
                         null,
-                        null,
+                        UUID.randomUUID(),
                         RequestedRole.COMPANY_MANAGER);
 
         UserCreateCommand command2 =
@@ -49,7 +52,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
                         "김철수",
                         "U44444444",
                         null,
-                        null,
+                        UUID.randomUUID(),
                         RequestedRole.COMPANY_MANAGER);
         dummyUser = userRepository.saveAndFlush(User.createByAdmin(UUID.randomUUID(), command));
 
@@ -61,12 +64,12 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
     @AfterEach
     void tearDown() {
         if (userId != null) {
-            refreshTokenRepository.delete(userId);
+            refreshTokenRepository.delete(userId, sessionId);
             roleCacheRepository.delete(userId);
         }
 
         if (userId2 != null) {
-            refreshTokenRepository.delete(userId2);
+            refreshTokenRepository.delete(userId2, sessionId);
             roleCacheRepository.delete(userId2);
         }
 
@@ -234,17 +237,19 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @DisplayName("회원 탈퇴에 성공하면 회원 정보와 Redis 인증 정보를 삭제한다.")
-    void deleteUser_success() {
+    void deleteUser_success() throws InterruptedException {
         // given
-        refreshTokenRepository.save(userId, "refreshToken");
-        roleCacheRepository.save(userId, "affiliationType");
+        refreshTokenRepository.save(userId, sessionId, "refreshToken");
+        roleCacheRepository.save(userId, "master");
 
         // when
+        sessionRepository.save(userId, sessionId, 1);
         userService.deleteUser(userId);
 
-        // then
-        assertThat(refreshTokenRepository.findByUserId(userId).orElse(null)).isNull();
+        Thread.sleep(1000);
 
+        // then
+        assertThat(sessionRepository.exists(userId, sessionId)).isFalse();
         assertThat(roleCacheRepository.findByUserId(userId).orElse(null)).isNull();
 
         assertThatThrownBy(() -> userService.deleteUser(userId))
