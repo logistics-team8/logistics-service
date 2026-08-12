@@ -2,11 +2,14 @@ package com.logistics.deliveryservice.infrastructure.persistence;
 
 import com.logistics.deliveryservice.domain.model.DeliveryManager;
 import com.logistics.deliveryservice.domain.model.DeliveryManagerAssignmentGroup;
+import com.logistics.deliveryservice.domain.model.DeliveryManagerType;
 import com.logistics.deliveryservice.domain.repository.DeliveryManagerRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 // 도메인 Repository와 Spring Data JPA 사이를 연결
@@ -37,5 +40,15 @@ public class DeliveryManagerRepositoryAdapter implements DeliveryManagerReposito
                 assignmentGroup.managerType(),
                 assignmentGroup.hubId()
         );
+    }
+
+    // 담당자 목록 조회
+    @Override
+    public Page<DeliveryManager> search(
+            UUID hubId,
+            DeliveryManagerType managerType,
+            Pageable pageable
+    ) {
+        return deliveryManagerJpaRepository.search(hubId, managerType, pageable);
     }
 }
