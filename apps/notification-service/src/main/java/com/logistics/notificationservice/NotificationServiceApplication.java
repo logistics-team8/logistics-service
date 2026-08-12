@@ -14,20 +14,5 @@ public class NotificationServiceApplication {
     public static void main(String[] args) {
         SpringApplication.run(NotificationServiceApplication.class, args);
     }
-    @Bean
-    CommandLineRunner printServiceToken(
-            ServiceTokenProvider serviceTokenProvider
-    ) {
-        return args -> {
-            String token =
-                    serviceTokenProvider.createToken(
-                            "delivery-service"
-                    );
 
-            System.out.println("==============================");
-            System.out.println("TEST SERVICE TOKEN");
-            System.out.println(token);
-            System.out.println("==============================");
-        };
-    }
 }
