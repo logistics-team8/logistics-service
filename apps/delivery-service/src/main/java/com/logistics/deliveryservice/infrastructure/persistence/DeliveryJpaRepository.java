@@ -26,7 +26,7 @@ interface DeliveryJpaRepository extends JpaRepository<Delivery, UUID> {
             where delivery.deletedAt is null
               and delivery.status in :deliveryStatuses
               and (
-                    delivery.companyDeliveryManagerId = :managerUserId
+                    delivery.deliveryManagerId = :managerUserId
                     or (
                         routeHistory.hubDeliveryManagerId = :managerUserId
                         and routeHistory.deletedAt is null

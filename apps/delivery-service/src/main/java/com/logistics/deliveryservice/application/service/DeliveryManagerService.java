@@ -62,10 +62,10 @@ public class DeliveryManagerService {
     );
 
     private static final Set<DeliveryStatus> DELETION_BLOCKING_DELIVERY_STATUSES = EnumSet.of(
-            DeliveryStatus.HUB_WAITING,
+            DeliveryStatus.HUB_WAIT,
             DeliveryStatus.HUB_MOVING,
-            DeliveryStatus.DEST_HUB_ARRIVED,
-            DeliveryStatus.COMPANY_MOVING
+            DeliveryStatus.HUB_ARRIVED,
+            DeliveryStatus.IN_DELIVERY
     );
 
     private final DeliveryManagerRepository deliveryManagerRepository;

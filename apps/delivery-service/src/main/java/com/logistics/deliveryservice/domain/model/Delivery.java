@@ -41,8 +41,8 @@ import lombok.NoArgsConstructor;
                 @Index(name = "idx_deliveries_departure_hub_id", columnList = "departure_hub_id"),
                 @Index(name = "idx_deliveries_arrival_hub_id", columnList = "arrival_hub_id"),
                 @Index(
-                        name = "idx_deliveries_company_delivery_manager_id",
-                        columnList = "company_delivery_manager_id"
+                        name = "idx_deliveries_delivery_manager_id",
+                        columnList = "delivery_manager_id"
                 )
         }
 )
@@ -51,7 +51,7 @@ public class Delivery extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "delivery_id", nullable = false, updatable = false)
+    @Column(name = "id", nullable = false, updatable = false)
     private UUID deliveryId;
 
     @Column(name = "order_id", nullable = false)
@@ -61,7 +61,7 @@ public class Delivery extends BaseEntity {
     private UUID requesterId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 30)
+    @Column(name = "status", nullable = false, length = 50)
     private DeliveryStatus status;
 
     @Column(name = "departure_hub_id", nullable = false)
@@ -73,14 +73,14 @@ public class Delivery extends BaseEntity {
     @Column(name = "delivery_address", nullable = false)
     private String deliveryAddress;
 
-    @Column(name = "receiver_name", nullable = false)
+    @Column(name = "receiver_name", nullable = false, length = 100)
     private String receiverName;
 
-    @Column(name = "receiver_slack_id")
+    @Column(name = "receiver_slack_id", length = 100)
     private String receiverSlackId;
 
-    @Column(name = "company_delivery_manager_id", nullable = false)
-    private UUID companyDeliveryManagerId;
+    @Column(name = "delivery_manager_id")
+    private UUID deliveryManagerId;
 
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
@@ -116,11 +116,11 @@ public class Delivery extends BaseEntity {
         delivery.deliveryAddress = deliveryAddress;
         delivery.receiverName = receiverName;
         delivery.receiverSlackId = receiverSlackId;
-        delivery.companyDeliveryManagerId = deliveryPlan.companyDeliveryManagerId();
+        delivery.deliveryManagerId = deliveryPlan.companyDeliveryManagerId();
         // 같은 허브 배송은 이동 경로가 없으므로 도착 허브에 도착한 상태에서 업체 배송을 기다린다.
         delivery.status = departureHubId.equals(arrivalHubId)
-                ? DeliveryStatus.DEST_HUB_ARRIVED
-                : DeliveryStatus.HUB_WAITING;
+                ? DeliveryStatus.HUB_ARRIVED
+                : DeliveryStatus.HUB_WAIT;
 
         // 검증된 각 Hub 이동 구간을 Delivery에 소속된 Route 이력으로 생성한다.
         deliveryPlan.routes().stream()
