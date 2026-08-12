@@ -12,8 +12,8 @@ public final class ApiResponse<T> {
 
     @JsonCreator
     private ApiResponse(
-            @JsonProperty T data,
-            @JsonProperty ApiError error) {
+            @JsonProperty("data") T data,
+            @JsonProperty("error") ApiError error) {
         this.data = data;
         this.error = error;
     }
