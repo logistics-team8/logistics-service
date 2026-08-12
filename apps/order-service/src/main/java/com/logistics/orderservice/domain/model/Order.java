@@ -222,17 +222,13 @@ public class Order extends BaseEntity {
         validateCancelable();
 
         this.orderItems.stream()
-                //제외 가능
-                .filter(orderItem ->
-                        orderItem.getDeletedAt() == null
-                )
                 .filter(orderItem ->
                         !orderItem.isCanceled()
                 )
                 .forEach(orderItem ->
                         orderItem.cancel(
                                 canceledBy,
-                                LocalDateTime.now()
+                                canceledAt
                         )
                 );
         this.status = OrderStatus.CANCELED;
@@ -241,7 +237,7 @@ public class Order extends BaseEntity {
     }
 
 
-    public OrderItem cancelOrderItem(UUID orderItemId, UUID canceledBy) {
+    public OrderItem cancelOrderItem(UUID orderItemId, UUID canceledBy, LocalDateTime canceledAt) {
         validateCancelable();
 
         OrderItem orderItem = orderItems.stream()
@@ -256,7 +252,7 @@ public class Order extends BaseEntity {
         if(orderItems.stream().allMatch(OrderItem::isCanceled)){
             this.status = OrderStatus.CANCELED;
             this.canceledBy = canceledBy;
-            this.canceledAt = LocalDateTime.now();
+            this.canceledAt = canceledAt;
         }
 
         return orderItem;

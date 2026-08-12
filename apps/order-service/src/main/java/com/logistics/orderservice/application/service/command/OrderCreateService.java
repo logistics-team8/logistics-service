@@ -52,20 +52,6 @@ public class OrderCreateService {
      *   ↓
      * DELIVERY_CREATED
      */
-
-    public CreateOrderResponse createOrder(
-            CreateOrderCommand command,
-            CustomUserDetails user
-    ) {
-        return createOrder(
-                command,
-                user,
-                null,
-                null
-        );
-    }
-
-
     public CreateOrderResponse createOrder(
             CreateOrderCommand command,
             CustomUserDetails user,
@@ -206,6 +192,9 @@ public class OrderCreateService {
     }
 
 
+
+
+    //==============================================================================================
     /**
      * 주문 번호 생성 메서드
      * //ex)ORD-20260804-A12F45C98D01
