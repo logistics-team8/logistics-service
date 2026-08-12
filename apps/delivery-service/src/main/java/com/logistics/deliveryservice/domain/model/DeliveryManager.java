@@ -59,4 +59,19 @@ public class DeliveryManager extends BaseEntity {
         deliveryManager.deliverySequence = deliverySequence;
         return deliveryManager;
     }
+
+    public void update(
+            DeliveryManagerAssignmentGroup assignmentGroup,
+            Integer deliverySequence
+    ) {
+        if (assignmentGroup == null) {
+            throw new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_HUB);
+        }
+
+        DeliveryManagerAssignmentGroup.validateSequence(deliverySequence);
+
+        this.managerType = assignmentGroup.managerType();
+        this.hubId = assignmentGroup.hubId();
+        this.deliverySequence = deliverySequence;
+    }
 }

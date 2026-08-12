@@ -4,6 +4,7 @@ import com.logistics.deliveryservice.application.command.DeliveryManagerCreateCo
 import com.logistics.deliveryservice.application.dto.DeliveryManagerCreateResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryManagerDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryManagerSearchResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryManagerUpdateResponse;
 import com.logistics.common.response.PageableUtil;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
@@ -12,6 +13,7 @@ import com.logistics.deliveryservice.domain.model.DeliveryManagerAssignmentGroup
 import com.logistics.deliveryservice.domain.port.UserSlackProvider;
 import com.logistics.deliveryservice.domain.repository.DeliveryManagerRepository;
 import com.logistics.deliveryservice.presentation.dto.DeliveryManagerSearchRequest;
+import com.logistics.deliveryservice.presentation.dto.DeliveryManagerUpdateRequest;
 import com.logistics.common.security.principal.CustomUserDetails;
 
 import java.util.Set;
@@ -131,6 +133,43 @@ public class DeliveryManagerService {
         return DeliveryManagerDetailResponse.from(deliveryManager, slackId);
     }
 
+    /**
+     * 배송 담당자 수정
+     **/
+    public DeliveryManagerUpdateResponse update(
+            UUID userId,
+            DeliveryManagerUpdateRequest request,
+            CustomUserDetails userDetails
+    ) {
+        if (request.hasNoUpdateFields()) {
+            throw new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_CHANGE);
+        }
+
+        // 배송 담당자 존재 검증
+        DeliveryManager deliveryManager = deliveryManagerRepository.findActiveByUserId(userId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+
+        // 수정 정보(request) 있으면 채택 없으면 기존 값
+        DeliveryManagerAssignmentGroup updatedAssignmentGroup = new DeliveryManagerAssignmentGroup(
+                request.managerType() != null ? request.managerType() : deliveryManager.getManagerType(),
+                request.hubId() != null ? request.hubId() : deliveryManager.getHubId()
+        );
+
+        // 업데이트 권한 검증
+        validateUpdatePermission(deliveryManager, updatedAssignmentGroup, userDetails);
+
+        // 담당자 수정시 순번 다시 계산해서 저장
+        int sequenceNumber = deliveryManager.getDeliverySequence();
+        if (isAssignmentGroupChanged(deliveryManager, updatedAssignmentGroup)) {
+            sequenceNumber = updatedAssignmentGroup.findSmallestAvailableSequence(
+                    deliveryManagerRepository.findActiveDeliverySequences(updatedAssignmentGroup)
+            );
+        }
+
+        deliveryManager.update(updatedAssignmentGroup, sequenceNumber);
+        return DeliveryManagerUpdateResponse.from(deliveryManagerRepository.save(deliveryManager));
+    }
+
     // 담당자 역할 권한 확인
     private void validateDetailReadPermission(
             DeliveryManager deliveryManager,
@@ -153,6 +192,34 @@ public class DeliveryManagerService {
         }
 
         throw new AccessDeniedException("배송 담당자 조회 권한이 없습니다.");
+    }
+
+    private void validateUpdatePermission(
+            DeliveryManager deliveryManager,
+            DeliveryManagerAssignmentGroup updatedAssignmentGroup,
+            CustomUserDetails userDetails
+    ) {
+        if ("MASTER".equals(userDetails.getRole())) {
+            return;
+        }
+
+        if ("HUB_MANAGER".equals(userDetails.getRole())
+                && userDetails.getHubId() != null
+                && userDetails.getHubId().equals(deliveryManager.getHubId())
+                && userDetails.getHubId().equals(updatedAssignmentGroup.hubId())) {
+            return;
+        }
+
+        throw new AccessDeniedException("배송 담당자 수정 권한이 없습니다.");
+    }
+
+    // 담당자 정보 실제로 수정됐는지 확인
+    private boolean isAssignmentGroupChanged(
+            DeliveryManager deliveryManager,
+            DeliveryManagerAssignmentGroup updatedAssignmentGroup
+    ) {
+        return deliveryManager.getManagerType() != updatedAssignmentGroup.managerType()
+                || !deliveryManager.getHubId().equals(updatedAssignmentGroup.hubId());
     }
 
 
