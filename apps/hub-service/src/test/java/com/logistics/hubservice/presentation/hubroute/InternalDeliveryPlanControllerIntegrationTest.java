@@ -3,6 +3,7 @@ package com.logistics.hubservice.presentation.hubroute;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -22,25 +23,29 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.CacheManager;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
+import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@DisplayName("HubRoute 내부 최단 경로 API 통합 테스트")
-class InternalHubRouteControllerIntegrationTest extends PostgreSqlIntegrationTest {
+@DisplayName("Hub 내부 배송 계획 API 통합 테스트")
+class InternalDeliveryPlanControllerIntegrationTest extends PostgreSqlIntegrationTest {
 
     private static final UUID MASTER_ID =
             UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
+    private static final UUID ORDER_ID =
+            UUID.fromString("09cf5d6c-ec32-43f9-871c-e5f152aa17e0");
 
     private MockMvc mockMvc;
+    private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
     @Autowired
     private WebApplicationContext webApplicationContext;
@@ -79,41 +84,49 @@ class InternalHubRouteControllerIntegrationTest extends PostgreSqlIntegrationTes
     }
 
     @Test
-    @DisplayName("인증 없이 소요시간이 가장 짧은 전체 경로를 조회한다")
-    void getsShortestPathWithoutAuthentication() throws Exception {
+    @DisplayName("인증 없이 Delivery 계약 경로로 최단 경로 배송 계획을 반환한다")
+    void createsDeliveryPlanWithoutAuthentication() throws Exception {
         Hub sourceHub = saveHub("서울 허브");
         Hub intermediateHub = saveHub("대전 허브");
         Hub destinationHub = saveHub("부산 허브");
-        HubRoute firstRoute = saveRoute(sourceHub.getId(), intermediateHub.getId(), 40L, 50L);
-        HubRoute secondRoute = saveRoute(intermediateHub.getId(), destinationHub.getId(), 60L, 70L);
+        saveRoute(sourceHub.getId(), intermediateHub.getId(), 40L, 50L);
+        saveRoute(intermediateHub.getId(), destinationHub.getId(), 60L, 70L);
         saveRoute(sourceHub.getId(), destinationHub.getId(), 80L, 200L);
 
-        mockMvc.perform(shortestPathRequest(sourceHub.getId(), destinationHub.getId()))
+        mockMvc.perform(post("/internal/v1/delivery-plans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody(sourceHub.getId(), destinationHub.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.sourceHubId").value(sourceHub.getId().toString()))
-                .andExpect(jsonPath("$.data.destinationHubId").value(destinationHub.getId().toString()))
-                .andExpect(jsonPath("$.data.totalDistanceMeters").value(100L))
-                .andExpect(jsonPath("$.data.totalDurationSeconds").value(120L))
-                .andExpect(jsonPath("$.data.segments", hasSize(2)))
-                .andExpect(jsonPath("$.data.segments[0].sequence").value(1))
-                .andExpect(jsonPath("$.data.segments[0].hubRouteId")
-                        .value(firstRoute.getId().toString()))
-                .andExpect(jsonPath("$.data.segments[1].sequence").value(2))
-                .andExpect(jsonPath("$.data.segments[1].hubRouteId")
-                        .value(secondRoute.getId().toString()))
-                .andExpect(jsonPath("$.error").value(nullValue()));
+                .andExpect(jsonPath("$.companyDeliveryManagerId").value(nullValue()))
+                .andExpect(jsonPath("$.routes", hasSize(2)))
+                .andExpect(jsonPath("$.routes[0].sequence").value(1))
+                .andExpect(jsonPath("$.routes[0].departureHubId").value(sourceHub.getId().toString()))
+                .andExpect(jsonPath("$.routes[0].arrivalHubId")
+                        .value(intermediateHub.getId().toString()))
+                .andExpect(jsonPath("$.routes[0].estimatedDistanceKm").value(0.040))
+                .andExpect(jsonPath("$.routes[0].estimatedDurationMinutes").value(1))
+                .andExpect(jsonPath("$.routes[0].hubDeliveryManagerId").value(nullValue()))
+                .andExpect(jsonPath("$.routes[1].sequence").value(2))
+                .andExpect(jsonPath("$.routes[1].departureHubId")
+                        .value(intermediateHub.getId().toString()))
+                .andExpect(jsonPath("$.routes[1].arrivalHubId")
+                        .value(destinationHub.getId().toString()))
+                .andExpect(jsonPath("$.routes[1].estimatedDistanceKm").value(0.060))
+                .andExpect(jsonPath("$.routes[1].estimatedDurationMinutes").value(2))
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.error").doesNotExist());
     }
 
     @Test
-    @DisplayName("같은 활성 허브를 조회하면 빈 구간과 0 합계를 반환한다")
-    void sameHubReturnsEmptyPath() throws Exception {
+    @DisplayName("같은 허브면 빈 경로 목록을 반환한다")
+    void sameHubReturnsEmptyRoutes() throws Exception {
         Hub hub = saveHub("서울 허브");
 
-        mockMvc.perform(shortestPathRequest(hub.getId(), hub.getId()))
+        mockMvc.perform(post("/internal/v1/delivery-plans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody(hub.getId(), hub.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.totalDistanceMeters").value(0L))
-                .andExpect(jsonPath("$.data.totalDurationSeconds").value(0L))
-                .andExpect(jsonPath("$.data.segments", hasSize(0)));
+                .andExpect(jsonPath("$.routes", hasSize(0)));
     }
 
     @Test
@@ -121,22 +134,9 @@ class InternalHubRouteControllerIntegrationTest extends PostgreSqlIntegrationTes
     void missingHubReturnsHub001() throws Exception {
         Hub sourceHub = saveHub("서울 허브");
 
-        mockMvc.perform(shortestPathRequest(sourceHub.getId(), UUID.randomUUID()))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.error.code").value("HUB_001"));
-    }
-
-    @Test
-    @DisplayName("삭제된 허브의 경로는 조회할 수 없다")
-    void deletedHubReturnsHub001() throws Exception {
-        Hub sourceHub = saveHub("서울 허브");
-        Hub destinationHub = saveHub("부산 허브");
-        authenticate();
-        destinationHub.delete(MASTER_ID);
-        hubRepository.save(destinationHub);
-        SecurityContextHolder.clearContext();
-
-        mockMvc.perform(shortestPathRequest(sourceHub.getId(), destinationHub.getId()))
+        mockMvc.perform(post("/internal/v1/delivery-plans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody(sourceHub.getId(), UUID.randomUUID())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("HUB_001"));
     }
@@ -147,7 +147,9 @@ class InternalHubRouteControllerIntegrationTest extends PostgreSqlIntegrationTes
         Hub sourceHub = saveHub("서울 허브");
         Hub destinationHub = saveHub("부산 허브");
 
-        mockMvc.perform(shortestPathRequest(sourceHub.getId(), destinationHub.getId()))
+        mockMvc.perform(post("/internal/v1/delivery-plans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody(sourceHub.getId(), destinationHub.getId())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("HUB_005"));
     }
@@ -155,20 +157,25 @@ class InternalHubRouteControllerIntegrationTest extends PostgreSqlIntegrationTes
     @Test
     @DisplayName("필수 허브 ID가 없으면 400을 반환한다")
     void missingRequiredHubIdReturnsBadRequest() throws Exception {
-        Hub sourceHub = saveHub("서울 허브");
-
-        mockMvc.perform(get("/internal/v1/hub-routes/shortest-path")
-                        .param("sourceHubId", sourceHub.getId().toString()))
+        mockMvc.perform(post("/internal/v1/delivery-plans")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"orderId":"%s","departureHubId":"%s"}
+                                """.formatted(ORDER_ID, UUID.randomUUID())))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("내부 최단 경로 API를 공개 Swagger 문서에서 제외한다")
+    @DisplayName("내부 배송 계획 API를 공개 Swagger 문서에서 제외한다")
     void internalApiIsHiddenFromOpenApi() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paths['/internal/v1/hub-routes/shortest-path']")
-                        .doesNotExist());
+                .andExpect(jsonPath("$.paths['/internal/v1/delivery-plans']").doesNotExist());
+    }
+
+    private String requestBody(UUID departureHubId, UUID arrivalHubId) {
+        return jsonMapper.writeValueAsString(new DeliveryPlanRequestBody(
+                ORDER_ID, departureHubId, arrivalHubId));
     }
 
     private Hub saveHub(String name) {
@@ -197,14 +204,6 @@ class InternalHubRouteControllerIntegrationTest extends PostgreSqlIntegrationTes
         return route;
     }
 
-    private MockHttpServletRequestBuilder shortestPathRequest(
-            UUID sourceHubId,
-            UUID destinationHubId) {
-        return get("/internal/v1/hub-routes/shortest-path")
-                .param("sourceHubId", sourceHubId.toString())
-                .param("destinationHubId", destinationHubId.toString());
-    }
-
     private void authenticate() {
         CustomUserDetails principal = CustomUserDetails.from(MASTER_ID, null, null, "MASTER");
         SecurityContextHolder.getContext().setAuthentication(
@@ -212,5 +211,12 @@ class InternalHubRouteControllerIntegrationTest extends PostgreSqlIntegrationTes
                         principal,
                         null,
                         principal.getAuthorities()));
+    }
+
+    private record DeliveryPlanRequestBody(
+            UUID orderId,
+            UUID departureHubId,
+            UUID arrivalHubId
+    ) {
     }
 }

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Hidden
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/internal/hubs")
+@RequestMapping("/internal/v1/hubs")
 public class InternalHubController {
 
     private final HubQueryService hubQueryService;
