@@ -212,6 +212,11 @@ public enum OrderErrorCode implements ErrorCode {
             "ORD_034",
             HttpStatus.CONFLICT,
             "재고 처리 상태를 확인할 수 없어 주문을 취소할 수 없습니다."
+    ),
+    USER_NOT_FOUND(
+            "ORDER_404",
+            HttpStatus.NOT_FOUND,
+            "주문 요청자 정보를 찾을 수 없습니다."
     );
 
 

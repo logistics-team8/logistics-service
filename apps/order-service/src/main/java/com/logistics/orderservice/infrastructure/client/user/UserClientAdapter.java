@@ -1,6 +1,9 @@
 package com.logistics.orderservice.infrastructure.client.user;
 
+import com.logistics.common.error.ErrorCode;
+import com.logistics.common.exception.BusinessException;
 import com.logistics.orderservice.application.port.UserPort;
+import com.logistics.orderservice.error.OrderErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,8 +18,11 @@ public class UserClientAdapter implements UserPort {
 
     @Override
     public UserInfo getUserInfo(UUID userId) {
-        UserFeignClient.UserResponse response =
-                userFeignClient.getUser(userId);
+        UserFeignClient.UserResponse response = userFeignClient.getUser(userId).getData();
+
+        if(response == null){
+            throw new BusinessException(OrderErrorCode.USER_NOT_FOUND);
+        }
 
         return new UserInfo(
                 response.userId(),
