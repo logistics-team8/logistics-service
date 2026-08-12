@@ -19,11 +19,11 @@ public class HubFeignAdapter implements HubClientPort {
     public boolean existsById(UUID hubId) {
         try {
             HubExistsResponse response = hubFeignClient.checkHubExists(hubId).getData();
-            log.info("[SUCCESS] Hub 검증 성공 hubId = {}", hubId);
-            return response != null && response.exists();
-        } catch (FeignException.NotFound e) {
-            log.info("[SUCCESS] Hub가 존재하지 않음 hubId {}", e.getMessage());
-            return false;
+            boolean exists = response != null && response.exists();
+
+            log.info("[SUCCESS] Hub 존재 여부 조회 성공 hubId = {} result = {}", hubId, exists);
+            return exists;
+
         } catch (FeignException e) {
             log.error(
                     "[ERROR] Hub-Service 호출 실패 hubId = {}, status = {}, content = {}",

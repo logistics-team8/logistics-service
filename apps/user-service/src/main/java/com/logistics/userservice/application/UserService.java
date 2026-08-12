@@ -51,7 +51,7 @@ public class UserService {
             hubClientPort.existsById(command.hubId());
         } else {
             CompanyInfo companyInfo = companyClientPort.getCompanyInfo(command.companyId());
-            user.assignAffiliation(companyInfo.hubId(), companyInfo.Id());
+            user.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
         }
 
         user.encodePassword(passwordEncoder.encode(user.getPassword()));

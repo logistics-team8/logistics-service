@@ -4,9 +4,9 @@ import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.userservice.application.dto.admin.UserApprovalInfo;
+import com.logistics.userservice.presentation.dto.admin.AdminSearchRequest;
 import com.logistics.userservice.presentation.dto.admin.AdminUserInfoResponse;
 import com.logistics.userservice.presentation.dto.admin.RejectRequest;
-import com.logistics.userservice.presentation.dto.admin.UserApprovalSearchRequest;
 import com.logistics.userservice.presentation.dto.user.UserCreateRequest;
 import com.logistics.userservice.presentation.dto.user.UserUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -53,7 +53,7 @@ public interface AdminApi {
     @Operation(summary = "회원 목록 검색", description = "관리자가 회원 목록을 조회합니다.")
     public ApiResponse<PageResponse<AdminUserInfoResponse>> searchUsers(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @ParameterObject @Valid @ModelAttribute UserApprovalSearchRequest request,
+            @ParameterObject @Valid @ModelAttribute AdminSearchRequest request,
             @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC)
                     Pageable pageable);
 
@@ -81,7 +81,7 @@ public interface AdminApi {
     @Operation(summary = "회원가입 요청 리스트 검색", description = "관리자가 회원가입 요청 목록을 조회합니다.")
     public ApiResponse<PageResponse<UserApprovalInfo>> getPendingUsers(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @ParameterObject @Valid @ModelAttribute UserApprovalSearchRequest request,
+            @ParameterObject @Valid @ModelAttribute AdminSearchRequest request,
             @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC)
                     Pageable pageable);
 }

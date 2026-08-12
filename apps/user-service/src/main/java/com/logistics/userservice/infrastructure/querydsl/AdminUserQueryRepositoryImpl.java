@@ -10,13 +10,12 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
@@ -35,8 +34,9 @@ public class AdminUserQueryRepositoryImpl implements AdminUserQueryRepository {
     @Override
     public Page<User> searchUsers(
             UserContext userContext, SearchUsersQuery searchUsersQuery, Pageable pageable) {
-        BooleanBuilder builder = commonBuilder(userContext, searchUsersQuery)
-                .and(QuerydslUtils.eq(user.userStatus, searchUsersQuery.userStatus()));
+        BooleanBuilder builder =
+                commonBuilder(userContext, searchUsersQuery)
+                        .and(QuerydslUtils.eq(user.userStatus, searchUsersQuery.userStatus()));
 
         return commonQuery(builder, pageable);
     }
@@ -50,10 +50,12 @@ public class AdminUserQueryRepositoryImpl implements AdminUserQueryRepository {
      * @return
      */
     @Override
-    public Page<User> searchPendingUsers(UserContext userContext, SearchUsersQuery searchUsersQuery, Pageable pageable) {
+    public Page<User> searchPendingUsers(
+            UserContext userContext, SearchUsersQuery searchUsersQuery, Pageable pageable) {
         // PENDING 상태 고정
-        BooleanBuilder builder = commonBuilder(userContext, searchUsersQuery)
-                .and(user.userStatus.eq(UserStatus.PENDING));
+        BooleanBuilder builder =
+                commonBuilder(userContext, searchUsersQuery)
+                        .and(user.userStatus.eq(UserStatus.PENDING));
 
         return commonQuery(builder, pageable);
     }
@@ -65,7 +67,8 @@ public class AdminUserQueryRepositoryImpl implements AdminUserQueryRepository {
      * @param searchUsersQuery 쿼리 조건
      * @return BooleanBuilder
      */
-    private BooleanBuilder commonBuilder(UserContext userContext, SearchUsersQuery searchUsersQuery) {
+    private BooleanBuilder commonBuilder(
+            UserContext userContext, SearchUsersQuery searchUsersQuery) {
         BooleanBuilder builder = new BooleanBuilder();
 
         // 허브 매니저인 경우 본인 허브 요청만 조회 가능
@@ -76,8 +79,7 @@ public class AdminUserQueryRepositoryImpl implements AdminUserQueryRepository {
         }
 
         // 공통 쿼리
-        return builder
-                .and(QuerydslUtils.startsWith(user.username, searchUsersQuery.username()))
+        return builder.and(QuerydslUtils.startsWith(user.username, searchUsersQuery.username()))
                 .and(QuerydslUtils.startsWith(user.name, searchUsersQuery.name()))
                 .and(QuerydslUtils.eq(user.companyId, searchUsersQuery.companyId()))
                 .and(QuerydslUtils.eq(user.role, searchUsersQuery.role()));
@@ -93,18 +95,16 @@ public class AdminUserQueryRepositoryImpl implements AdminUserQueryRepository {
     private Page<User> commonQuery(BooleanBuilder builder, Pageable pageable) {
         OrderSpecifier<?>[] order = QuerydslUtils.getSort(pageable, user);
 
-        List<User> result = queryFactory
-                .selectFrom(user)
-                .where(builder)
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
-                .orderBy(order)
-                .fetch();
+        List<User> result =
+                queryFactory
+                        .selectFrom(user)
+                        .where(builder)
+                        .offset(pageable.getOffset())
+                        .limit(pageable.getPageSize())
+                        .orderBy(order)
+                        .fetch();
 
-        JPAQuery<Long> countQuery = queryFactory
-                .select(user.count())
-                .from(user)
-                .where(builder);
+        JPAQuery<Long> countQuery = queryFactory.select(user.count()).from(user).where(builder);
 
         return PageableExecutionUtils.getPage(result, pageable, countQuery::fetchOne);
     }

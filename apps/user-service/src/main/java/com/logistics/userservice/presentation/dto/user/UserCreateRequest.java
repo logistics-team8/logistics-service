@@ -1,9 +1,7 @@
 package com.logistics.userservice.presentation.dto.user;
 
-import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.domain.RequestedRole;
-import com.logistics.userservice.error.AuthErrorCode;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -43,24 +41,7 @@ public record UserCreateRequest(
                 RequestedRole requestedRole) {
 
     public UserCreateCommand toCommand() {
-        UUID normalizedHubId = null;
-        UUID normalizedCompanyId = null;
-
-        if (requestedRole == RequestedRole.COMPANY_MANAGER) {
-            if (companyId == null) throw new BusinessException(AuthErrorCode.COMPANY_ID_REQUIRED);
-            normalizedCompanyId = companyId;
-        } else {
-            if (hubId == null) throw new BusinessException(AuthErrorCode.HUB_ID_REQUIRED);
-            normalizedHubId = hubId;
-        }
-
         return new UserCreateCommand(
-                username,
-                password,
-                name,
-                slackId,
-                normalizedHubId,
-                normalizedCompanyId,
-                requestedRole);
+                username, password, name, slackId, hubId, companyId, requestedRole);
     }
 }

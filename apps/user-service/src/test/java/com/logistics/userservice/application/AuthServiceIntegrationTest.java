@@ -35,7 +35,7 @@ class AuthServiceIntegrationTest extends AbstractIntegrationTest {
                         "김철수",
                         "U123456789",
                         null,
-                        null,
+                        UUID.randomUUID(),
                         RequestedRole.COMPANY_MANAGER);
         userRepository.save(User.create(command)).approve(UUID.randomUUID());
     }

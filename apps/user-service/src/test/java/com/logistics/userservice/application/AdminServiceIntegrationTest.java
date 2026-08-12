@@ -38,7 +38,7 @@ class AdminServiceIntegrationTest extends AbstractIntegrationTest {
                         "김철수",
                         "U123456789",
                         null,
-                        null,
+                        UUID.randomUUID(),
                         RequestedRole.COMPANY_MANAGER);
         dummyUser = userRepository.save(User.create(command));
         userId = dummyUser.getId();

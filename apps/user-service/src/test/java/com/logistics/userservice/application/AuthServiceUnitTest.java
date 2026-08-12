@@ -80,7 +80,7 @@ class AuthServiceUnitTest {
                             "김철수",
                             "U123456789",
                             null,
-                            null,
+                            UUID.randomUUID(),
                             RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
@@ -113,7 +113,7 @@ class AuthServiceUnitTest {
                             "김철수",
                             "U123456789",
                             null,
-                            null,
+                            UUID.randomUUID(),
                             RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
@@ -148,7 +148,7 @@ class AuthServiceUnitTest {
                             "김철수",
                             "U123456789",
                             null,
-                            null,
+                            UUID.randomUUID(),
                             RequestedRole.COMPANY_MANAGER);
 
             User mockUser = User.create(command);
@@ -291,8 +291,7 @@ class AuthServiceUnitTest {
 
             given(refreshTokenRepository.findByUserId(userId, sessionId))
                     .willReturn(Optional.of(refreshToken));
-            given(sessionRepository.exists(userId, sessionId))
-                    .willReturn(true);
+            given(sessionRepository.exists(userId, sessionId)).willReturn(true);
 
             given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
 

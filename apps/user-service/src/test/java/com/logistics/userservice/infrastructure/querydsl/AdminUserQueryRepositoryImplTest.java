@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
 @SpringBootTest
-class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
+class AdminUserQueryRepositoryImplTest extends AbstractIntegrationTest {
     @Autowired private AdminUserQueryRepository adminUserQueryRepository;
     @Autowired private UserRepository userRepository;
 
@@ -48,12 +48,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                         RequestedRole.COMPANY_MANAGER)
                 .approve(UUID.randomUUID());
 
-        createUser(
-                        "test3456",
-                        "U333333333",
-                        dummyUserHubId2,
-                        null,
-                        RequestedRole.HUB_DELIVERY_MANAGER)
+        createUser("test3456", "U333333333", dummyUserHubId2, null, RequestedRole.HUB_DELIVERY)
                 .approve(UUID.randomUUID());
         userRepository.flush();
     }
@@ -82,7 +77,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
     void searchUsers_success_when_search_by_hub_manager() {
         // given
         UserContext userContext =
-                new UserContext(UUID.randomUUID(), Role.HUB_MANAGER, dummyUserHubId2);
+                new UserContext(UUID.randomUUID(), Role.HUB_MANAGER, dummyUserHubId);
 
         SearchUsersQuery searchUsersQuery =
                 new SearchUsersQuery(null, null, null, null, null, null);
@@ -94,7 +89,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                 adminUserQueryRepository.searchUsers(userContext, searchUsersQuery, pageable);
 
         // then
-        assertThat(result.getContent()).extracting(User::getUsername).containsExactly("test3456");
+        assertThat(result.getContent()).extracting(User::getUsername).containsExactly("test1234");
     }
 
     @Test
@@ -104,7 +99,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
         UserContext userContext = new UserContext(UUID.randomUUID(), Role.MASTER, null);
 
         SearchUsersQuery searchUsersQuery =
-                new SearchUsersQuery(null, null, dummyUserHubId2, null, null, null);
+                new SearchUsersQuery(null, null, dummyUserHubId, null, null, null);
 
         Pageable pageable = PageRequest.of(0, 10, Sort.Direction.DESC, "createdAt");
 
@@ -113,7 +108,7 @@ class AdminUserQueryRepositoryTest extends AbstractIntegrationTest {
                 adminUserQueryRepository.searchUsers(userContext, searchUsersQuery, pageable);
 
         // then
-        assertThat(result.getContent()).extracting(User::getUsername).containsExactly("test3456");
+        assertThat(result.getContent()).extracting(User::getUsername).containsExactly("test1234");
     }
 
     @Test

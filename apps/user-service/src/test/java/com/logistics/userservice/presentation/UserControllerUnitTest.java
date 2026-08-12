@@ -78,7 +78,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "Testtest123!",
                             "김철수",
                             "U123456789",
-                            UUID.randomUUID(),
+                            null,
                             UUID.randomUUID(),
                             RequestedRole.COMPANY_MANAGER),
 
@@ -88,7 +88,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "비밀번호",
                             "김철수",
                             "U123456789",
-                            UUID.randomUUID(),
+                            null,
                             UUID.randomUUID(),
                             RequestedRole.COMPANY_MANAGER),
 
@@ -98,7 +98,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "Testtest123!",
                             "",
                             "U123456789",
-                            UUID.randomUUID(),
+                            null,
                             UUID.randomUUID(),
                             RequestedRole.COMPANY_MANAGER),
 
@@ -108,7 +108,7 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "Testtest123!",
                             "김철수",
                             "테스트",
-                            UUID.randomUUID(),
+                            null,
                             UUID.randomUUID(),
                             RequestedRole.COMPANY_MANAGER),
 
@@ -120,7 +120,47 @@ class UserControllerUnitTest extends AbstractControllerTest {
                             "U123456789",
                             UUID.randomUUID(),
                             UUID.randomUUID(),
-                            null));
+                            null),
+
+                    // 6. MASTER 권한 선택 불가
+                    new UserCreateRequest(
+                            "test1234",
+                            "Testtest123!",
+                            "김철수",
+                            "U123456789",
+                            UUID.randomUUID(),
+                            UUID.randomUUID(),
+                            RequestedRole.MASTER),
+
+                    // 7. COMPANY_MANAGER 선택 시 companyId 필수입력
+                    new UserCreateRequest(
+                            "test1234",
+                            "Testtest123!",
+                            "김철수",
+                            "U123456789",
+                            UUID.randomUUID(),
+                            null,
+                            RequestedRole.COMPANY_MANAGER),
+
+                    // 8. HUB_MANAGER 선택 시 hubId 필수 입력
+                    new UserCreateRequest(
+                            "test1234",
+                            "Testtest123!",
+                            "김철수",
+                            "U123456789",
+                            null,
+                            UUID.randomUUID(),
+                            RequestedRole.MASTER),
+
+                    // 9. DELIVERY_MANAGER 선택 시 hubId 필수 입력
+                    new UserCreateRequest(
+                            "test1234",
+                            "Testtest123!",
+                            "김철수",
+                            "U123456789",
+                            null,
+                            UUID.randomUUID(),
+                            RequestedRole.HUB_DELIVERY));
         }
     }
 

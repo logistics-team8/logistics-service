@@ -55,7 +55,7 @@ public class AdminService {
             hubClientPort.existsById(command.hubId());
         } else {
             CompanyInfo companyInfo = companyClientPort.getCompanyInfo(command.companyId());
-            createdUser.assignAffiliation(companyInfo.hubId(), companyInfo.Id());
+            createdUser.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
         }
 
         createdUser.encodePassword(passwordEncoder.encode(createdUser.getPassword()));
@@ -150,11 +150,11 @@ public class AdminService {
         }
         user.approve(command.adminId());
 
-        if (user.getRequestedRole() == RequestedRole.HUB_DELIVERY_MANAGER
-                || user.getRequestedRole() == RequestedRole.COMPANY_DELIVERY_MANAGER) {
+        if (user.getRequestedRole() == RequestedRole.HUB_DELIVERY
+                || user.getRequestedRole() == RequestedRole.COMPANY_DELIVERY) {
             RequestedRole requestedRole = user.getRequestedRole();
 
-            // 배송 담당자가 가입 승인 시 배송 담당자 생성 이벤트 발행
+            // 배송 담당자 가입 승인 시 배송 담당자 생성 이벤트 발행
             applicationEventPublisher.publishEvent(
                     new UserApprovalEvent(user.getId(), user.getHubId(), requestedRole));
         }
@@ -184,7 +184,7 @@ public class AdminService {
     public Page<UserApprovalInfo> getPendingUsers(
             UserContext userContext, SearchUsersQuery searchUsersQuery, Pageable pageable) {
         return adminUserQueryRepository
-                .searchUsers(userContext, searchUsersQuery, pageable)
+                .searchPendingUsers(userContext, searchUsersQuery, pageable)
                 .map(UserApprovalInfo::from);
     }
 

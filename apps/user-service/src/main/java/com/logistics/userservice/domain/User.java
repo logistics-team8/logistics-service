@@ -128,8 +128,8 @@ public class User extends BaseEntity {
      * @param approvedBy 승인자 UUID
      */
     public void approve(UUID approvedBy) {
-        if (this.requestedRole == RequestedRole.COMPANY_DELIVERY_MANAGER
-                || this.requestedRole == RequestedRole.HUB_DELIVERY_MANAGER) {
+        if (this.requestedRole == RequestedRole.COMPANY_DELIVERY
+                || this.requestedRole == RequestedRole.HUB_DELIVERY) {
             this.userStatus = UserStatus.PROCESSING;
         } else {
             this.userStatus = UserStatus.APPROVED;

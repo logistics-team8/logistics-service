@@ -20,13 +20,13 @@ public class CompanyFeignAdapter implements CompanyClientPort {
     @Override
     public CompanyInfo getCompanyInfo(UUID companyId) {
         try {
-            CompanyInfo response = companyFeignClient.getCompanyInfo(companyId).getData();
-            if (response == null || !Objects.equals(companyId, response.Id())) {
+            CompanyResponse response = companyFeignClient.getCompanyInfo(companyId).getData();
+            if (response == null || !Objects.equals(companyId, response.id())) {
                 log.warn("[ERROR] 업체 ID 불일치 companyId = {}", companyId);
                 throw new BusinessException(ClientErrorCode.COMPANY_ID_INVALID);
             }
             log.info("[SUCCESS] 업체 ID 검증 성공 companyId = {}", companyId);
-            return response;
+            return toCompanyInfo(response);
         } catch (FeignException.NotFound e) {
             log.warn("[NOT_FOUND] 존재하지 않는 업체 companyId = {}", companyId);
             throw new BusinessException(ClientErrorCode.COMPANY_NOT_FOUND);
@@ -39,5 +39,9 @@ public class CompanyFeignAdapter implements CompanyClientPort {
                     e);
             throw new BusinessException(ClientErrorCode.SERVICE_UNAVAILABLE);
         }
+    }
+
+    private CompanyInfo toCompanyInfo(CompanyResponse response) {
+        return new CompanyInfo(response.id(), response.hubId());
     }
 }

@@ -42,7 +42,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
                         "김철수",
                         "U33333333",
                         null,
-                        null,
+                        UUID.randomUUID(),
                         RequestedRole.COMPANY_MANAGER);
 
         UserCreateCommand command2 =
@@ -52,7 +52,7 @@ public class UserServiceIntegrationTest extends AbstractIntegrationTest {
                         "김철수",
                         "U44444444",
                         null,
-                        null,
+                        UUID.randomUUID(),
                         RequestedRole.COMPANY_MANAGER);
         dummyUser = userRepository.saveAndFlush(User.createByAdmin(UUID.randomUUID(), command));
 
