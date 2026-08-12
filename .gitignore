@@ -217,6 +217,23 @@ nbdist/
 .history
 .ionide
 
+# Dev deployment runtime material. The CI workflow writes these only on the VM.
+deploy/runtime/
+
+# Local-only infra / one-time setup. App deploy workflows do not need these.
+deploy/local-setup/
+deploy/README.md
+deploy/README-prod.md
+infra/terraform/
+
+# Defense in depth if state/backend/tfvars ever land outside infra/terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/*.tfvars
+**/backend.hcl
+**/__pycache__/
+*.pyc
+
 ### Windows ###
 # Windows thumbnail cache files
 Thumbs.db
