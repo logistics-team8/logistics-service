@@ -55,4 +55,40 @@ class DeliveryManagerRepositoryAdapterTest {
                 hubId
         );
     }
+
+    @Test
+    void delegatesActiveManagerLookupWithHubIdForCompanyDeliveryGroup() {
+        UUID hubId = UUID.fromString("9fd130f7-4c66-4ca4-8db6-f8cb1cbb048f");
+        DeliveryManagerAssignmentGroup group =
+                DeliveryManagerAssignmentGroup.companyDelivery(hubId);
+        DeliveryManager deliveryManager = mock(DeliveryManager.class);
+        when(jpaRepository.findActiveManagers(
+                DeliveryManagerType.COMPANY_DELIVERY,
+                hubId
+        )).thenReturn(List.of(deliveryManager));
+
+        assertThat(adapter.findActiveManagers(group)).containsExactly(deliveryManager);
+        verify(jpaRepository).findActiveManagers(
+                DeliveryManagerType.COMPANY_DELIVERY,
+                hubId
+        );
+    }
+
+    @Test
+    void delegatesActiveManagerLookupWithoutHubIdForHubDeliveryGroup() {
+        UUID hubId = UUID.fromString("9fd130f7-4c66-4ca4-8db6-f8cb1cbb048f");
+        DeliveryManagerAssignmentGroup group =
+                DeliveryManagerAssignmentGroup.hubDelivery(hubId);
+        DeliveryManager deliveryManager = mock(DeliveryManager.class);
+        when(jpaRepository.findActiveManagers(
+                DeliveryManagerType.HUB_DELIVERY,
+                null
+        )).thenReturn(List.of(deliveryManager));
+
+        assertThat(adapter.findActiveManagers(group)).containsExactly(deliveryManager);
+        verify(jpaRepository).findActiveManagers(
+                DeliveryManagerType.HUB_DELIVERY,
+                null
+        );
+    }
 }

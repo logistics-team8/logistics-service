@@ -44,6 +44,9 @@ class DeliveryCreateServiceTest {
     @Mock
     private HubDeliveryPlanProvider hubDeliveryPlanProvider;
 
+    @Mock
+    private DeliveryCreationService deliveryCreationService;
+
     @InjectMocks
     private DeliveryService deliveryService;
 
@@ -57,8 +60,8 @@ class DeliveryCreateServiceTest {
                 DEPARTURE_HUB_ID,
                 ARRIVAL_HUB_ID
         )).thenReturn(plan);
-        when(deliveryRepository.save(any(Delivery.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(deliveryCreationService.register(command, plan))
+                .thenReturn(delivery(command, plan));
 
         DeliveryCreateResult result = deliveryService.create(command);
 
@@ -70,7 +73,8 @@ class DeliveryCreateServiceTest {
                 DEPARTURE_HUB_ID,
                 ARRIVAL_HUB_ID
         );
-        verify(deliveryRepository).save(any(Delivery.class));
+        verify(deliveryCreationService).register(command, plan);
+        verify(deliveryRepository, never()).save(any());
     }
 
     @Test
@@ -85,6 +89,7 @@ class DeliveryCreateServiceTest {
         assertThat(result.created()).isFalse();
         assertThat(result.response().orderId()).isEqualTo(ORDER_ID);
         verifyNoInteractions(hubDeliveryPlanProvider);
+        verifyNoInteractions(deliveryCreationService);
         verify(deliveryRepository, never()).save(any());
     }
 
@@ -100,6 +105,7 @@ class DeliveryCreateServiceTest {
 
         assertDuplicateConflict(() -> deliveryService.create(command));
         verifyNoInteractions(hubDeliveryPlanProvider);
+        verifyNoInteractions(deliveryCreationService);
     }
 
     @Test
@@ -112,6 +118,7 @@ class DeliveryCreateServiceTest {
 
         assertDuplicateConflict(() -> deliveryService.create(command));
         verifyNoInteractions(hubDeliveryPlanProvider);
+        verifyNoInteractions(deliveryCreationService);
     }
 
     @Test
@@ -126,8 +133,10 @@ class DeliveryCreateServiceTest {
                 DEPARTURE_HUB_ID,
                 ARRIVAL_HUB_ID
         )).thenReturn(plan());
-        when(deliveryRepository.save(any(Delivery.class)))
-                .thenThrow(new DataIntegrityViolationException("order_id unique"));
+        when(deliveryCreationService.register(
+                any(DeliveryCreateCommand.class),
+                any(DeliveryPlan.class)
+        )).thenThrow(new DataIntegrityViolationException("order_id unique"));
 
         DeliveryCreateResult result = deliveryService.create(command);
 
@@ -147,8 +156,10 @@ class DeliveryCreateServiceTest {
                 DEPARTURE_HUB_ID,
                 ARRIVAL_HUB_ID
         )).thenReturn(plan());
-        when(deliveryRepository.save(any(Delivery.class)))
-                .thenThrow(new DataIntegrityViolationException("order_id unique"));
+        when(deliveryCreationService.register(
+                any(DeliveryCreateCommand.class),
+                any(DeliveryPlan.class)
+        )).thenThrow(new DataIntegrityViolationException("order_id unique"));
 
         assertDuplicateConflict(() -> deliveryService.create(command));
     }
@@ -166,7 +177,10 @@ class DeliveryCreateServiceTest {
                 DEPARTURE_HUB_ID,
                 ARRIVAL_HUB_ID
         )).thenReturn(plan());
-        when(deliveryRepository.save(any(Delivery.class))).thenThrow(violation);
+        when(deliveryCreationService.register(
+                any(DeliveryCreateCommand.class),
+                any(DeliveryPlan.class)
+        )).thenThrow(violation);
 
         assertThatThrownBy(() -> deliveryService.create(command)).isSameAs(violation);
     }

@@ -1,6 +1,8 @@
 package com.logistics.deliveryservice.domain.model;
 
 import com.logistics.deliveryservice.domain.common.BaseEntity;
+import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
+import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -8,6 +10,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import java.util.List;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -61,5 +64,32 @@ public class DeliveryManagerAssignmentCursor extends BaseEntity {
         cursor.managerType = assignmentGroup.managerType();
         cursor.hubId = assignmentGroup.hubId();
         return cursor;
+    }
+
+    /**
+     * 활성 순번 목록에서 마지막 배정 다음 값을 고르고, 없으면 최소 순번으로 되돌린다.
+     */
+    public int assignNext(List<Integer> activeSequences) {
+        if (activeSequences == null || activeSequences.isEmpty()) {
+            throw new DeliveryException(DeliveryErrorCode.DELIVERY_MANAGER_UNAVAILABLE);
+        }
+
+        int minimumSequence = activeSequences.stream()
+                .mapToInt(Integer::intValue)
+                .min()
+                .orElseThrow(() -> new DeliveryException(
+                        DeliveryErrorCode.DELIVERY_MANAGER_UNAVAILABLE
+                ));
+
+        int selectedSequence = lastAssignedSequence == null
+                ? minimumSequence
+                : activeSequences.stream()
+                        .mapToInt(Integer::intValue)
+                        .filter(sequence -> sequence > lastAssignedSequence)
+                        .min()
+                        .orElse(minimumSequence);
+
+        lastAssignedSequence = selectedSequence;
+        return selectedSequence;
     }
 }

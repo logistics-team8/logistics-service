@@ -42,6 +42,20 @@ public class DeliveryManagerRepositoryAdapter implements DeliveryManagerReposito
         );
     }
 
+    @Override
+    public List<DeliveryManager> findActiveManagers(
+            DeliveryManagerAssignmentGroup assignmentGroup
+    ) {
+        // 허브 배송은 전역 그룹이므로 hubId 필터를 생략한다.
+        UUID hubIdFilter = assignmentGroup.managerType() == DeliveryManagerType.HUB_DELIVERY
+                ? null
+                : assignmentGroup.hubId();
+        return deliveryManagerJpaRepository.findActiveManagers(
+                assignmentGroup.managerType(),
+                hubIdFilter
+        );
+    }
+
     // 담당자 목록 조회
     @Override
     public Page<DeliveryManager> search(

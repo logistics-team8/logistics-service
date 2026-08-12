@@ -21,6 +21,9 @@ public interface DeliveryManagerRepository {
     // 사용 중인 순번 조회
     List<Integer> findActiveDeliverySequences(DeliveryManagerAssignmentGroup assignmentGroup);
 
+    // 배정 그룹의 활성 담당자를 순번, 사용자 ID 순으로 조회한다.
+    List<DeliveryManager> findActiveManagers(DeliveryManagerAssignmentGroup assignmentGroup);
+
     // 목록 검색
     Page<DeliveryManager> search(
             UUID hubId,

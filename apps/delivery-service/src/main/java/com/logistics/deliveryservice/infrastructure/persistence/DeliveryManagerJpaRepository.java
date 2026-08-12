@@ -27,6 +27,19 @@ interface DeliveryManagerJpaRepository extends JpaRepository<DeliveryManager, UU
             @Param("hubId") UUID hubId
     );
 
+    @Query("""
+            select manager
+            from DeliveryManager manager
+            where manager.managerType = :managerType
+              and manager.deletedAt is null
+              and (:hubId is null or manager.hubId = :hubId)
+            order by manager.deliverySequence asc, manager.userId asc
+            """)
+    List<DeliveryManager> findActiveManagers(
+            @Param("managerType") DeliveryManagerType managerType,
+            @Param("hubId") UUID hubId
+    );
+
 
     // 동적 메서드
     @Query("""

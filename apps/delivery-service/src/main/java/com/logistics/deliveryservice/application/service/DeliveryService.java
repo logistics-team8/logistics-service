@@ -25,6 +25,7 @@ public class DeliveryService {
 
     private final DeliveryRepository deliveryRepository;
     private final HubDeliveryPlanProvider hubDeliveryPlanProvider;
+    private final DeliveryCreationService deliveryCreationService;
 
     /**
      * 기존 배송을 먼저 확인하고, 신규 주문일 때만 Hub 계획 조회와 Aggregate 저장을 수행한다.
@@ -36,27 +37,16 @@ public class DeliveryService {
             return resolveExisting(existingDelivery.get(), command);
         }
 
-        // 신규 주문일 때만 Hub Service에서 담당자와 전체 허브 이동 계획을 조회한다.
+        // 신규 주문일 때만 Hub Service에서 허브 간 이동 경로 계획을 조회한다.
         DeliveryPlan deliveryPlan = hubDeliveryPlanProvider.getDeliveryPlan(
                 command.orderId(),
                 command.departureHubId(),
                 command.arrivalHubId()
         );
-        // Hub 계획의 무결성을 검증하면서 Delivery와 모든 Route를 하나의 Aggregate로 생성한다.
-        Delivery delivery = Delivery.create(
-                command.orderId(),
-                command.requesterId(),
-                command.departureHubId(),
-                command.arrivalHubId(),
-                command.deliveryAddress(),
-                command.receiverName(),
-                command.receiverSlackId(),
-                deliveryPlan
-        );
 
         try {
-            // Aggregate Root를 저장하면 Cascade 설정에 따라 소속 Route도 함께 저장된다.
-            Delivery savedDelivery = deliveryRepository.save(delivery);
+            // 담당자 배정과 Aggregate 저장을 한 트랜잭션에서 처리해 Cursor 잠금을 유지한다.
+            Delivery savedDelivery = deliveryCreationService.register(command, deliveryPlan);
             return DeliveryCreateResult.created(DeliveryCreateResponse.from(savedDelivery));
         } catch (DataIntegrityViolationException exception) {
             // 조회와 저장 사이 다른 요청이 먼저 생성했다면 재조회하여 멱등 또는 충돌로 판정한다.
