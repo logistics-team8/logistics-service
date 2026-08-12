@@ -20,9 +20,10 @@ public class DeliveryRequestService {
 
     public Optional<DeliveryPort.DeliveryInfo> requestDelivery(DeliveryPort.CreateDeliveryCommand command) {
 
-        //1차로 배송 생성 요청을 시도
+        //최초 배송 생성 요청을 시도
         try{
             DeliveryPort.DeliveryInfo deliveryInfo = deliveryPort.createDelivery(command);
+            //정상 응답 반환 시 배송 생성 성공
             return Optional.of(deliveryInfo);
         }catch (DeliveryCreateException e) {
             log.warn("배송 생성 요청 실패. 배송 생성 여부 확인. orderId : {}", command.orderId(), e);
@@ -31,14 +32,14 @@ public class DeliveryRequestService {
         //배송 생성 실패 후 배송 조회
         Optional<DeliveryPort.DeliveryInfo> existingDelivery  = findDelivery(command);
 
-        //배송이 존재하면 재시도 하지 않는다.
+        //배송이 존재하면 재시도 하지 않고 기존 배송 정보를 반환
         if(existingDelivery.isPresent()) {
             return existingDelivery;
         }
 
 
         /**
-         * 배송이 확인 되지 않는 상황
+         * 배송 조회 요청은 성공했고 실제로 해당 주문의 배송이 존재하지 않는 상태
          * Delivery의 orderId 멱등성을 이용해
          * 같은 payload로 한 번 재요청
          */
@@ -54,6 +55,7 @@ public class DeliveryRequestService {
         return findDelivery(command);
     }
 
+
     private Optional<DeliveryPort.DeliveryInfo> findDelivery(DeliveryPort.CreateDeliveryCommand command) {
         Optional<DeliveryPort.DeliveryInfo> delivery;
 
@@ -66,6 +68,7 @@ public class DeliveryRequestService {
             throw new DeliveryStatusUnknownException("배송 생성 결과를 확인할 수 없습니다.",e);
 
         }
+            //조회는 성공했지만 배송이 존재하지 않는다.
            if(delivery.isEmpty()){
                return Optional.empty();
            }
@@ -73,7 +76,7 @@ public class DeliveryRequestService {
            //배송 정보 가져옴
            DeliveryPort.DeliveryInfo existing = delivery.get();
 
-           //실제 요청 payload와 일치하는지도 검증한다.
+           //기존 배송과 현재 요청 payload와 일치하는지도 검증한다.
             if(!existing.matches(command)) {
                 log.error("기존 배송 정보가 주문 배송 요청과 일치하지 않습니다. orderId : {}, deliveryId : {}", command.orderId(), existing.deliveryId());
                 throw new BusinessException(OrderErrorCode.DELIVERY_REQUEST_CONFLICT);

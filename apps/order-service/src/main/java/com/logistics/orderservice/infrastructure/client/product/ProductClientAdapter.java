@@ -47,9 +47,9 @@ public class ProductClientAdapter implements ProductPort {
     }
 
     @Override
-    public void decreaseStock(List<StockItem> items) {
+    public void decreaseStock(UUID orderId, List<StockItem> items) {
         try {
-            productFeignClient.decreaseStock(toRequest(items));
+            productFeignClient.decreaseStock(toRequest(orderId, items));
 
         } catch (RetryableException e){
             throw new StockDecreaseUnknownException( "재고 차감 처리 결과를 확인할 수 없습니다.", e);
@@ -61,9 +61,9 @@ public class ProductClientAdapter implements ProductPort {
     }
 
     @Override
-    public void restoreStock(List<StockItem> items) {
+    public void restoreStock(UUID orderId, List<StockItem> items) {
         try {
-            productFeignClient.restoreStock(toRequest(items));
+            productFeignClient.restoreStock(toRequest(orderId, items));
 
         } catch (RetryableException e){
             throw new StockRestoreUnknownException("재고 복원 처리 결과를 확인할 수 없습니다.", e);
@@ -74,8 +74,29 @@ public class ProductClientAdapter implements ProductPort {
         }
     }
 
+    @Override
+    public boolean isStockDecreased(UUID orderId) {
+        try {
+            Boolean result = productFeignClient.isStockDecreased(orderId).getData();
 
-    private ProductFeignClient.StockItemListRequest toRequest(List<StockItem> items) {
+            return Boolean.TRUE.equals(result);
+        }catch (FeignException e) {
+            throw new StockDecreaseUnknownException("재고 차감 상태 조회에 실패했습니다.", e);
+        }
+    }
+
+    @Override
+    public boolean isStockRestored(UUID orderId) {
+        try{
+            Boolean result = productFeignClient.isStockRestored(orderId).getData();
+            return Boolean.TRUE.equals(result);
+        }catch (FeignException e) {
+            throw new StockRestoreUnknownException(  "재고 복원 상태 조회에 실패했습니다.", e);
+        }
+    }
+
+
+    private ProductFeignClient.StockItemListRequest toRequest(UUID orderId, List<StockItem> items) {
         List<ProductFeignClient.StockItemRequest> requests =
                 items.stream()
                         .map(item ->
@@ -85,6 +106,6 @@ public class ProductClientAdapter implements ProductPort {
                                 )
 
                         ).toList();
-        return new ProductFeignClient.StockItemListRequest(requests);
+        return new ProductFeignClient.StockItemListRequest(orderId, requests);
     }
 }

@@ -23,6 +23,12 @@ public interface ProductFeignClient {
     @PatchMapping("/restore-stock")
     ApiResponse<?> restoreStock(@RequestBody StockItemListRequest request);
 
+    @GetMapping("/decrease-stock/{orderId}")
+    ApiResponse<Boolean> isStockDecreased(@PathVariable UUID orderId);
+
+    @GetMapping("/restore-stock/{orderId}")
+    ApiResponse<Boolean> isStockRestored(@PathVariable UUID orderId);
+
     record ProductResponse(
             UUID id,
             String name,
@@ -32,6 +38,7 @@ public interface ProductFeignClient {
     }
 
     record StockItemListRequest(
+            UUID orderId,
             List<StockItemRequest> items
     ){
     }

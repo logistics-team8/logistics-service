@@ -6,10 +6,11 @@ import java.util.UUID;
 public interface ProductPort {
     List<ProductInfo> getProducts(List<UUID> productIds);
 
-    void decreaseStock(List<StockItem> items);
+    void decreaseStock(UUID orderId, List<StockItem> items);
+    void restoreStock(UUID orderId, List<StockItem> items);
 
-    void restoreStock(List<StockItem> items);
-
+    boolean isStockDecreased(UUID orderId);
+    boolean isStockRestored(UUID orderId);
 
     record ProductInfo(
             UUID id,
