@@ -4,7 +4,7 @@ import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.authorization.OrderAuthorization;
 import com.logistics.orderservice.application.command.UpdateOrderCommand;
-import com.logistics.orderservice.application.service.command.OrderCommandService;
+import com.logistics.orderservice.application.service.command.OrderManagementService;
 import com.logistics.orderservice.domain.model.Order;
 import com.logistics.orderservice.domain.repository.OrderRepository;
 import com.logistics.orderservice.error.OrderErrorCode;
@@ -33,7 +33,7 @@ class OrderCommandServiceTest {
     @Mock OrderAuthorization orderAuthorization;
     @Mock Order order;
 
-    private OrderCommandService service;
+    private OrderManagementService service;
     private CustomUserDetails user;
     private UUID orderId;
     private LocalDateTime now;
@@ -43,7 +43,7 @@ class OrderCommandServiceTest {
         orderId = UUID.randomUUID();
         now = LocalDateTime.of(2026, 8, 12, 15, 0);
         Clock clock = Clock.fixed(now.atZone(ZoneId.of("Asia/Seoul")).toInstant(), ZoneId.of("Asia/Seoul"));
-        service = new OrderCommandService(orderRepository, orderAuthorization, clock);
+        service = new OrderManagementService(orderRepository, orderAuthorization, clock);
         user = CustomUserDetails.from(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "MASTER");
     }
 

@@ -3,15 +3,8 @@ package com.logistics.orderservice.application.service.command;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.authorization.OrderAuthorization;
-import com.logistics.orderservice.application.command.CreateOrderCommand;
-import com.logistics.orderservice.application.command.CreateOrderItemCommand;
 import com.logistics.orderservice.application.command.UpdateOrderCommand;
-import com.logistics.orderservice.application.port.CompanyPort;
-import com.logistics.orderservice.application.port.DeliveryPort;
-import com.logistics.orderservice.application.port.ProductPort;
-import com.logistics.orderservice.application.port.UserPort;
 import com.logistics.orderservice.domain.model.Order;
-import com.logistics.orderservice.domain.model.OrderFailureReason;
 import com.logistics.orderservice.domain.repository.OrderRepository;
 import com.logistics.orderservice.error.OrderErrorCode;
 import com.logistics.orderservice.presentation.dto.response.*;
@@ -27,7 +20,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OrderCommandService {
+public class OrderManagementService {
     private final OrderRepository orderRepository;
     private final OrderAuthorization orderAuthorization;
     private final Clock clock;

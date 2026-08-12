@@ -4,7 +4,7 @@ import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.service.command.OrderCancelService;
-import com.logistics.orderservice.application.service.command.OrderCommandService;
+import com.logistics.orderservice.application.service.command.OrderManagementService;
 import com.logistics.orderservice.application.service.command.OrderCreateService;
 import com.logistics.orderservice.application.service.query.OrderQueryService;
 import com.logistics.orderservice.presentation.dto.request.CreateOrderRequest;
@@ -27,7 +27,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final OrderCommandService orderCommandService;
+    private final OrderManagementService orderCommandService;
     private final OrderCreateService orderCreateService;
     private final OrderCancelService  orderCancelService;
     private final OrderQueryService orderQueryService;
