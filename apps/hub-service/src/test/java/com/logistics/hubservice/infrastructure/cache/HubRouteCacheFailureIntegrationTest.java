@@ -4,6 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.PostgreSqlIntegrationTest;
+import com.logistics.hubservice.application.hub.command.HubCommandService;
+import com.logistics.hubservice.application.hubroute.command.CreateHubRouteCommand;
+import com.logistics.hubservice.application.hubroute.command.HubRouteCommandService;
+import com.logistics.hubservice.application.hubroute.command.UpdateHubRouteCommand;
+import com.logistics.hubservice.application.hubroute.dto.HubRoutePathResponse;
 import com.logistics.hubservice.application.hubroute.dto.HubRouteResponse;
 import com.logistics.hubservice.application.hubroute.query.HubRouteQueryService;
 import com.logistics.hubservice.domain.hub.Hub;
@@ -49,6 +54,12 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
     private HubRouteQueryService hubRouteQueryService;
 
     @Autowired
+    private HubRouteCommandService hubRouteCommandService;
+
+    @Autowired
+    private HubCommandService hubCommandService;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
@@ -81,6 +92,127 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
         assertThat(response.distanceMeters()).isEqualTo(123_400L);
     }
 
+    @Test
+    @DisplayName("최단 경로 캐시 조회와 저장에 실패해도 DB에서 경로를 계산한다")
+    void shortestPathFallsBackToDatabaseWhenCacheFails() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                123_400L,
+                7_200L));
+
+        HubRoutePathResponse response = hubRouteQueryService.getShortestPath(
+                sourceHub.getId(),
+                destinationHub.getId());
+
+        assertThat(response.totalDistanceMeters()).isEqualTo(123_400L);
+        assertThat(response.segments())
+                .extracting(HubRoutePathResponse.Segment::hubRouteId)
+                .containsExactly(route.getId());
+    }
+
+    @Test
+    @DisplayName("캐시 제거에 실패해도 허브 경로 생성은 완료한다")
+    void createPersistsRouteWhenCacheEvictionFails() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+
+        HubRouteResponse response = hubRouteCommandService.create(new CreateHubRouteCommand(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                123_400L,
+                7_200L));
+
+        assertThat(response.hubRouteId()).isNotNull();
+        assertThat(hubRouteRepository.existsBySourceHubIdAndDestinationHubIdAndDeletedAtIsNull(
+                sourceHub.getId(),
+                destinationHub.getId()))
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("캐시 제거에 실패해도 허브 경로 수정은 완료한다")
+    void updatePersistsRouteWhenCacheEvictionFails() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                123_400L,
+                7_200L
+        ));
+
+        HubRouteResponse response = hubRouteCommandService.update(
+                route.getId(),
+                new UpdateHubRouteCommand(130_000L, null));
+
+        assertThat(response.distanceMeters()).isEqualTo(130_000L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select distance_meters from p_hub_routes where id = ?",
+                Long.class,
+                route.getId()))
+                .isEqualTo(130_000L);
+    }
+
+    @Test
+    @DisplayName("캐시 제거에 실패해도 허브 경로 삭제는 완료한다")
+    void deletePersistsRouteWhenCacheEvictionFails() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                123_400L,
+                7_200L
+        ));
+
+        hubRouteCommandService.delete(route.getId(), MASTER_ID);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hub_routes where id = ?",
+                Boolean.class,
+                route.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_by from p_hub_routes where id = ?",
+                UUID.class,
+                route.getId()))
+                .isEqualTo(MASTER_ID);
+    }
+
+    @Test
+    @DisplayName("캐시 제거에 실패해도 허브와 연결 경로 삭제를 완료한다")
+    void deleteHubAndConnectedRouteWhenCacheEvictionFails() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute route = hubRouteRepository.save(HubRoute.create(
+                sourceHub.getId(),
+                destinationHub.getId(),
+                123_400L,
+                7_200L
+        ));
+
+        hubCommandService.delete(sourceHub.getId(), MASTER_ID);
+
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hubs where id = ?",
+                Boolean.class,
+                sourceHub.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hub_routes where id = ?",
+                Boolean.class,
+                route.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_by from p_hub_routes where id = ?",
+                UUID.class,
+                route.getId()))
+                .isEqualTo(MASTER_ID);
+    }
+
     private Hub saveHub(String name) {
         return hubRepository.save(Hub.create(
                 name,
@@ -104,9 +236,34 @@ class HubRouteCacheFailureIntegrationTest extends PostgreSqlIntegrationTest {
         @Primary
         CacheManager failingCacheManager() {
             SimpleCacheManager cacheManager = new SimpleCacheManager();
-            cacheManager.setCaches(List.of(new ConcurrentMapCache("hubRouteById") {
+            cacheManager.setCaches(List.of(new ConcurrentMapCache("hubById") {
+                @Override
+                public void evict(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+            }, new ConcurrentMapCache("hubRouteById") {
                 @Override
                 protected Object lookup(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+
+                @Override
+                public void evict(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+            }, new ConcurrentMapCache("hubRoutePath") {
+                @Override
+                protected Object lookup(Object key) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+
+                @Override
+                public void put(Object key, Object value) {
+                    throw new IllegalStateException("Redis unavailable");
+                }
+
+                @Override
+                public void clear() {
                     throw new IllegalStateException("Redis unavailable");
                 }
             }));

@@ -11,3 +11,13 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+
+hub-route:
+  default-data:
+    enabled: ${HUB_ROUTE_DEFAULT_DATA_ENABLED:false}
+
+naver:
+  maps:
+    base-url: ${NAVER_MAPS_BASE_URL:https://maps.apigw.ntruss.com}
+    api-key-id: ${NAVER_MAPS_API_KEY_ID:}
+    api-key: ${NAVER_MAPS_API_KEY:}
