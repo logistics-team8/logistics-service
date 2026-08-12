@@ -107,7 +107,7 @@ class InternalUserControllerUnitTest extends AbstractControllerTest {
 
         given(userService.getUserRole(eq(userId))).willReturn(userRoleInfo);
 
-        String jsonUserInfo = jsonMapper.writeValueAsString(ApiResponse.success(userRoleInfo));
+        String jsonUserInfo = jsonMapper.writeValueAsString(userRoleInfo);
 
         // when & then
         mockMvc.perform(
