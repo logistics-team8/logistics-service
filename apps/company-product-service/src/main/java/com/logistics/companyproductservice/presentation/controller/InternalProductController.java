@@ -5,6 +5,7 @@ import com.logistics.companyproductservice.application.dto.ProductInfo;
 import com.logistics.companyproductservice.application.service.ProductService;
 import com.logistics.companyproductservice.presentation.dto.request.StockAdjustRequest;
 import com.logistics.companyproductservice.presentation.dto.request.StockBatchAdjustRequest;
+import com.logistics.companyproductservice.domain.model.StockTransactionType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -51,5 +52,14 @@ public class InternalProductController {
     @GetMapping("/batch")
     public ApiResponse<List<ProductInfo>> getProductInfos(@RequestParam List<UUID> ids) {
         return ApiResponse.success(productService.getProductInfos(ids));
+    }
+    @GetMapping("/decrease-stock/{orderId}")
+    public ApiResponse<Boolean> getDecreaseStockStatus(@PathVariable UUID orderId) {
+        return ApiResponse.success(productService.isStockTransactionProcessed(orderId, StockTransactionType.DECREASE));
+    }
+
+    @GetMapping("/restore-stock/{orderId}")
+    public ApiResponse<Boolean> getRestoreStockStatus(@PathVariable UUID orderId) {
+        return ApiResponse.success(productService.isStockTransactionProcessed(orderId, StockTransactionType.RESTORE));
     }
 }
