@@ -14,9 +14,7 @@ import org.springframework.http.HttpHeaders;
 public class SlackConfig {
 
     @Bean("slackRestClient")
-    public RestClient slackRestClient(
-            SlackProperties properties
-    ) {
+    public RestClient slackRestClient(SlackProperties properties) {
         return RestClient.builder()
                 .baseUrl(properties.getBaseUrl())
                 .defaultHeader(
@@ -27,8 +25,5 @@ public class SlackConfig {
                         HttpHeaders.CONTENT_TYPE,
                         MediaType.APPLICATION_JSON_VALUE
                 ).build();
-
     }
-
-
 }

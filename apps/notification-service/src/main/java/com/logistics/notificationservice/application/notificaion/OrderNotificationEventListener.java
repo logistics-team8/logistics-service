@@ -6,7 +6,7 @@ import com.logistics.notificationservice.application.ai.AiDispatchProcessResult;
 import com.logistics.notificationservice.application.ai.AiDispatchService;
 import com.logistics.notificationservice.application.ai.SlackMessageGenerator;
 import com.logistics.notificationservice.application.slack.SlackMessageService;
-import com.logistics.notificationservice.presentation.slack.dto.OrderNotificationRequestDto;
+import com.logistics.notificationservice.presentation.slack.dto.DispatchNotificationRequestDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -26,7 +26,7 @@ public class OrderNotificationEventListener {
     @EventListener
     public void handle(OrderNotificationEvent event) {
 
-        OrderNotificationRequestDto request = event.request();
+        DispatchNotificationRequestDto request = event.request();
 
         try {
             AiDispatchCommand command =
@@ -35,11 +35,13 @@ public class OrderNotificationEventListener {
             AiDispatchProcessResult aiResult =
                     aiDispatchService.calculateDeadline(command);
 
+
             String message =
                     slackMessageGenerator.generate(
                             command,
                             aiResult.result()
                     );
+
 
             slackMessageService.sendMessage(
                     command.orderId(),

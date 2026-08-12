@@ -2,29 +2,22 @@ package com.logistics.notificationservice.presentation;
 
 import com.logistics.common.response.ApiResponse;
 import com.logistics.notificationservice.application.notificaion.OrderNotificationService;
-import com.logistics.notificationservice.application.slack.SlackMessageService;
-import com.logistics.notificationservice.presentation.slack.dto.OrderNotificationRequestDto;
-import com.logistics.notificationservice.presentation.slack.dto.SlackMessageRequestDto;
-import jakarta.validation.Valid;
+import com.logistics.notificationservice.presentation.slack.dto.DispatchNotificationRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/slack/messages")
+@RequestMapping("/internal/notifications")
 public class NotificationController {
 
-    private final SlackMessageService slackMessageService;
     private final OrderNotificationService orderNotificationService;
-
 
 
     @PostMapping("/orders")
     public ResponseEntity<ApiResponse<Void>> notifyOrderCreated(
-            @RequestBody OrderNotificationRequestDto request
+            @RequestBody DispatchNotificationRequestDto request
     ) {
 
         orderNotificationService.notifyOrderCreated(request);
