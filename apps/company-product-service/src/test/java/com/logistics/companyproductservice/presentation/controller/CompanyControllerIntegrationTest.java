@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK, properties = {
         "spring.config.import=",
-        "spring.datasource.url=jdbc:postgresql://localhost:5432/logistics?currentSchema=company_products",
+        "spring.datasource.url=jdbc:postgresql://localhost:5432/logistics",
         "spring.datasource.username=logistics",
         "spring.datasource.password=logistics",
         "spring.jpa.hibernate.ddl-auto=update",
