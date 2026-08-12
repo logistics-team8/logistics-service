@@ -112,6 +112,9 @@ services:
     image: ${HUB_SERVICE_IMAGE:?HUB_SERVICE_IMAGE is required}
     environment:
       <<: *application-env
+      HUB_ROUTE_DEFAULT_DATA_ENABLED: ${HUB_ROUTE_DEFAULT_DATA_ENABLED:-false}
+      NAVER_MAPS_API_KEY_ID: ${NAVER_MAPS_API_KEY_ID:-}
+      NAVER_MAPS_API_KEY: ${NAVER_MAPS_API_KEY:-}
       JAVA_TOOL_OPTIONS: -Xms256m -Xmx512m -XX:+ExitOnOutOfMemoryError
     mem_limit: 1024m
     depends_on: *application-depends-on

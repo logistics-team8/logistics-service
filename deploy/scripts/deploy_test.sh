@@ -60,6 +60,13 @@ write_current_env() {
   } > "$target"
 }
 
+write_current_env_for_candidate() {
+  local target="$1"
+  write_current_env "$target"
+  sed -i.bak "s/^CANDIDATE_SHA=.*/CANDIDATE_SHA=$NEW_SHA/" "$target"
+  rm "$target.bak"
+}
+
 write_fake_commands() {
   cat > "$FAKE_BIN/docker" <<'EOF'
 #!/usr/bin/env bash
@@ -76,7 +83,7 @@ if [[ "$1" == "compose" ]]; then
         [[ "$1" == "--env-file" ]] && env_file="$2"
         shift 2
         ;;
-      pull|up|ps)
+      pull|up|ps|exec)
         command="$1"
         shift
         break
@@ -90,6 +97,9 @@ if [[ "$1" == "compose" ]]; then
   if [[ "$command" == "ps" ]]; then
     service="${!#}"
     printf '%s-%s-container\n' "$candidate" "$service"
+  fi
+  if [[ "$command" == "exec" && "$*" == *"p_hub_routes"* ]]; then
+    printf '17|36\n'
   fi
   exit 0
 fi
@@ -133,6 +143,8 @@ run_deploy() {
   DEV_JWT_ACCESS_SECRET_OCID=access \
   DEV_JWT_REFRESH_SECRET_OCID=refresh \
   DEV_PROVISION_KEY_SECRET_OCID=provision \
+  DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID=naver-key-id \
+  DEV_NAVER_MAPS_API_KEY_SECRET_OCID=naver-key \
   DOCKER_LOG="$DOCKER_LOG" \
   PATH="$FAKE_BIN:$PATH" \
     bash "$DEPLOY_SCRIPT" \
@@ -188,10 +200,15 @@ run_deploy "$manifest" "$success_state" > "$TEST_ROOT/success.out" 2>&1
 
 assert_file_line "CANDIDATE_SHA=$NEW_SHA" "$success_state/runtime/current.env"
 assert_file_line "CANDIDATE_SHA=$OLD_SHA" "$success_state/runtime/previous.env"
+assert_file_line "HUB_ROUTE_DEFAULT_DATA_ENABLED=true" "$success_state/runtime/current.env"
+assert_file_line "NAVER_MAPS_API_KEY_ID=value" "$success_state/runtime/current.env"
+assert_file_line "NAVER_MAPS_API_KEY=value" "$success_state/runtime/current.env"
 while IFS= read -r locked_image; do
   [[ -z "$locked_image" || "$locked_image" == \#* ]] && continue
   assert_file_line "$locked_image" "$success_state/runtime/current.env"
 done < "$BASE_IMAGES_FILE"
+grep -Fq "candidate=$NEW_SHA command=exec args=-T postgres sh -c" "$DOCKER_LOG"
+grep -Fq "p_hub_routes" "$DOCKER_LOG"
 
 : > "$DOCKER_LOG"
 run_deploy "$manifest" "$success_state" > "$TEST_ROOT/no-op.out" 2>&1
@@ -200,5 +217,18 @@ if [[ -s "$DOCKER_LOG" ]]; then
   echo "No-op deployment unexpectedly invoked Docker." >&2
   exit 1
 fi
+
+legacy_state="$TEST_ROOT/legacy-state"
+mkdir -p "$legacy_state/runtime"
+write_current_env_for_candidate "$legacy_state/runtime/current.env"
+: > "$DOCKER_LOG"
+run_deploy "$manifest" "$legacy_state" > "$TEST_ROOT/legacy.out" 2>&1
+if [[ ! -s "$DOCKER_LOG" ]]; then
+  echo "Legacy deployment without Hub default data configuration was not upgraded." >&2
+  exit 1
+fi
+assert_file_line "HUB_ROUTE_DEFAULT_DATA_ENABLED=true" "$legacy_state/runtime/current.env"
+assert_file_line "NAVER_MAPS_API_KEY_ID=value" "$legacy_state/runtime/current.env"
+assert_file_line "NAVER_MAPS_API_KEY=value" "$legacy_state/runtime/current.env"
 
 echo "deploy.sh regression tests passed."
