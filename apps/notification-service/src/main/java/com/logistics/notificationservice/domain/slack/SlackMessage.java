@@ -1,5 +1,6 @@
 package com.logistics.notificationservice.domain.slack;
 
+import com.logistics.notificationservice.domain.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -11,7 +12,7 @@ import java.util.UUID;
 @Table(name = "p_slack_messages")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class SlackMessage {
+public class SlackMessage extends BaseEntity {
 
     private static final int MAX_ATTEMPT_COUNT = 3;
 

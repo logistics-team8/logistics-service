@@ -10,4 +10,8 @@ public record SearchUsersQuery(
         UUID hubId,
         UUID companyId,
         Role role,
-        UserStatus userStatus) {}
+        UserStatus userStatus) {
+    public SearchUsersQuery {
+        userStatus = userStatus == null ? UserStatus.APPROVED : userStatus;
+    }
+}

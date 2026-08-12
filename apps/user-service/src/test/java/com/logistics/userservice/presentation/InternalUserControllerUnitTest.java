@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
+import com.logistics.common.response.ApiResponse;
 import com.logistics.userservice.application.UserService;
 import com.logistics.userservice.application.dto.user.UserInfo;
 import com.logistics.userservice.application.dto.user.UserRoleInfo;
@@ -48,7 +49,7 @@ class InternalUserControllerUnitTest extends AbstractControllerTest {
 
         given(userService.getUserInfo(eq(userId))).willReturn(userInfo);
 
-        String jsonUserInfo = jsonMapper.writeValueAsString(userInfo);
+        String jsonUserInfo = jsonMapper.writeValueAsString(ApiResponse.success(userInfo));
 
         // when & then
         mockMvc.perform(
@@ -106,7 +107,7 @@ class InternalUserControllerUnitTest extends AbstractControllerTest {
 
         given(userService.getUserRole(eq(userId))).willReturn(userRoleInfo);
 
-        String jsonUserInfo = jsonMapper.writeValueAsString(userRoleInfo);
+        String jsonUserInfo = jsonMapper.writeValueAsString(ApiResponse.success(userRoleInfo));
 
         // when & then
         mockMvc.perform(
@@ -128,7 +129,7 @@ class InternalUserControllerUnitTest extends AbstractControllerTest {
 
         given(userService.getUserSlackId(eq(userId))).willReturn(userSlackInfo);
 
-        String jsonUserInfo = jsonMapper.writeValueAsString(userSlackInfo);
+        String jsonUserInfo = jsonMapper.writeValueAsString(ApiResponse.success(userSlackInfo));
 
         // when & then
         mockMvc.perform(

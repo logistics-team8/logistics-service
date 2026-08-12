@@ -29,25 +29,24 @@ public class UserController implements UserApi {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserInfoResponse>> getMyInfo(
+    public ApiResponse<UserInfoResponse> getMyInfo(
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
-        return ResponseEntity.ok(
-                ApiResponse.success(
-                        UserInfoResponse.from(userService.getUserInfo(customUserDetails.getId()))));
+        return ApiResponse.success(
+                UserInfoResponse.from(userService.getUserInfo(customUserDetails.getId())));
     }
 
     @PatchMapping("/me")
-    public ResponseEntity<ApiResponse<Void>> updateMyInfo(
+    public ApiResponse<Void> updateMyInfo(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @Valid @RequestBody UserUpdateRequest request) {
         userService.updateUser(request.toCommand(customUserDetails.getId()));
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ApiResponse.success(null);
     }
 
     @DeleteMapping("/me")
-    public ResponseEntity<ApiResponse<Void>> deleteMyAccount(
+    public ApiResponse<Void> deleteMyAccount(
             @AuthenticationPrincipal CustomUserDetails customUserDetails) {
         userService.deleteUser(customUserDetails.getId());
-        return ResponseEntity.ok(ApiResponse.success(null));
+        return ApiResponse.success(null);
     }
 }

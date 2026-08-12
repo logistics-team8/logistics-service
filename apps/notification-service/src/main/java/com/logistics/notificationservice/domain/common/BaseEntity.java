@@ -21,7 +21,7 @@ public abstract class BaseEntity {
     private LocalDateTime createdAt;
 
     @CreatedBy
-    @Column(name = "created_by", updatable = false, nullable = false)
+    @Column(name = "created_by", updatable = false, nullable = true)
     private UUID createdBy;
 
     @LastModifiedDate

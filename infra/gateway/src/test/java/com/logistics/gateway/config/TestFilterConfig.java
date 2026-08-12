@@ -1,7 +1,7 @@
 package com.logistics.gateway.config;
 
-import com.logistics.gateway.error.GatewayErrorCode;
 import com.logistics.gateway.error.BusinessException;
+import com.logistics.gateway.error.GatewayErrorCode;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.context.annotation.Bean;

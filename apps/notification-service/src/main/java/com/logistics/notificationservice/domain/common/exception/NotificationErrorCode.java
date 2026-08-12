@@ -1,6 +1,7 @@
 package com.logistics.notificationservice.domain.common.exception;
 
 import com.logistics.common.error.ErrorCode;
+import org.apache.http.protocol.HTTP;
 import org.springframework.http.HttpStatus;
 
 public enum NotificationErrorCode implements ErrorCode {
@@ -16,6 +17,14 @@ public enum NotificationErrorCode implements ErrorCode {
             HttpStatus.BAD_GATEWAY,
             "Slack 메시지 전송에 실패했습니다."
     ),
+
+    SLACK_MESSAGE_NOT_FOUND(
+            "NOTIFICATION_201",
+            HttpStatus.NOT_FOUND,
+            "Slack 메시지를 찾을 수 없습니다."
+    ),
+
+
 
     GEMINI_RESPONSE_EMPTY(
             "NOTIFICATION_101",
@@ -33,7 +42,15 @@ public enum NotificationErrorCode implements ErrorCode {
             "NOTIFICATION_103",
             HttpStatus.BAD_GATEWAY,
             "Gemini 응답을 변환할 수 없습니다."
+    ),
+
+    USER_NOT_FOUND(
+            "INTERNAL_001",
+            HttpStatus.BAD_GATEWAY,
+            "사용자의 Slack_ID를 조회할 수 없습니다."
     );
+
+
 
     private final String code;
     private final HttpStatus status;

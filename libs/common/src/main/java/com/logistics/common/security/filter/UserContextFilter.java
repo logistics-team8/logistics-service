@@ -41,6 +41,12 @@ public class UserContextFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/internal/");
+    }
+
     /**
      * Security Context Set
      * @param userId (PK)

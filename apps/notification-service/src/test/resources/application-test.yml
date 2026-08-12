@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/logistics
+    username: logistics
+    password: logistics
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+slack:
+  bot-token: test-token
+  base-url: https://slack.com/api
+  channel-id: test-channel
+
+gemini:
+  api-key: test-key
+  base-url: https://generativelanguage.googleapis.com
+  model: gemini-3.5-flash
