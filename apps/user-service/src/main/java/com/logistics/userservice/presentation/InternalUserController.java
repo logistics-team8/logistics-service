@@ -26,8 +26,8 @@ public class InternalUserController {
     }
 
     @GetMapping("/{userId}/role")
-    public ApiResponse<InternalUserRoleResponse> getUserRole(@PathVariable UUID userId) {
-        return ApiResponse.success(InternalUserRoleResponse.from(userService.getUserRole(userId)));
+    public InternalUserRoleResponse getUserRole(@PathVariable UUID userId) {
+        return InternalUserRoleResponse.from(userService.getUserRole(userId));
     }
 
     @GetMapping("/{userId}/slack")

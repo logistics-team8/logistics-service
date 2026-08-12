@@ -12,9 +12,12 @@ public enum AuthErrorCode implements ErrorCode {
     TOKEN_INVALID("AUTH_102", HttpStatus.UNAUTHORIZED, "유효하지 않은 인증 정보입니다."),
     PENDING_APPROVAL("AUTH_103", HttpStatus.FORBIDDEN, "승인 대기중인 계정입니다."),
     APPROVAL_REJECTED("AUTH_104", HttpStatus.FORBIDDEN, "승인 거절된 계정입니다."),
-    HUB_ID_REQUIRED("AUTH_105", HttpStatus.BAD_REQUEST, "허브 소속 회원은 허브 ID를 입력해야 합니다."),
-    COMPANY_ID_REQUIRED("AUTH_106", HttpStatus.BAD_REQUEST, "업체 소속 회원은 업체 ID를 입력해야 합니다"),
-    MASTER_ROLE_NOT_ALLOWED("AUTH_107", HttpStatus.BAD_REQUEST, "마스터 권한은 선택할 수 없습니다.");
+    ALREADY_PROCESSING("AUTH_105", HttpStatus.CONFLICT, "승인 처리중인 계정입니다."),
+    ALREADY_APPROVED("AUTH_106", HttpStatus.CONFLICT, "이미 승인이 완료된 계정입니다."),
+    ALREADY_REJECTED("AUTH_107", HttpStatus.CONFLICT, "이미 승인이 거절된 계정입니다."),
+    HUB_ID_REQUIRED("AUTH_108", HttpStatus.BAD_REQUEST, "허브 소속 회원은 허브 ID를 입력해야 합니다."),
+    COMPANY_ID_REQUIRED("AUTH_109", HttpStatus.BAD_REQUEST, "업체 소속 회원은 업체 ID를 입력해야 합니다"),
+    MASTER_ROLE_NOT_ALLOWED("AUTH_110", HttpStatus.BAD_REQUEST, "마스터 권한은 선택할 수 없습니다.");
 
     private final String code;
     private final HttpStatus status;

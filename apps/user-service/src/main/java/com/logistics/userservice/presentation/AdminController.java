@@ -9,6 +9,7 @@ import com.logistics.userservice.application.dto.admin.AdminApprovalCommand;
 import com.logistics.userservice.application.dto.admin.AdminUserInfo;
 import com.logistics.userservice.application.dto.admin.UserApprovalInfo;
 import com.logistics.userservice.application.dto.user.UserContext;
+import com.logistics.userservice.presentation.dto.admin.AdminApproveSearchRequest;
 import com.logistics.userservice.presentation.dto.admin.AdminSearchRequest;
 import com.logistics.userservice.presentation.dto.admin.AdminUserInfoResponse;
 import com.logistics.userservice.presentation.dto.admin.RejectRequest;
@@ -103,7 +104,7 @@ public class AdminController implements AdminApi {
     @GetMapping("/pending-approvals")
     public ApiResponse<PageResponse<UserApprovalInfo>> getPendingUsers(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @ParameterObject @Valid @ModelAttribute AdminSearchRequest request,
+            @ParameterObject @Valid @ModelAttribute AdminApproveSearchRequest request,
             @ParameterObject @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC)
                     Pageable pageable) {
         Pageable normalizedPageable = normalizeSort(PageableUtil.normalize(pageable));
