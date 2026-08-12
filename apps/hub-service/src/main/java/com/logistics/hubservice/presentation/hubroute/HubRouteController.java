@@ -6,6 +6,7 @@ import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.application.hubroute.command.HubRouteCommandService;
 import com.logistics.hubservice.application.hubroute.query.HubRouteQueryService;
 import com.logistics.hubservice.presentation.hubroute.dto.CreateHubRouteRequest;
+import com.logistics.hubservice.presentation.hubroute.dto.HubRoutePathResponseDto;
 import com.logistics.hubservice.presentation.hubroute.dto.HubRouteResponseDto;
 import com.logistics.hubservice.presentation.hubroute.dto.UpdateHubRouteRequest;
 import jakarta.validation.Valid;
@@ -44,6 +45,14 @@ public class HubRouteController implements HubRouteApi {
                 .search(sourceHubId, destinationHubId, pageable)
                 .map(HubRouteResponseDto::from);
         return ResponseEntity.ok(ApiResponse.success(PageResponse.from(responsePage)));
+    }
+
+    @Override
+    public ResponseEntity<ApiResponse<HubRoutePathResponseDto>> getShortestPath(
+            UUID sourceHubId, UUID destinationHubId) {
+        HubRoutePathResponseDto response = HubRoutePathResponseDto.from(
+                hubRouteQueryService.getShortestPath(sourceHubId, destinationHubId));
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @Override
