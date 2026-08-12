@@ -3,9 +3,11 @@ package com.logistics.userservice.infrastructure;
 import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
+import com.logistics.userservice.domain.UserStatus;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,4 +26,6 @@ public interface UserJpaRepository extends UserRepository, JpaRepository<User, U
 
     @Query("SELECT u.slackId FROM User u WHERE u.id = :userId AND u.deletedAt IS NULL")
     Optional<String> findSlackIdByIdDeletedAtIsNull(@Param("userId") UUID userId);
+
+    List<User> findAllByUserStatus(UserStatus userStatus, PageRequest of);
 }

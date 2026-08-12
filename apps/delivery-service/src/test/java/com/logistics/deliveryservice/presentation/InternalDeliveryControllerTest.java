@@ -9,12 +9,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.logistics.common.web.GlobalExceptionHandler;
-import com.logistics.deliveryservice.application.command.CreateDeliveryCommand;
-import com.logistics.deliveryservice.application.dto.CreateDeliveryResponse;
-import com.logistics.deliveryservice.application.dto.CreateDeliveryResult;
-import com.logistics.deliveryservice.application.dto.GetDeliveryByOrderResponse;
-import com.logistics.deliveryservice.application.service.CreateDeliveryService;
-import com.logistics.deliveryservice.application.service.GetDeliveryByOrderService;
+import com.logistics.deliveryservice.application.command.DeliveryCreateCommand;
+import com.logistics.deliveryservice.application.dto.DeliveryCreateResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryCreateResult;
+import com.logistics.deliveryservice.application.dto.DeliveryGetByOrderResponse;
+import com.logistics.deliveryservice.application.service.DeliveryService;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.DeliveryStatus;
@@ -51,15 +50,12 @@ class InternalDeliveryControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CreateDeliveryService createDeliveryService;
-
-    @MockitoBean
-    private GetDeliveryByOrderService getDeliveryByOrderService;
+    private DeliveryService deliveryService;
 
     @Test
     void returnsCreatedForFirstRequest() throws Exception {
-        when(createDeliveryService.create(any(CreateDeliveryCommand.class)))
-                .thenReturn(CreateDeliveryResult.created(response()));
+        when(deliveryService.create(any(DeliveryCreateCommand.class)))
+                .thenReturn(DeliveryCreateResult.created(response()));
 
         mockMvc.perform(post("/internal/v1/deliveries")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -71,13 +67,13 @@ class InternalDeliveryControllerTest {
                 .andExpect(jsonPath("$.data.routes[0].sequence").value(1))
                 .andExpect(jsonPath("$.error").doesNotExist());
 
-        verify(createDeliveryService).create(any(CreateDeliveryCommand.class));
+        verify(deliveryService).create(any(DeliveryCreateCommand.class));
     }
 
     @Test
     void returnsOkForIdempotentRequest() throws Exception {
-        when(createDeliveryService.create(any(CreateDeliveryCommand.class)))
-                .thenReturn(CreateDeliveryResult.existing(response()));
+        when(deliveryService.create(any(DeliveryCreateCommand.class)))
+                .thenReturn(DeliveryCreateResult.existing(response()));
 
         mockMvc.perform(post("/internal/v1/deliveries")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -89,7 +85,7 @@ class InternalDeliveryControllerTest {
 
     @Test
     void returnsDeliveryForOrder() throws Exception {
-        when(getDeliveryByOrderService.getByOrderId(ORDER_ID)).thenReturn(queryResponse());
+        when(deliveryService.getByOrderId(ORDER_ID)).thenReturn(queryResponse());
 
         mockMvc.perform(get("/internal/v1/deliveries/by-order/{orderId}", ORDER_ID))
                 .andExpect(status().isOk())
@@ -99,12 +95,12 @@ class InternalDeliveryControllerTest {
                 .andExpect(jsonPath("$.data.routes[0].sequence").value(1))
                 .andExpect(jsonPath("$.error").doesNotExist());
 
-        verify(getDeliveryByOrderService).getByOrderId(ORDER_ID);
+        verify(deliveryService).getByOrderId(ORDER_ID);
     }
 
     @Test
     void returnsNotFoundWhenDeliveryForOrderDoesNotExist() throws Exception {
-        when(getDeliveryByOrderService.getByOrderId(ORDER_ID))
+        when(deliveryService.getByOrderId(ORDER_ID))
                 .thenThrow(new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         mockMvc.perform(get("/internal/v1/deliveries/by-order/{orderId}", ORDER_ID))
@@ -138,7 +134,7 @@ class InternalDeliveryControllerTest {
     @ParameterizedTest
     @MethodSource("businessErrors")
     void returnsBusinessError(DeliveryErrorCode errorCode, int expectedStatus) throws Exception {
-        when(createDeliveryService.create(any(CreateDeliveryCommand.class)))
+        when(deliveryService.create(any(DeliveryCreateCommand.class)))
                 .thenThrow(new DeliveryException(errorCode));
 
         mockMvc.perform(post("/internal/v1/deliveries")
@@ -177,8 +173,8 @@ class InternalDeliveryControllerTest {
         );
     }
 
-    private CreateDeliveryResponse response() {
-        return new CreateDeliveryResponse(
+    private DeliveryCreateResponse response() {
+        return new DeliveryCreateResponse(
                 DELIVERY_ID,
                 ORDER_ID,
                 REQUESTER_ID,
@@ -191,7 +187,7 @@ class InternalDeliveryControllerTest {
                 COMPANY_MANAGER_ID,
                 null,
                 null,
-                List.of(new CreateDeliveryResponse.RouteResponse(
+                List.of(new DeliveryCreateResponse.RouteResponse(
                         ROUTE_ID,
                         1,
                         DEPARTURE_HUB_ID,
@@ -204,8 +200,8 @@ class InternalDeliveryControllerTest {
         );
     }
 
-    private GetDeliveryByOrderResponse queryResponse() {
-        return new GetDeliveryByOrderResponse(
+    private DeliveryGetByOrderResponse queryResponse() {
+        return new DeliveryGetByOrderResponse(
                 DELIVERY_ID,
                 ORDER_ID,
                 REQUESTER_ID,
@@ -218,7 +214,7 @@ class InternalDeliveryControllerTest {
                 COMPANY_MANAGER_ID,
                 null,
                 null,
-                List.of(new GetDeliveryByOrderResponse.RouteResponse(
+                List.of(new DeliveryGetByOrderResponse.RouteResponse(
                         ROUTE_ID,
                         1,
                         DEPARTURE_HUB_ID,

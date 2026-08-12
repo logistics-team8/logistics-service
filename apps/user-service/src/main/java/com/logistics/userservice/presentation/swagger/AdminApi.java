@@ -10,6 +10,7 @@ import com.logistics.userservice.presentation.dto.admin.UserApprovalSearchReques
 import com.logistics.userservice.presentation.dto.user.UserCreateRequest;
 import com.logistics.userservice.presentation.dto.user.UserUpdateRequest;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -25,11 +26,31 @@ import org.springframework.web.bind.annotation.*;
 public interface AdminApi {
     // ============================== CRUD ==============================
     @Operation(summary = "회원 등록", description = "관리자가 신규 회원을 등록합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "201",
+                description = "회원 등록 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "400",
+                description = "필수 입력값 누락 또는 유효성 체크 실패."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "403",
+                description = "권한 부족."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "409",
+                description = "아이디 또는 슬랙 아이디 중복."),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "500",
+                description = "서버 오류"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "503",
+                description = "Service-Server 오류")
+    })
     public ResponseEntity<ApiResponse<Void>> createUser(
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody UserCreateRequest signUpRequest);
 
-    @Operation(summary = "회원 목록 검색", description = "관리자가 회원 목록을 조회합니다..")
+    @Operation(summary = "회원 목록 검색", description = "관리자가 회원 목록을 조회합니다.")
     public ApiResponse<PageResponse<AdminUserInfoResponse>> searchUsers(
             @AuthenticationPrincipal CustomUserDetails principal,
             @ParameterObject @Valid @ModelAttribute UserApprovalSearchRequest request,

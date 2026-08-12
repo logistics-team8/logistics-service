@@ -1,5 +1,6 @@
 package com.logistics.userservice.presentation;
 
+import com.logistics.common.response.ApiResponse;
 import com.logistics.userservice.application.UserService;
 import com.logistics.userservice.presentation.dto.internal.InternalUserInfoResponse;
 import com.logistics.userservice.presentation.dto.internal.InternalUserRoleResponse;
@@ -20,17 +21,18 @@ public class InternalUserController {
     private final UserService userService;
 
     @GetMapping("/{userId}")
-    public InternalUserInfoResponse getUserInfo(@PathVariable UUID userId) {
-        return InternalUserInfoResponse.from(userService.getUserInfo(userId));
+    public ApiResponse<InternalUserInfoResponse> getUserInfo(@PathVariable UUID userId) {
+        return ApiResponse.success(InternalUserInfoResponse.from(userService.getUserInfo(userId)));
     }
 
     @GetMapping("/{userId}/role")
-    public InternalUserRoleResponse getUserRole(@PathVariable UUID userId) {
-        return InternalUserRoleResponse.from(userService.getUserRole(userId));
+    public ApiResponse<InternalUserRoleResponse> getUserRole(@PathVariable UUID userId) {
+        return ApiResponse.success(InternalUserRoleResponse.from(userService.getUserRole(userId)));
     }
 
     @GetMapping("/{userId}/slack")
-    public InternalUserSlackResponse getUserSlackId(@PathVariable UUID userId) {
-        return InternalUserSlackResponse.from(userService.getUserSlackId(userId));
+    public ApiResponse<InternalUserSlackResponse> getUserSlackId(@PathVariable UUID userId) {
+        return ApiResponse.success(
+                InternalUserSlackResponse.from(userService.getUserSlackId(userId)));
     }
 }

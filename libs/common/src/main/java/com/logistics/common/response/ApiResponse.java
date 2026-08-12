@@ -1,5 +1,7 @@
 package com.logistics.common.response;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.logistics.common.error.ErrorCode;
 import java.util.List;
 
@@ -8,7 +10,10 @@ public final class ApiResponse<T> {
     private final T data;
     private final ApiError error;
 
-    private ApiResponse(T data, ApiError error) {
+    @JsonCreator
+    private ApiResponse(
+            @JsonProperty("data") T data,
+            @JsonProperty("error") ApiError error) {
         this.data = data;
         this.error = error;
     }

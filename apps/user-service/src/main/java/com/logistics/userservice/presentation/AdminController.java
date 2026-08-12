@@ -42,7 +42,7 @@ public class AdminController implements AdminApi {
     public ResponseEntity<ApiResponse<Void>> createUser(
             @AuthenticationPrincipal CustomUserDetails principal,
             @Valid @RequestBody UserCreateRequest signUpRequest) {
-        adminService.createUserByAdmin(principal.getId(), signUpRequest.toCommand());
+        adminService.createUserByAdmin(signUpRequest.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(null));
     }
 

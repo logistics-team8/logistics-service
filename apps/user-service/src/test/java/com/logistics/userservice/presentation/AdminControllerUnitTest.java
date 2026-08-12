@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.userservice.application.AdminService;
 import com.logistics.userservice.config.test.AbstractControllerTest;
+import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.presentation.dto.user.UserCreateRequest;
 import com.logistics.userservice.presentation.dto.user.UserUpdateRequest;
@@ -48,7 +49,7 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .with(user(createPrincipal(Role.HUB_MANAGER))))
                     .andExpect(status().isForbidden());
-            verify(adminService, never()).createUserByAdmin(any(), any());
+            verify(adminService, never()).createUserByAdmin(any());
         }
 
         @ParameterizedTest
@@ -62,7 +63,7 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     .with(user(createPrincipal(Role.MASTER)))
                                     .content(jsonMapper.writeValueAsString(request)))
                     .andExpect(status().isBadRequest());
-            verify(adminService, never()).createUserByAdmin(any(), any());
+            verify(adminService, never()).createUserByAdmin(any());
         }
 
         private static Stream<Arguments> createUserRequests() {
@@ -75,7 +76,7 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "U12345678",
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
-                                    Role.COMPANY_MANAGER)),
+                                    RequestedRole.COMPANY_MANAGER)),
                     Arguments.of(
                             new UserCreateRequest(
                                     "test1234",
@@ -84,7 +85,7 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "U12345678",
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
-                                    Role.COMPANY_MANAGER)),
+                                    RequestedRole.COMPANY_MANAGER)),
                     Arguments.of(
                             new UserCreateRequest(
                                     "test1234",
@@ -93,7 +94,7 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "U12345678",
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
-                                    Role.COMPANY_MANAGER)),
+                                    RequestedRole.COMPANY_MANAGER)),
                     Arguments.of(
                             new UserCreateRequest(
                                     "test1234",
@@ -102,16 +103,7 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                     "Q12345678",
                                     UUID.randomUUID(),
                                     UUID.randomUUID(),
-                                    Role.COMPANY_MANAGER)),
-                    Arguments.of(
-                            new UserCreateRequest(
-                                    "test1234",
-                                    "Test1234!",
-                                    "김길동",
-                                    "U12345678",
-                                    null,
-                                    UUID.randomUUID(),
-                                    Role.COMPANY_MANAGER)),
+                                    RequestedRole.COMPANY_MANAGER)),
                     Arguments.of(
                             new UserCreateRequest(
                                     "test1234",
