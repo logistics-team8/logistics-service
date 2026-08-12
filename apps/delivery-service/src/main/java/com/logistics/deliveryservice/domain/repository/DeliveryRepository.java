@@ -1,6 +1,8 @@
 package com.logistics.deliveryservice.domain.repository;
 
 import com.logistics.deliveryservice.domain.model.Delivery;
+import com.logistics.deliveryservice.domain.model.DeliveryStatus;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,4 +16,9 @@ public interface DeliveryRepository {
     Optional<Delivery> findByOrderId(UUID orderId);
 
     Optional<Delivery> findActiveByOrderId(UUID orderId);
+
+    boolean existsActiveManagerAssignment(
+            UUID managerUserId,
+            Collection<DeliveryStatus> deliveryStatuses
+    );
 }

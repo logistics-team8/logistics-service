@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -66,5 +67,14 @@ public class DeliveryManagerController {
         return ResponseEntity.ok(
                 ApiResponse.success(deliveryManagerService.update(userId, request, userDetails))
         );
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<ApiResponse<Void>> deleteDeliveryManager(
+            @PathVariable UUID userId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        deliveryManagerService.delete(userId, userDetails);
+        return ResponseEntity.ok(ApiResponse.<Void>success(null));
     }
 }

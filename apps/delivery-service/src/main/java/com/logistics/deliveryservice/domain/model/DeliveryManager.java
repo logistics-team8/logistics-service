@@ -71,6 +71,11 @@ public class DeliveryManager extends BaseEntity {
         this.deliverySequence = deliverySequence;
     }
 
+    // Soft Delete(논리 삭제)
+    public void delete(UUID deletedBy) {
+        markDeleted(deletedBy);
+    }
+
     // managerType나 hubId 둘 다 비어있지 않는지 검증
     private static void validateManagerFields(DeliveryManagerType managerType, UUID hubId) {
         if (managerType == null || hubId == null) {

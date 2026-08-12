@@ -10,11 +10,14 @@ import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.DeliveryManager;
 import com.logistics.deliveryservice.domain.model.DeliveryManagerAssignmentGroup;
+import com.logistics.deliveryservice.domain.model.DeliveryStatus;
 import com.logistics.deliveryservice.domain.port.UserSlackProvider;
+import com.logistics.deliveryservice.domain.repository.DeliveryRepository;
 import com.logistics.deliveryservice.domain.repository.DeliveryManagerRepository;
 import com.logistics.deliveryservice.presentation.dto.DeliveryManagerSearchRequest;
 import com.logistics.deliveryservice.presentation.dto.DeliveryManagerUpdateRequest;
 import com.logistics.common.security.principal.CustomUserDetails;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -58,7 +61,15 @@ public class DeliveryManagerService {
             "updatedAt"
     );
 
+    private static final Set<DeliveryStatus> DELETION_BLOCKING_DELIVERY_STATUSES = EnumSet.of(
+            DeliveryStatus.HUB_WAITING,
+            DeliveryStatus.HUB_MOVING,
+            DeliveryStatus.DEST_HUB_ARRIVED,
+            DeliveryStatus.COMPANY_MOVING
+    );
+
     private final DeliveryManagerRepository deliveryManagerRepository;
+    private final DeliveryRepository deliveryRepository;
     private final UserSlackProvider userSlackProvider;
     private final StringRedisTemplate redisTemplate;
     private final TransactionTemplate transactionTemplate;
@@ -66,11 +77,13 @@ public class DeliveryManagerService {
     // 서비스 작동에 필요한 의존성(DB, 슬랙, Redis, 트랜잭션 관리자) 주입 및 초기화
     public DeliveryManagerService(
             DeliveryManagerRepository deliveryManagerRepository,
+            DeliveryRepository deliveryRepository,
             UserSlackProvider userSlackProvider,
             StringRedisTemplate redisTemplate,
             PlatformTransactionManager transactionManager
     ) {
         this.deliveryManagerRepository = deliveryManagerRepository;
+        this.deliveryRepository = deliveryRepository;
         this.userSlackProvider = userSlackProvider;
         this.redisTemplate = redisTemplate;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
@@ -201,6 +214,20 @@ public class DeliveryManagerService {
         ));
     }
 
+    /**
+     * 배송 담당자 삭제
+     **/
+    @Transactional
+    public void delete(UUID userId, CustomUserDetails userDetails) {
+        DeliveryManager deliveryManager = deliveryManagerRepository.findActiveByUserId(userId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+
+        validateDeletePermission(deliveryManager, userDetails);
+        validateNoActiveDeliveryAssignment(deliveryManager.getUserId());
+        deliveryManager.delete(userDetails.getId());
+        deliveryManagerRepository.save(deliveryManager);
+    }
+
     private void validateDetailReadPermission(
             DeliveryManager deliveryManager,
             CustomUserDetails userDetails
@@ -241,6 +268,33 @@ public class DeliveryManagerService {
         }
 
         throw new AccessDeniedException("배송 담당자 수정 권한이 없습니다.");
+    }
+
+    // 담당자 삭제 권한 검증
+    private void validateDeletePermission(
+            DeliveryManager deliveryManager,
+            CustomUserDetails userDetails
+    ) {
+        if ("MASTER".equals(userDetails.getRole())) {
+            return;
+        }
+
+        if ("HUB_MANAGER".equals(userDetails.getRole())
+                && userDetails.getHubId() != null
+                && userDetails.getHubId().equals(deliveryManager.getHubId())) {
+            return;
+        }
+
+        throw new AccessDeniedException("배송 담당자 삭제 권한이 없습니다.");
+    }
+
+    private void validateNoActiveDeliveryAssignment(UUID managerUserId) {
+        if (deliveryRepository.existsActiveManagerAssignment(
+                managerUserId,
+                DELETION_BLOCKING_DELIVERY_STATUSES
+        )) {
+            throw new DeliveryException(DeliveryErrorCode.DELIVERY_MANAGER_IN_USE);
+        }
     }
 
     // 담당자 정보 실제로 변경됐는지 확인
