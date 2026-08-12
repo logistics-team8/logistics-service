@@ -70,7 +70,7 @@ class InternalHubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     void activeHubExistsWithoutAuthentication() throws Exception {
         Hub hub = saveHub("서울 허브");
 
-        mockMvc.perform(get("/internal/hubs/{hubId}/exists", hub.getId()))
+        mockMvc.perform(get("/internal/v1/hubs/{hubId}/exists", hub.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.exists").value(true))
                 .andExpect(jsonPath("$.error").value(nullValue()));
@@ -79,7 +79,7 @@ class InternalHubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     @Test
     @DisplayName("존재하지 않는 Hub는 존재하지 않는 것으로 응답한다")
     void missingHubDoesNotExist() throws Exception {
-        mockMvc.perform(get("/internal/hubs/{hubId}/exists", UUID.randomUUID()))
+        mockMvc.perform(get("/internal/v1/hubs/{hubId}/exists", UUID.randomUUID()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.exists").value(false))
                 .andExpect(jsonPath("$.error").value(nullValue()));
@@ -94,7 +94,7 @@ class InternalHubControllerIntegrationTest extends PostgreSqlIntegrationTest {
         hubRepository.save(hub);
         SecurityContextHolder.clearContext();
 
-        mockMvc.perform(get("/internal/hubs/{hubId}/exists", hub.getId()))
+        mockMvc.perform(get("/internal/v1/hubs/{hubId}/exists", hub.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.exists").value(false))
                 .andExpect(jsonPath("$.error").value(nullValue()));
@@ -105,7 +105,7 @@ class InternalHubControllerIntegrationTest extends PostgreSqlIntegrationTest {
     void internalApiIsHiddenFromOpenApi() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.paths['/internal/hubs/{hubId}/exists']").doesNotExist());
+                .andExpect(jsonPath("$.paths['/internal/v1/hubs/{hubId}/exists']").doesNotExist());
     }
 
     private Hub saveHub(String name) {

@@ -57,7 +57,7 @@ public class HubDeliveryPlanClientAdapter implements HubDeliveryPlanProvider {
                 : response.routes().stream()
                 .map(this::toRoutePlan)
                 .toList();
-        return new DeliveryPlan(response.companyDeliveryManagerId(), routes);
+        return new DeliveryPlan(null, routes);
     }
 
     private DeliveryPlan.Route toRoutePlan(HubDeliveryPlanResponse.RouteResponse route) {
@@ -71,7 +71,7 @@ public class HubDeliveryPlanClientAdapter implements HubDeliveryPlanProvider {
                 route.arrivalHubId(),
                 route.estimatedDistanceKm(),
                 route.estimatedDurationMinutes(),
-                route.hubDeliveryManagerId()
+                null
         );
     }
 }
