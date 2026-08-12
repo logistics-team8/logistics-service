@@ -207,6 +207,11 @@ public enum OrderErrorCode implements ErrorCode {
             "ORD_033",
             HttpStatus.SERVICE_UNAVAILABLE,
             "주문 취소 중 재고 복원 결과를 확인할 수 없습니다."
+    ),
+    ORDER_STOCK_STATUS_UNKNOWN(
+            "ORD_034",
+            HttpStatus.CONFLICT,
+            "재고 처리 상태를 확인할 수 없어 주문을 취소할 수 없습니다."
     );
 
 

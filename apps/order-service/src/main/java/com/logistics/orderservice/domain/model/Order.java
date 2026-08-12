@@ -281,6 +281,13 @@ public class Order extends BaseEntity {
     }
 
     public void validateCancelable(){
+
+        //재고 차감 결과를 알 수 없는 주문은 실제 Product 재고가 이미 감소했을 수도 있다.
+        if (this.failureReason == OrderFailureReason.STOCK_DECREASE_UNKNOWN) {
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_STOCK_STATUS_UNKNOWN
+            );
+        }
         if (this.status == OrderStatus.DELIVERY_CREATED) {
             throw new BusinessException(
                     OrderErrorCode.ORDER_NOT_CANCELABLE
