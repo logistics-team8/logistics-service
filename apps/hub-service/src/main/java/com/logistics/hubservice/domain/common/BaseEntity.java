@@ -17,6 +17,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
 
+    private static final UUID SYSTEM_USER_ID =
+            UUID.fromString("00000000-0000-0000-0000-000000000001");
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -32,5 +35,10 @@ public abstract class BaseEntity {
     @LastModifiedBy
     @Column(nullable = false)
     private UUID updatedBy;
+
+    protected void initializeSystemAudit() {
+        createdBy = SYSTEM_USER_ID;
+        updatedBy = SYSTEM_USER_ID;
+    }
 
 }

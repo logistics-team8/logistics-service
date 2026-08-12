@@ -9,6 +9,7 @@ import com.logistics.hubservice.domain.hub.HubRepository;
 import com.logistics.hubservice.domain.hubroute.HubRoute;
 import com.logistics.hubservice.domain.hubroute.HubRouteRepository;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +31,10 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
 
     private static final UUID MASTER_ID =
             UUID.fromString("e81cce60-2e94-41cd-9b89-dbf7dfc5f9b5");
+    private static final UUID MODIFIER_ID =
+            UUID.fromString("c69b113d-0991-4d8c-b7d0-87bdfadd18ae");
+    private static final UUID DELETER_ID =
+            UUID.fromString("9e954d31-8045-49cd-a741-f186da531f8d");
 
     @Autowired
     private HubRepository hubRepository;
@@ -102,6 +107,28 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    @DisplayName("허브 ID가 출발지 또는 도착지인 활성 경로만 조회한다")
+    void findAllByHubIdReturnsOnlyActiveConnectedRoutes() {
+        Hub targetHub = saveHub("서울 허브");
+        Hub otherHub = saveHub("대전 허브");
+        Hub thirdHub = saveHub("부산 허브");
+        HubRoute outgoingRoute = saveRoute(targetHub.getId(), otherHub.getId());
+        HubRoute incomingRoute = saveRoute(thirdHub.getId(), targetHub.getId());
+        saveRoute(otherHub.getId(), thirdHub.getId());
+        HubRoute deletedRoute = saveRoute(targetHub.getId(), thirdHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                deletedRoute.getId());
+
+        List<HubRoute> result =
+                hubRouteRepository.findAllByHubIdAndDeletedAtIsNull(targetHub.getId());
+
+        assertThat(result)
+                .extracting(HubRoute::getId)
+                .containsExactlyInAnyOrder(outgoingRoute.getId(), incomingRoute.getId());
+    }
+
+    @Test
     @DisplayName("출발 허브와 도착 허브 조건으로 활성 경로를 페이지 조회한다")
     void searchFiltersActiveRoutesBySourceAndDestinationHub() {
         Hub sourceHub = saveHub("서울 허브");
@@ -124,6 +151,79 @@ class HubRouteJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
         assertThat(result.getContent())
                 .extracting(HubRoute::getId)
                 .containsExactly(matchingRoute.getId());
+    }
+
+    @Test
+    @DisplayName("활성 허브 경로 전체 조회에서 논리 삭제된 경로를 제외한다")
+    void findAllReturnsOnlyActiveRoutes() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        Hub otherHub = saveHub("부산 허브");
+        HubRoute firstActiveRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+        HubRoute secondActiveRoute = saveRoute(destinationHub.getId(), otherHub.getId());
+        HubRoute deletedRoute = saveRoute(otherHub.getId(), sourceHub.getId());
+        jdbcTemplate.update(
+                "update p_hub_routes set deleted_at = current_timestamp where id = ?",
+                deletedRoute.getId());
+
+        List<HubRoute> activeRoutes = hubRouteRepository.findAllByDeletedAtIsNull();
+
+        assertThat(activeRoutes)
+                .extracting(HubRoute::getId)
+                .containsExactlyInAnyOrder(firstActiveRoute.getId(), secondActiveRoute.getId());
+    }
+
+    @Test
+    @DisplayName("허브 경로를 수정하면 변경값과 수정 감사 정보를 저장한다")
+    void updatePersistsChangedValuesAndAuditMetadata() throws InterruptedException {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute savedRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+        var originalUpdatedAt = savedRoute.getUpdatedAt();
+
+        Thread.sleep(10);
+        authenticate(MODIFIER_ID);
+        savedRoute.update(130_000L, null);
+        hubRouteRepository.save(savedRoute);
+
+        HubRoute updatedRoute = hubRouteRepository
+                .findByIdAndDeletedAtIsNull(savedRoute.getId())
+                .orElseThrow();
+        assertThat(updatedRoute.getSourceHubId()).isEqualTo(sourceHub.getId());
+        assertThat(updatedRoute.getDestinationHubId()).isEqualTo(destinationHub.getId());
+        assertThat(updatedRoute.getDistanceMeters()).isEqualTo(130_000L);
+        assertThat(updatedRoute.getDurationSeconds()).isEqualTo(7_200L);
+        assertThat(updatedRoute.getUpdatedAt()).isAfter(originalUpdatedAt);
+        assertThat(updatedRoute.getUpdatedBy()).isEqualTo(MODIFIER_ID);
+    }
+
+    @Test
+    @DisplayName("허브 경로를 삭제하면 삭제 시각과 요청자 UUID를 저장하고 활성 조회에서 제외한다")
+    void deletePersistsDeletionMetadataAndExcludesRouteFromActiveLookup() {
+        Hub sourceHub = saveHub("서울 허브");
+        Hub destinationHub = saveHub("대전 허브");
+        HubRoute savedRoute = saveRoute(sourceHub.getId(), destinationHub.getId());
+
+        authenticate(DELETER_ID);
+        savedRoute.delete(DELETER_ID);
+        hubRouteRepository.save(savedRoute);
+
+        assertThat(hubRouteRepository.findByIdAndDeletedAtIsNull(savedRoute.getId())).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_at is not null from p_hub_routes where id = ?",
+                Boolean.class,
+                savedRoute.getId()))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "select deleted_by from p_hub_routes where id = ?",
+                UUID.class,
+                savedRoute.getId()))
+                .isEqualTo(DELETER_ID);
+        assertThat(jdbcTemplate.queryForObject(
+                "select updated_by from p_hub_routes where id = ?",
+                UUID.class,
+                savedRoute.getId()))
+                .isEqualTo(DELETER_ID);
     }
 
     private Hub saveHub(String name) {
