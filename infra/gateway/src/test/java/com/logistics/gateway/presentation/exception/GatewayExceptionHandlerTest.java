@@ -17,17 +17,17 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {
-                "spring.cloud.config.enabled=false",
-                "eureka.client.register-with-eureka=false",
-                "eureka.client.fetch-registry=false",
-                "path.whitelist[0].method=GET",
-                "path.whitelist[0].pattern=/business-exception",
-                "path.whitelist[1].method=GET",
-                "path.whitelist[1].pattern=/not-found",
-                "path.whitelist[2].method=GET",
-                "path.whitelist[2].pattern=/bad-request",
-                "path.whitelist[3].method=GET",
-                "path.whitelist[3].pattern=/internal-server-error"
+            "spring.cloud.config.enabled=false",
+            "eureka.client.register-with-eureka=false",
+            "eureka.client.fetch-registry=false",
+            "path.whitelist[0].method=GET",
+            "path.whitelist[0].pattern=/business-exception",
+            "path.whitelist[1].method=GET",
+            "path.whitelist[1].pattern=/not-found",
+            "path.whitelist[2].method=GET",
+            "path.whitelist[2].pattern=/bad-request",
+            "path.whitelist[3].method=GET",
+            "path.whitelist[3].pattern=/internal-server-error"
         })
 class GatewayExceptionHandlerTest {
 
