@@ -3,6 +3,14 @@ eureka:
     service-url:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
 
+management:
+  tracing:
+    export:
+      zipkin:
+        endpoint: ${ZIPKIN_ENDPOINT}
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+
 app:
   database:
     host: ${DB_HOST}
@@ -10,6 +18,8 @@ app:
     name: ${DB_NAME:logistics}
 
 spring:
+  reactor:
+    context-propagation: auto
   datasource:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}

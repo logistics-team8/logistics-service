@@ -1,6 +1,5 @@
 package com.logistics.notificationservice.infrastructure.ai;
 
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -15,17 +14,16 @@ public class GeminiConfig {
 
     @Bean("geminiRestClient")
     public RestClient geminiRestClient(
-            GeminiProperties properties
-    ){
-        return RestClient.builder()
+            GeminiProperties properties,
+            RestClient.Builder builder) {
+        return builder
                 .baseUrl(properties.getBaseUrl())
                 .defaultHeader(
                         "x-goog-api-key",
-                        properties.getApiKey()
-                )
+                        properties.getApiKey())
                 .defaultHeader(
                         "Content-Type",
-                        MediaType.APPLICATION_JSON_VALUE
-                ).build();
+                        MediaType.APPLICATION_JSON_VALUE)
+                .build();
     }
 }
