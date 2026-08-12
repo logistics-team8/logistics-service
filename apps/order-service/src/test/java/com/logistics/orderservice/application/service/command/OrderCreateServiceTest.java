@@ -120,7 +120,9 @@ class OrderCreateServiceTest {
             return order;
         });
 
-        CreateOrderResponse response = service.createOrder(command, user);
+        CreateOrderResponse response = service.createOrder(
+                command, user, "request-key", "request-hash"
+        );
 
         Order order = savedOrder.get();
         assertThat(response.orderId()).isEqualTo(orderId);
@@ -152,6 +154,25 @@ class OrderCreateServiceTest {
     }
 
     @Test
+    @DisplayName("멱등 키와 요청 해시를 PENDING 주문에 저장한다")
+    void createOrder_assignsIdempotencyMetadata() {
+        givenBaseDependencies();
+        given(deliveryRequestService.requestDelivery(any()))
+                .willReturn(Optional.of(matchingDelivery()));
+        given(orderStateService.markDeliveryCreated(orderId)).willAnswer(invocation -> {
+            Order order = savedOrder.get();
+            order.confirm();
+            order.markDeliveryCreated();
+            return order;
+        });
+
+        service.createOrder(command, user, "request-key", "request-hash");
+
+        assertThat(savedOrder.get().getIdempotencyKey()).isEqualTo("request-key");
+        assertThat(savedOrder.get().getRequestHash()).isEqualTo("request-hash");
+    }
+
+    @Test
     @DisplayName("중복 상품이 포함되면 외부 조회 전에 주문 생성을 거절한다")
     void createOrder_duplicateProducts() {
         CreateOrderCommand duplicated = new CreateOrderCommand(
@@ -162,7 +183,8 @@ class OrderCreateServiceTest {
                 )
         );
 
-        assertBusinessException(() -> service.createOrder(duplicated, user),
+        assertBusinessException(() -> service.createOrder(
+                        duplicated, user, "request-key", "request-hash"),
                 OrderErrorCode.DUPLICATE_ORDER_PRODUCT);
         verifyNoInteractions(productPort, userPort, companyPort, orderStateService,
                 deliveryRequestService, stockProcessService);
@@ -174,7 +196,8 @@ class OrderCreateServiceTest {
         given(productPort.getProducts(List.of(firstProductId, secondProductId)))
                 .willReturn(List.of(products.getFirst()));
 
-        assertBusinessException(() -> service.createOrder(command, user),
+        assertBusinessException(() -> service.createOrder(
+                        command, user, "request-key", "request-hash"),
                 OrderErrorCode.PRODUCT_NOT_FOUND);
         verify(orderStateService, never()).createPendingOrder(any());
         verifyNoInteractions(userPort, companyPort, stockProcessService, deliveryRequestService);
@@ -189,7 +212,8 @@ class OrderCreateServiceTest {
         );
         given(productPort.getProducts(List.of(firstProductId, secondProductId))).willReturn(differentHubs);
 
-        assertBusinessException(() -> service.createOrder(command, user),
+        assertBusinessException(() -> service.createOrder(
+                        command, user, "request-key", "request-hash"),
                 OrderErrorCode.DIFFERENT_DEPARTURE_HUB);
         verify(orderStateService, never()).createPendingOrder(any());
         verifyNoInteractions(userPort, companyPort, stockProcessService, deliveryRequestService);
@@ -202,7 +226,8 @@ class OrderCreateServiceTest {
         willThrow(new DeliveryStatusUnknownException("unknown"))
                 .given(deliveryRequestService).requestDelivery(any());
 
-        assertBusinessException(() -> service.createOrder(command, user),
+        assertBusinessException(() -> service.createOrder(
+                        command, user, "request-key", "request-hash"),
                 OrderErrorCode.DELIVERY_STATUS_CHECK_FAILED);
         verify(orderStateService).markDeliveryStatusCheckFailed(orderId);
         verify(stockProcessService, never()).restoreStockAfterDeliveryFailure(any(), any());
@@ -215,7 +240,8 @@ class OrderCreateServiceTest {
         givenBaseDependencies();
         given(deliveryRequestService.requestDelivery(any())).willReturn(Optional.empty());
 
-        assertBusinessException(() -> service.createOrder(command, user),
+        assertBusinessException(() -> service.createOrder(
+                        command, user, "request-key", "request-hash"),
                 OrderErrorCode.DELIVERY_CREATE_FAILED);
 
         List<ProductPort.StockItem> expectedStock = List.of(
