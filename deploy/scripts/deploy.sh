@@ -27,6 +27,8 @@ done
 : "${DEV_JWT_ACCESS_SECRET_OCID:?DEV_JWT_ACCESS_SECRET_OCID is required}"
 : "${DEV_JWT_REFRESH_SECRET_OCID:?DEV_JWT_REFRESH_SECRET_OCID is required}"
 : "${DEV_PROVISION_KEY_SECRET_OCID:?DEV_PROVISION_KEY_SECRET_OCID is required}"
+: "${DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID:?DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID is required}"
+: "${DEV_NAVER_MAPS_API_KEY_SECRET_OCID:?DEV_NAVER_MAPS_API_KEY_SECRET_OCID is required}"
 
 umask 077
 mkdir -p "$STATE_DIR/releases" "$STATE_DIR/runtime"
@@ -72,7 +74,10 @@ if [[ -f "$current_env" ]] \
   && [[ "$(env_value CANDIDATE_SHA "$current_env")" == "$candidate_sha" ]] \
   && [[ "$(env_value POSTGRES_IMAGE "$current_env")" == "$LOCKED_POSTGRES_IMAGE" ]] \
   && [[ "$(env_value REDIS_IMAGE "$current_env")" == "$LOCKED_REDIS_IMAGE" ]] \
-  && [[ "$(env_value CADDY_IMAGE "$current_env")" == "$LOCKED_CADDY_IMAGE" ]]; then
+  && [[ "$(env_value CADDY_IMAGE "$current_env")" == "$LOCKED_CADDY_IMAGE" ]] \
+  && [[ "$(env_value HUB_ROUTE_DEFAULT_DATA_ENABLED "$current_env")" == "true" ]] \
+  && [[ -n "$(env_value NAVER_MAPS_API_KEY_ID "$current_env")" ]] \
+  && [[ -n "$(env_value NAVER_MAPS_API_KEY "$current_env")" ]]; then
   echo "No-op: candidate $candidate_sha is already deployed."
   exit 0
 fi
@@ -87,12 +92,15 @@ secret_value() {
 
 write_release_env() {
   local target="$1"
-  local db_password jwt_access_secret jwt_refresh_secret provision_key image_lines
+  local db_password jwt_access_secret jwt_refresh_secret provision_key
+  local naver_maps_api_key_id naver_maps_api_key image_lines
 
   db_password="$(secret_value "$DEV_DB_PASSWORD_SECRET_OCID")"
   jwt_access_secret="$(secret_value "$DEV_JWT_ACCESS_SECRET_OCID")"
   jwt_refresh_secret="$(secret_value "$DEV_JWT_REFRESH_SECRET_OCID")"
   provision_key="$(secret_value "$DEV_PROVISION_KEY_SECRET_OCID")"
+  naver_maps_api_key_id="$(secret_value "$DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID")"
+  naver_maps_api_key="$(secret_value "$DEV_NAVER_MAPS_API_KEY_SECRET_OCID")"
   image_lines="$(jq -er '
     .images | to_entries[] |
     (.key | ascii_upcase | gsub("-"; "_") + "_IMAGE") + "\t" + .value
@@ -105,6 +113,9 @@ write_release_env() {
     printf 'JWT_ACCESS_SECRET=%s\n' "$jwt_access_secret"
     printf 'JWT_REFRESH_SECRET=%s\n' "$jwt_refresh_secret"
     printf 'DEV_PROVISION_KEY=%s\n' "$provision_key"
+    printf 'HUB_ROUTE_DEFAULT_DATA_ENABLED=true\n'
+    printf 'NAVER_MAPS_API_KEY_ID=%s\n' "$naver_maps_api_key_id"
+    printf 'NAVER_MAPS_API_KEY=%s\n' "$naver_maps_api_key"
     printf 'POSTGRES_IMAGE=%s\n' "$LOCKED_POSTGRES_IMAGE"
     printf 'REDIS_IMAGE=%s\n' "$LOCKED_REDIS_IMAGE"
     printf 'CADDY_IMAGE=%s\n' "$LOCKED_CADDY_IMAGE"
@@ -132,6 +143,42 @@ write_release_env "$release_env"
 ACTIVE_ENV_FILE="$release_env"
 compose() {
   docker compose --project-directory "$(dirname "$COMPOSE_FILE")/.." --env-file "$ACTIVE_ENV_FILE" -f "$COMPOSE_FILE" "$@"
+}
+
+initialize_database_schemas() {
+  # PostgreSQL variables expand inside the container.
+  # shellcheck disable=SC2016
+  compose exec -T postgres sh -c \
+    'psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --file /docker-entrypoint-initdb.d/01-create-schemas.sql'
+}
+
+verify_hub_default_data() {
+  if [[ "$(env_value HUB_ROUTE_DEFAULT_DATA_ENABLED "$ACTIVE_ENV_FILE")" != "true" ]]; then
+    return 0
+  fi
+
+  local counts hub_count route_count
+  counts="$(compose exec -T postgres psql \
+    --username logistics \
+    --dbname logistics \
+    --tuples-only \
+    --no-align \
+    --field-separator '|' \
+    --set ON_ERROR_STOP=1 \
+    --command "
+      SELECT
+        (SELECT count(*) FROM hubs.p_hubs
+          WHERE deleted_at IS NULL
+            AND created_by = '00000000-0000-0000-0000-000000000001'),
+        (SELECT count(*) FROM hubs.p_hub_routes
+          WHERE deleted_at IS NULL
+            AND created_by = '00000000-0000-0000-0000-000000000001');
+    ")"
+  IFS='|' read -r hub_count route_count <<< "$counts"
+  if [[ "$hub_count" != "17" || "$route_count" != "36" ]]; then
+    echo "Hub default data verification failed: hubs=${hub_count:-unknown}, routes=${route_count:-unknown}" >&2
+    return 1
+  fi
 }
 
 wait_healthy() {
@@ -168,6 +215,7 @@ deploy_environment() {
   compose pull || return 1
   compose up -d postgres redis || return 1
   wait_healthy postgres || return 1
+  initialize_database_schemas || return 1
   wait_healthy redis || return 1
   compose up -d config-server eureka-server || return 1
   wait_healthy config-server || return 1
@@ -177,6 +225,9 @@ deploy_environment() {
   for service in user-service hub-service company-product-service delivery-service order-service notification-service; do
     compose up -d "$service" || return 1
     wait_healthy "$service" || return 1
+    if [[ "$service" == "hub-service" ]]; then
+      verify_hub_default_data || return 1
+    fi
   done
   compose up -d gateway || return 1
   wait_healthy gateway || return 1
