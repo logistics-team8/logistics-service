@@ -52,7 +52,7 @@ class SelfHostedRunnerPolicyTest(unittest.TestCase):
     def test_allows_github_hosted_runner_and_comments(self) -> None:
         workflow = """jobs:
   test:
-    runs-on: ubuntu-latest # self-hosted is forbidden here
+    runs-on: ubuntu-latest # 여기에서는 self-hosted를 사용할 수 없다
 """
 
         self.assertEqual(self.find({"hosted.yml": workflow}), [])

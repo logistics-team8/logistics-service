@@ -9,7 +9,7 @@ eureka:
 spring:
   data:
     redis:
-      # Prefer REDIS_HOST, then Spring's standard env override, then localhost for local runs.
+      # REDIS_HOST, Spring 표준 환경 변수, 로컬 실행용 localhost 순서로 적용한다.
       host: ${SPRING_DATA_REDIS_HOST:${REDIS_HOST:localhost}}
       port: ${SPRING_DATA_REDIS_PORT:${REDIS_PORT:6379}}
       connect-timeout: 1s

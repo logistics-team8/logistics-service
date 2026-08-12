@@ -33,8 +33,8 @@ RUN rm -f *-plain.jar \
 USER spring:spring
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
-# Config Server must ship the exact configuration revision that was built with
-# the image, rather than mounting a mutable repository on the runtime host.
+# Config Server는 런타임 호스트의 변경 가능한 저장소를 마운트하지 않고,
+# 이미지와 함께 빌드된 정확한 설정 revision을 포함해야 한다.
 FROM service AS config-server
 USER root
 COPY --from=builder --chown=spring:spring /workspace/config-repo /config-repo

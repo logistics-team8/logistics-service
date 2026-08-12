@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject self-hosted runner references outside the Dev deployment workflow."""
+"""Dev 배포 workflow 외부의 self-hosted runner 참조를 거부한다."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ RUNS_ON = re.compile(r"^(?P<indent>[ ]*)runs-on[ ]*:[ ]*(?P<value>.*)$")
 
 
 def without_yaml_comment(line: str) -> str:
-    """Remove an unquoted YAML comment from one line."""
+    """한 줄에서 따옴표로 감싸지 않은 YAML 주석을 제거한다."""
     single_quoted = False
     double_quoted = False
     escaped = False
@@ -39,7 +39,7 @@ def without_yaml_comment(line: str) -> str:
 
 
 def direct_runs_on_violations(lines: list[str]) -> list[int]:
-    """Find scalar, flow-sequence, and block-sequence runs-on labels."""
+    """scalar, flow sequence, block sequence 형식의 runs-on label을 찾는다."""
     violations: list[int] = []
     index = 0
 
@@ -87,9 +87,9 @@ def find_violations(workflows_dir: Path) -> list[tuple[Path, int]]:
         for line_number in direct_runs_on_violations(lines):
             violations.add((workflow, line_number))
 
-        # A matrix or expression can indirectly feed a self-hosted label into
-        # runs-on. Conservatively reject the token anywhere outside this policy
-        # workflow, while still checking the policy workflow's runs-on directly.
+        # matrix나 표현식은 self-hosted label을 runs-on에 간접 전달할 수 있다.
+        # 이 정책 workflow 외부에서는 토큰을 모두 거부하고, 정책 workflow 자체의
+        # runs-on은 직접 검사한다.
         if workflow.name != POLICY_WORKFLOW:
             for line_number, line in enumerate(lines, start=1):
                 if SELF_HOSTED.search(without_yaml_comment(line)):
