@@ -1,18 +1,13 @@
 package com.logistics.orderservice.infrastructure.client.product;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.orderservice.application.exception.StockDecreaseException;
-import com.logistics.orderservice.application.exception.StockDecreaseUnknownException;
-import com.logistics.orderservice.application.exception.StockRestoreException;
-import com.logistics.orderservice.application.exception.StockRestoreUnknownException;
+import com.logistics.orderservice.application.exception.*;
 import com.logistics.orderservice.application.port.ProductPort;
 import com.logistics.orderservice.error.OrderErrorCode;
 import feign.FeignException;
 import feign.RetryableException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -79,9 +74,15 @@ public class ProductClientAdapter implements ProductPort {
         try {
             Boolean result = productFeignClient.isStockDecreased(orderId).getData();
 
-            return Boolean.TRUE.equals(result);
-        }catch (FeignException e) {
-            throw new StockDecreaseUnknownException("재고 차감 상태 조회에 실패했습니다.", e);
+            //NULL -> 처리 상태를 알 수 없는 잘못된 응답
+            //NULL을 FALSE로 취급하지 말자
+            if(result == null) {
+                throw new StockStatusLookupException("재고 차감 처리 상태 응답이 없습니다.");
+            }
+            return result;
+        }
+        catch (FeignException e) {
+            throw new StockStatusLookupException("재고 차감 상태 조회에 실패했습니다.", e);
         }
     }
 
@@ -89,9 +90,15 @@ public class ProductClientAdapter implements ProductPort {
     public boolean isStockRestored(UUID orderId) {
         try{
             Boolean result = productFeignClient.isStockRestored(orderId).getData();
-            return Boolean.TRUE.equals(result);
-        }catch (FeignException e) {
-            throw new StockRestoreUnknownException(  "재고 복원 상태 조회에 실패했습니다.", e);
+
+            if(result == null) {
+                throw new StockStatusLookupException("재고 복원 처리 상태 응답이 없습니다.");
+            }
+
+            return result;
+        }
+        catch (FeignException e) {
+            throw new StockStatusLookupException(  "재고 복원 상태 조회에 실패했습니다.", e);
         }
     }
 

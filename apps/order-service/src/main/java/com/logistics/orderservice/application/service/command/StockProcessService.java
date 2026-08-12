@@ -1,10 +1,7 @@
 package com.logistics.orderservice.application.service.command;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.orderservice.application.exception.StockDecreaseException;
-import com.logistics.orderservice.application.exception.StockDecreaseUnknownException;
-import com.logistics.orderservice.application.exception.StockRestoreException;
-import com.logistics.orderservice.application.exception.StockRestoreUnknownException;
+import com.logistics.orderservice.application.exception.*;
 import com.logistics.orderservice.application.port.ProductPort;
 import com.logistics.orderservice.domain.model.OrderFailureReason;
 import com.logistics.orderservice.error.OrderErrorCode;
@@ -117,16 +114,17 @@ public class StockProcessService {
         try {
             return productPort.isStockDecreased(orderId);
 
-        } catch (StockDecreaseUnknownException e) {
-
-            /*
-             * 최초 차감 요청 결과도 모르고
-             * 상태 조회까지 실패.
-             *
-             * 실제 차감 여부를 확정할 수 없다.
-             */
+        } catch (StockStatusLookupException e) {
             log.error("재고 차감 처리 상태 조회 실패. orderId : {}", orderId, e);
 
+            /*
+             * 최초 차감 요청도 UNKNOWN이고
+             * 상태 조회까지 실패했으므로
+             * 실제 재고 차감 여부를 확정할 수 없다.
+             *
+             * PENDING은 유지하고
+             * failureReason만 기록한다.
+             */
             orderStateService.markStockDecreaseUnknown(orderId);
 
             throw new BusinessException(OrderErrorCode.STOCK_DECREASE_UNKNOWN);
@@ -225,14 +223,14 @@ public class StockProcessService {
 
         try {
             return productPort.isStockRestored(orderId);
-        } catch (StockRestoreUnknownException e) {
+        } catch (StockStatusLookupException e) {
+
+            log.error("재고 복원 처리 상태 조회 실패. orderId : {}", orderId, e);
 
             /*
-             * 복원 요청 결과도 모르고
-             * 조회까지 실패했으므로
-             * 실제 재고 상태를 확정할 수 없다.
+             * 실제 복원이 됐는지 확인할 수 없으므로
+             * 주문 실패 원인을 UNKNOWN으로 기록
              */
-            log.error("재고 복원 처리 상태 조회 실패. orderId : {}", orderId, e);
             orderStateService.failOrder(orderId, OrderFailureReason.STOCK_RESTORE_UNKNOWN);
             throw new BusinessException(OrderErrorCode.STOCK_RESTORE_UNKNOWN);
         }
@@ -314,7 +312,7 @@ public class StockProcessService {
         try {
             return productPort.isStockRestored(orderId);
 
-        } catch (StockRestoreUnknownException e) {
+        } catch (StockStatusLookupException e) {
 
             /*
              * 재고가 실제로 복원됐는지 알 수 없으므로
