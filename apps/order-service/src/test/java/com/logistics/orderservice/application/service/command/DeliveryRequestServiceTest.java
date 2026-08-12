@@ -1,7 +1,8 @@
 package com.logistics.orderservice.application.service.command;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.orderservice.application.exception.DeliveryCreateException;
+import com.logistics.orderservice.application.exception.DeliveryCreateRejectedException;
+import com.logistics.orderservice.application.exception.DeliveryCreateRetryableException;
 import com.logistics.orderservice.application.exception.DeliveryLookupException;
 import com.logistics.orderservice.application.exception.DeliveryStatusUnknownException;
 import com.logistics.orderservice.application.port.DeliveryPort;
@@ -54,7 +55,8 @@ class DeliveryRequestServiceTest {
     @Test
     @DisplayName("첫 생성 실패 후 동일한 기존 배송을 반환한다")
     void request_existingDelivery() {
-        given(deliveryPort.createDelivery(command)).willThrow(new DeliveryCreateException("failed"));
+        given(deliveryPort.createDelivery(command))
+                .willThrow(new DeliveryCreateRetryableException("failed"));
         given(deliveryPort.findDeliveryByOrderId(command.orderId())).willReturn(Optional.of(delivery));
         assertThat(service.requestDelivery(command)).contains(delivery);
         verify(deliveryPort).createDelivery(command);
@@ -64,7 +66,7 @@ class DeliveryRequestServiceTest {
     @DisplayName("배송이 없으면 한 번만 생성 재시도한다")
     void request_retry() {
         given(deliveryPort.createDelivery(command))
-                .willThrow(new DeliveryCreateException("failed")).willReturn(delivery);
+                .willThrow(new DeliveryCreateRetryableException("failed")).willReturn(delivery);
         given(deliveryPort.findDeliveryByOrderId(command.orderId())).willReturn(Optional.empty());
         assertThat(service.requestDelivery(command)).contains(delivery);
         verify(deliveryPort, times(2)).createDelivery(command);
@@ -73,7 +75,8 @@ class DeliveryRequestServiceTest {
     @Test
     @DisplayName("배송 조회 실패는 상태 미확인 예외로 변환한다")
     void request_lookupUnknown() {
-        given(deliveryPort.createDelivery(command)).willThrow(new DeliveryCreateException("failed"));
+        given(deliveryPort.createDelivery(command))
+                .willThrow(new DeliveryCreateRetryableException("failed"));
         given(deliveryPort.findDeliveryByOrderId(command.orderId()))
                 .willThrow(new DeliveryLookupException("lookup failed"));
         assertThatThrownBy(() -> service.requestDelivery(command))
@@ -87,12 +90,40 @@ class DeliveryRequestServiceTest {
         DeliveryPort.DeliveryInfo conflict = new DeliveryPort.DeliveryInfo(
                 UUID.randomUUID(), command.orderId(), command.requesterId(), "PENDING",
                 command.departureHubId(), command.arrivalHubId(), "부산", command.receiverName(), command.receiverSlackId());
-        given(deliveryPort.createDelivery(command)).willThrow(new DeliveryCreateException("failed"));
+        given(deliveryPort.createDelivery(command))
+                .willThrow(new DeliveryCreateRetryableException("failed"));
         given(deliveryPort.findDeliveryByOrderId(command.orderId())).willReturn(Optional.of(conflict));
 
         assertThatThrownBy(() -> service.requestDelivery(command))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(OrderErrorCode.DELIVERY_REQUEST_CONFLICT));
+    }
+
+    @Test
+    @DisplayName("명확한 배송 생성 거절은 조회하거나 재시도하지 않는다")
+    void request_rejectedNotRetried() {
+        given(deliveryPort.createDelivery(command))
+                .willThrow(new DeliveryCreateRejectedException("bad request", null));
+
+        assertThat(service.requestDelivery(command)).isEmpty();
+
+        verify(deliveryPort).createDelivery(command);
+        verify(deliveryPort, never()).findDeliveryByOrderId(command.orderId());
+    }
+
+    @Test
+    @DisplayName("일시적 실패 재요청도 불확실하면 마지막으로 배송 상태를 조회한다")
+    void request_retryUnknownFinalLookup() {
+        given(deliveryPort.createDelivery(command))
+                .willThrow(new DeliveryCreateRetryableException("first"))
+                .willThrow(new DeliveryCreateRetryableException("second"));
+        given(deliveryPort.findDeliveryByOrderId(command.orderId()))
+                .willReturn(Optional.empty(), Optional.of(delivery));
+
+        assertThat(service.requestDelivery(command)).contains(delivery);
+
+        verify(deliveryPort, times(2)).createDelivery(command);
+        verify(deliveryPort, times(2)).findDeliveryByOrderId(command.orderId());
     }
 }

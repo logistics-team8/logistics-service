@@ -1,9 +1,12 @@
 package com.logistics.orderservice.infrastructure.client.delivery;
 
 import com.logistics.orderservice.application.exception.DeliveryCreateException;
+import com.logistics.orderservice.application.exception.DeliveryCreateRejectedException;
+import com.logistics.orderservice.application.exception.DeliveryCreateRetryableException;
 import com.logistics.orderservice.application.exception.DeliveryLookupException;
 import com.logistics.orderservice.application.port.DeliveryPort;
 import feign.FeignException;
+import feign.RetryableException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -36,14 +39,31 @@ public class DeliveryClientAdapter implements DeliveryPort {
                             .getData();
 
             if (response == null) {
-                throw new DeliveryCreateException("배송 생성 응답 데이터가 없습니다.");
+                throw new DeliveryCreateRetryableException(
+                        "배송 생성 응답 데이터가 없어 처리 결과를 확인할 수 없습니다."
+                );
             }
             return toDeliveryInfo(response);
 
+        } catch (RetryableException e) {
+            throw new DeliveryCreateRetryableException(
+                    "배송 생성 요청의 처리 결과를 확인할 수 없습니다.", e
+            );
         } catch (FeignException e) {
-            throw new DeliveryCreateException("배송 생성 요청에 실패했습니다.", e);
+            if (isTransientStatus(e.status())) {
+                throw new DeliveryCreateRetryableException(
+                        "배송 서비스의 일시적 장애로 생성 요청에 실패했습니다.", e
+                );
+            }
+            throw new DeliveryCreateRejectedException(
+                    "재시도할 수 없는 배송 생성 요청 실패입니다.", e
+            );
         }
 
+    }
+
+    private boolean isTransientStatus(int status) {
+        return status == 502 || status == 503 || status == 504;
     }
 
     @Override

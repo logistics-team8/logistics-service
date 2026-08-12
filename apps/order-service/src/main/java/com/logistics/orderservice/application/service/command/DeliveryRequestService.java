@@ -1,7 +1,8 @@
 package com.logistics.orderservice.application.service.command;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.orderservice.application.exception.DeliveryCreateException;
+import com.logistics.orderservice.application.exception.DeliveryCreateRejectedException;
+import com.logistics.orderservice.application.exception.DeliveryCreateRetryableException;
 import com.logistics.orderservice.application.exception.DeliveryLookupException;
 import com.logistics.orderservice.application.exception.DeliveryStatusUnknownException;
 import com.logistics.orderservice.application.port.DeliveryPort;
@@ -25,8 +26,11 @@ public class DeliveryRequestService {
             DeliveryPort.DeliveryInfo deliveryInfo = deliveryPort.createDelivery(command);
             //정상 응답 반환 시 배송 생성 성공
             return Optional.of(deliveryInfo);
-        }catch (DeliveryCreateException e) {
-            log.warn("배송 생성 요청 실패. 배송 생성 여부 확인. orderId : {}", command.orderId(), e);
+        } catch (DeliveryCreateRejectedException e) {
+            log.warn("재시도 불가능한 배송 생성 실패. orderId : {}", command.orderId(), e);
+            return Optional.empty();
+        } catch (DeliveryCreateRetryableException e) {
+            log.warn("일시적 배송 생성 실패. 배송 생성 여부 확인. orderId : {}", command.orderId(), e);
         }
 
         //배송 생성 실패 후 배송 조회
@@ -46,8 +50,11 @@ public class DeliveryRequestService {
         try {
             DeliveryPort.DeliveryInfo delivery = deliveryPort.createDelivery(command);
             return Optional.of(delivery);
-        }catch (DeliveryCreateException e) {
-            log.warn("배송 생성 요청 재시도 실패, orderId : {}", command.orderId(), e);
+        } catch (DeliveryCreateRejectedException e) {
+            log.warn("배송 생성 재요청이 명확하게 거절됨. orderId : {}", command.orderId(), e);
+            return Optional.empty();
+        } catch (DeliveryCreateRetryableException e) {
+            log.warn("배송 생성 재요청 결과 확인 불가. 최종 상태 조회. orderId : {}", command.orderId(), e);
         }
 
         //재시도 실패
