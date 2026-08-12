@@ -2,6 +2,7 @@ package com.logistics.orderservice.application.service;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.orderservice.application.service.query.OrderQueryService;
 import com.logistics.orderservice.domain.model.Order;
 import com.logistics.orderservice.domain.repository.OrderRepository;
 import com.logistics.orderservice.error.OrderErrorCode;
@@ -53,6 +54,10 @@ class OrderQueryServiceTest {
                 "ORD-20260809-123456",
                 requesterId,
                 UUID.randomUUID(),
+                hubId,
+                "서울특별시 중구 세종대로 110",
+                "홍길동",
+                "hong.slack",
                 "테스트 주문입니다.",
                 now.plusDays(3),
                 now

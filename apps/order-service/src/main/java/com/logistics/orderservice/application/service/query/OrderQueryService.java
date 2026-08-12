@@ -1,4 +1,4 @@
-package com.logistics.orderservice.application.service;
+package com.logistics.orderservice.application.service.query;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;

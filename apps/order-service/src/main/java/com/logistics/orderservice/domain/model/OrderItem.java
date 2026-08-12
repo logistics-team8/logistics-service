@@ -61,10 +61,17 @@ public class OrderItem extends BaseEntity {
     private OrderItem(
             Order order,
             UUID productId,
+            String productName,
+            UUID supplierCompanyId,
+            UUID departureHubId,
             Integer quantity
+
     ) {
         this.order = order;
         this.productId = productId;
+        this.productName = productName;
+        this.supplierCompanyId = supplierCompanyId;
+        this.departureHubId = departureHubId;
         this.quantity = quantity;
         this.status = OrderItemStatus.ACTIVE;
     }
@@ -72,12 +79,18 @@ public class OrderItem extends BaseEntity {
     static OrderItem create(
             Order order,
             UUID productId,
+            String productName,
+            UUID supplierCompanyId,
+            UUID departureHubId,
             Integer quantity
     ) {
         validateQuantity(quantity);
         return new OrderItem(
                 order,
                 productId,
+                productName,
+                supplierCompanyId,
+                departureHubId,
                 quantity
         );
     }

@@ -131,6 +131,16 @@ public enum OrderErrorCode implements ErrorCode {
         "이미 취소된 주문상품입니다."
     ),
 
+    PRODUCT_NOT_FOUND(
+            "ORD_022",
+            HttpStatus.NOT_FOUND,
+            "주문 상품을 찾을 수 없습니다."
+    ),
+    DIFFERENT_DEPARTURE_HUB(
+            "ORD_023",
+            HttpStatus.BAD_REQUEST,
+            "하나의 주문에는 동일한 허브에 소속된 상품만 포함할 수 있습니다."
+    ),
     ORDER_AUTHENTICATION_REQUIRED(
             "ORD_401",
             HttpStatus.UNAUTHORIZED,
@@ -141,6 +151,72 @@ public enum OrderErrorCode implements ErrorCode {
             "ORDER_403",
             HttpStatus.FORBIDDEN,
             "해당 주문에 접근할 권한이 없습니다."
+    ),
+    DELIVERY_CANCEL_NOT_SUPPORTED(
+            "ORD_024",
+            HttpStatus.CONFLICT,
+            "배송이 생성된 주문은 현재 취소할 수 없습니다."
+    ),
+    DELIVERY_CREATE_FAILED(
+            "ORD_025",
+            HttpStatus.BAD_GATEWAY,
+            "배송 생성에 실패했습니다."
+    ),
+
+    DELIVERY_STATUS_CHECK_FAILED(
+            "ORD_026",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "배송 생성 결과를 확인할 수 없습니다."
+    ),
+
+    DELIVERY_REQUEST_CONFLICT(
+            "ORD_027",
+            HttpStatus.CONFLICT,
+            "기존 배송 정보가 주문의 배송 요청 정보와 일치하지 않습니다."
+    ),
+    // 재고 차감 실패
+    STOCK_DECREASE_FAILED(
+            "ORD_028",
+            HttpStatus.BAD_GATEWAY,
+                "재고 차감 요청에 실패했습니다."
+    ),
+
+    // 배송 실패 후 재고 복원까지 실패
+    STOCK_RESTORE_FAILED(
+            "ORD_029",
+            HttpStatus.BAD_GATEWAY,
+                "배송 생성 실패 후 재고 복원에 실패했습니다."
+    ),
+
+    ORDER_CANCEL_STOCK_RESTORE_FAILED(
+            "ORD_030",
+            HttpStatus.BAD_GATEWAY,
+                "주문 취소 중 재고 복원에 실패했습니다."
+    ),
+    STOCK_DECREASE_UNKNOWN(
+            "ORD_031",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "재고 차감 결과를 확인할 수 없습니다."
+    ),
+    STOCK_RESTORE_UNKNOWN(
+            "ORD_032",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "재고 복원 결과를 확인할 수 없습니다."
+    ),
+    ORDER_CANCEL_STOCK_RESTORE_UNKNOWN(
+            "ORD_033",
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "주문 취소 중 재고 복원 결과를 확인할 수 없습니다."
+    ),
+    ORDER_STOCK_STATUS_UNKNOWN(
+            "ORD_034",
+            HttpStatus.CONFLICT,
+            "재고 처리 상태를 확인할 수 없어 주문을 취소할 수 없습니다."
+    ),
+    USER_NOT_FOUND(
+            "ORDER_404",
+            HttpStatus.NOT_FOUND,
+            "주문 요청자 정보를 찾을 수 없습니다."
     );
 
 
