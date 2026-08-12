@@ -65,4 +65,6 @@ public interface OrderJpaRepository extends JpaRepository<Order, UUID> {
             @Param("hubId") UUID hubId, Pageable pageable
     );
 
+    Optional<Order> findByRequesterIdAndIdempotencyKey(UUID requesterId, String idempotencyKey);
+
 }
