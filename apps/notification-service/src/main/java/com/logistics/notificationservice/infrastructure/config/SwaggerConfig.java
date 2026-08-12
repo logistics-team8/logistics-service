@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Configuration;
 public class SwaggerConfig {
 
     @Bean
-    public OpenAPI noticationOpenAPI() {
+    public OpenAPI notificationOpenAPI() {
         return new OpenAPI()
                 .info(new Info().title("Notification Service API")
                         .description("Slack 메시지 및 AI 알림 API")
