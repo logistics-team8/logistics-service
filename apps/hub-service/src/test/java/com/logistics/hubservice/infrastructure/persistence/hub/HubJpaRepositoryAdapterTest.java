@@ -2,6 +2,7 @@ package com.logistics.hubservice.infrastructure.persistence.hub;
 
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.hubservice.PostgreSqlIntegrationTest;
+import com.logistics.hubservice.application.hubroute.initialization.DefaultHub;
 import com.logistics.hubservice.domain.hub.Hub;
 import com.logistics.hubservice.domain.hub.HubRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -54,6 +55,29 @@ class HubJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
     }
 
     @Test
+    @DisplayName("인증 사용자가 없어도 기본 Hub를 고정 UUID와 시스템 감사 정보로 저장한다")
+    void savePersistsHubWithFixedId() {
+        SecurityContextHolder.clearContext();
+        DefaultHub defaultHub = DefaultHub.SEOUL;
+
+        Hub savedHub = hubRepository.save(Hub.createDefault(
+                defaultHub.hubId(),
+                defaultHub.hubName(),
+                defaultHub.address(),
+                new BigDecimal("37.5145751"),
+                new BigDecimal("127.1122451")));
+
+        assertThat(savedHub.getId()).isEqualTo(defaultHub.hubId());
+        assertThat(savedHub.getCreatedBy())
+                .isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        assertThat(savedHub.getUpdatedBy())
+                .isEqualTo(UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        assertThat(hubRepository.findByIdAndDeletedAtIsNull(defaultHub.hubId()))
+                .map(Hub::getName)
+                .contains(defaultHub.hubName());
+    }
+
+    @Test
     @DisplayName("단일 조회와 검색에서 논리 삭제된 허브를 제외한다")
     void activeQueriesExcludeSoftDeletedHubs() {
         UUID userId = UUID.fromString("c69b113d-0991-4d8c-b7d0-87bdfadd18ae");
@@ -77,6 +101,9 @@ class HubJpaRepositoryAdapterTest extends PostgreSqlIntegrationTest {
                 .map(Hub::getId)
                 .contains(activeHub.getId());
         assertThat(hubRepository.findByIdAndDeletedAtIsNull(deletedHub.getId())).isEmpty();
+        assertThat(hubRepository.existsByIdAndDeletedAtIsNull(activeHub.getId())).isTrue();
+        assertThat(hubRepository.existsByIdAndDeletedAtIsNull(deletedHub.getId())).isFalse();
+        assertThat(hubRepository.existsByIdAndDeletedAtIsNull(UUID.randomUUID())).isFalse();
         Page<Hub> activeHubs = hubRepository.findAllByDeletedAtIsNull(
                 PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt")));
         assertThat(activeHubs.getContent())
