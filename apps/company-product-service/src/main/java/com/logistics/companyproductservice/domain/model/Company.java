@@ -17,7 +17,7 @@ public class Company extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 100, unique = true)
     private String name;
 
     @Enumerated(EnumType.STRING)
@@ -39,6 +39,15 @@ public class Company extends BaseEntity {
 
     public static Company create(String name, Type type, UUID hubId, String address) {
         return new Company(name, type, hubId, address);
+    }
+
+    public void update(String name, String address) {
+        if (name != null) {
+            this.name = name;
+        }
+        if (address != null) {
+            this.address = address;
+        }
     }
 
     public enum Type {

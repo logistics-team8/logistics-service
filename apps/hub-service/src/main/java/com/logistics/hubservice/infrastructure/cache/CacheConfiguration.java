@@ -1,5 +1,7 @@
 package com.logistics.hubservice.infrastructure.cache;
 
+import com.logistics.hubservice.application.hub.dto.HubResponse;
+import com.logistics.hubservice.application.hubroute.dto.HubRoutePathResponse;
 import com.logistics.hubservice.application.hubroute.dto.HubRouteResponse;
 import java.time.Duration;
 import java.util.Map;
@@ -12,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.JacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext.SerializationPair;
@@ -21,26 +24,43 @@ import tools.jackson.databind.json.JsonMapper;
 @EnableCaching
 public class CacheConfiguration implements CachingConfigurer {
 
+    private static final String HUB_BY_ID_CACHE = "hubById";
     private static final String HUB_ROUTE_BY_ID_CACHE = "hubRouteById";
-    private static final Duration HUB_ROUTE_CACHE_TTL = Duration.ofHours(1);
+    private static final String HUB_ROUTE_PATH_CACHE = "hubRoutePath";
+    private static final Duration CACHE_TTL = Duration.ofHours(1);
 
     @Bean
     CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         JsonMapper jsonMapper = JsonMapper.builder().findAndAddModules().build();
-        JacksonJsonRedisSerializer<HubRouteResponse> serializer =
+        JacksonJsonRedisSerializer<HubResponse> hubSerializer =
+                new JacksonJsonRedisSerializer<>(jsonMapper, HubResponse.class);
+        JacksonJsonRedisSerializer<HubRouteResponse> hubRouteSerializer =
                 new JacksonJsonRedisSerializer<>(jsonMapper, HubRouteResponse.class);
+        JacksonJsonRedisSerializer<HubRoutePathResponse> hubRoutePathSerializer =
+                new JacksonJsonRedisSerializer<>(jsonMapper, HubRoutePathResponse.class);
 
         RedisCacheConfiguration defaultConfiguration = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(HUB_ROUTE_CACHE_TTL)
+                .entryTtl(CACHE_TTL)
                 .disableCachingNullValues();
+        RedisCacheConfiguration hubConfiguration = defaultConfiguration
+                .serializeValuesWith(SerializationPair.fromSerializer(hubSerializer));
         RedisCacheConfiguration hubRouteConfiguration = defaultConfiguration
-                .serializeValuesWith(SerializationPair.fromSerializer(serializer));
+                .serializeValuesWith(SerializationPair.fromSerializer(hubRouteSerializer));
+        RedisCacheConfiguration hubRoutePathConfiguration = defaultConfiguration
+                .serializeValuesWith(SerializationPair.fromSerializer(hubRoutePathSerializer));
+        RedisCacheWriter cacheWriter = RedisCacheWriter.create(
+                connectionFactory,
+                configurer -> configurer.immediateWrites());
 
-        return RedisCacheManager.builder(connectionFactory)
+        return RedisCacheManager.builder(cacheWriter)
                 .cacheDefaults(defaultConfiguration)
                 .withInitialCacheConfigurations(Map.of(
+                        HUB_BY_ID_CACHE,
+                        hubConfiguration,
                         HUB_ROUTE_BY_ID_CACHE,
-                        hubRouteConfiguration))
+                        hubRouteConfiguration,
+                        HUB_ROUTE_PATH_CACHE,
+                        hubRoutePathConfiguration))
                 .build();
     }
 
