@@ -18,6 +18,14 @@ public enum NotificationErrorCode implements ErrorCode {
             "Slack 메시지 전송에 실패했습니다."
     ),
 
+    SLACK_MESSAGE_NOT_FOUND(
+            "NOTIFICATION_201",
+            HttpStatus.NOT_FOUND,
+            "Slack 메시지를 찾을 수 없습니다."
+    ),
+
+
+
     GEMINI_RESPONSE_EMPTY(
             "NOTIFICATION_101",
             HttpStatus.BAD_GATEWAY,
