@@ -83,19 +83,6 @@ public class JwtTokenProvider implements TokenProvider {
     }
 
     /**
-     * Access Token 만료기간 확인
-     *
-     * @param accessToken
-     * @return 만료기간
-     */
-    @Override
-    public Date getExpirationFromAccessToken(String accessToken) {
-        Claims claims = parseToken(accessToken, createSigningKey(jwtProperties.accessSecret()));
-
-        return claims.getExpiration();
-    }
-
-    /**
      * Token 생성
      *
      * @param tokenClaims
