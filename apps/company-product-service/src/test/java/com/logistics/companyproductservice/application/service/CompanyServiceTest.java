@@ -3,11 +3,13 @@ package com.logistics.companyproductservice.application.service;
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.companyproductservice.application.dto.CompanyInfo;
 import com.logistics.companyproductservice.application.error.CompanyErrorCode;
 import com.logistics.companyproductservice.domain.model.Company;
 import com.logistics.companyproductservice.domain.repository.CompanyRepository;
 import com.logistics.companyproductservice.presentation.dto.request.CompanyCreateRequest;
 import com.logistics.companyproductservice.presentation.dto.request.CompanyUpdateRequest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -59,7 +62,7 @@ class CompanyServiceTest {
     @DisplayName("create()")
     class Create {
 
-        @org.junit.jupiter.api.BeforeEach
+        @BeforeEach
         void setUp() {
             hubId = UUID.randomUUID();
         }
@@ -137,7 +140,7 @@ class CompanyServiceTest {
     @DisplayName("update() / delete() - 소속 검증")
     class Ownership {
 
-        @org.junit.jupiter.api.BeforeEach
+        @BeforeEach
         void setUp() {
             hubId = UUID.randomUUID();
             companyId = UUID.randomUUID();
@@ -278,6 +281,69 @@ class CompanyServiceTest {
                             .isEqualTo(CompanyErrorCode.NOT_OWNED_COMPANY));
 
             assertThat(company.getDeletedAt()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("getCompanyInfo() / getCompanyInfos()")
+    class Info {
+
+        @BeforeEach
+        void setUp() {
+            hubId = UUID.randomUUID();
+            companyId = UUID.randomUUID();
+        }
+
+        @Test
+        @DisplayName("존재하는 companyId면 CompanyInfo를 반환한다")
+        void returnsCompanyInfoWhenExists() {
+            Company company = existingCompany(companyId, hubId);
+            when(companyRepository.findByIdAndDeletedAtIsNull(companyId))
+                    .thenReturn(Optional.of(company));
+
+            CompanyInfo result = companyService.getCompanyInfo(companyId);
+
+            assertThat(result.id()).isEqualTo(companyId);
+            assertThat(result.hubId()).isEqualTo(hubId);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 companyId면 RESOURCE_NOT_FOUND 예외가 발생한다")
+        void throwsWhenCompanyInfoNotFound() {
+            when(companyRepository.findByIdAndDeletedAtIsNull(companyId))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> companyService.getCompanyInfo(companyId))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                            .isEqualTo(CommonErrorCode.RESOURCE_NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("요청한 id 중 일부가 존재하지 않으면 RESOURCE_NOT_FOUND 예외가 발생한다 (전체 실패)")
+        void throwsWhenSomeCompanyIdsNotFound() {
+            UUID missingId = UUID.randomUUID();
+            Company company = existingCompany(companyId, hubId);
+            when(companyRepository.findAllByIds(List.of(companyId, missingId)))
+                    .thenReturn(List.of(company));
+
+            assertThatThrownBy(() -> companyService.getCompanyInfos(List.of(companyId, missingId)))
+                    .isInstanceOf(BusinessException.class)
+                    .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                            .isEqualTo(CommonErrorCode.RESOURCE_NOT_FOUND));
+        }
+
+        @Test
+        @DisplayName("요청한 id가 전부 존재하면 CompanyInfo 목록을 반환한다")
+        void returnsAllCompanyInfosWhenAllExist() {
+            Company company = existingCompany(companyId, hubId);
+            when(companyRepository.findAllByIds(List.of(companyId)))
+                    .thenReturn(List.of(company));
+
+            List<CompanyInfo> result = companyService.getCompanyInfos(List.of(companyId));
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).id()).isEqualTo(companyId);
         }
     }
 }
