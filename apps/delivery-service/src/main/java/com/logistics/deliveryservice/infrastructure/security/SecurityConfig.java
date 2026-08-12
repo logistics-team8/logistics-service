@@ -30,7 +30,7 @@ public class SecurityConfig {
                         .accessDeniedHandler(new CustomAccessDeniedHandler(jsonMapper)))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/actuator/health").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/delivery-managers")
+                        .requestMatchers(HttpMethod.POST, "/internal/v1/delivery-managers")
                         .hasAnyRole("MASTER", "HUB_MANAGER")
                         .requestMatchers(HttpMethod.GET, "/api/v1/delivery-managers")
                         .hasAnyRole("MASTER", "HUB_MANAGER")
