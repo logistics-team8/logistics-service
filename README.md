@@ -88,31 +88,33 @@ logistics-service/
 - Java 21 이상
 - Docker & Docker Compose
 
-### 인프라 설정
+### 1. 인프라 설정
 ```
 docker-compose up -d
 ```
+PostgreSQL, Redis가 실행됩니다.
 
-### 환경변수 설정
-```
-환경 변수 설정
-```
+### 2. 환경변수 설정
+루트 디렉토리에 `.env` 파일을 생성하고 DB 계정 정보 등을 설정합니다. (`docker-compose.yml`의 `${DB_USERNAME:-logistics}` 형태 변수 참고)
 
-### 서비스 빌드
-```
-빌드
-```
-
-### 3.서비스 실행
-```
-실행
+### 3. 서비스 빌드
+```bash
+./gradlew build
 ```
 
-### 4. URL
+### 4. 서비스 실행
+아래 순서대로 실행해야 정상적으로 연결됩니다.
+infra/config-server
+infra/eureka-server
+infra/gateway
+apps/ 하위 각 마이크로서비스 (순서 무관)
+
+### 5. URL
 | 서비스 | URL |
 |---|---|
 | API Gateway | http://localhost:8080 |
 | Swagger | http://localhost:8080/swagger-ui.html |
+| Dev 서버(배포) | https://dev.nodyy.com |
 <br>
 
 ## 📚 주요 기능
@@ -157,5 +159,20 @@ docker-compose up -d
 
 
 ## 🚨 트러블 슈팅
-- 내용
+**1. 유니크 제약으로 인한 소프트 삭제 데이터 재사용 불가**
+- 문제: `Company.name`에 일반 유니크 제약을 걸면, 삭제된 업체의 이름을 재사용할 수 없음
+- 해결: PostgreSQL 파셜 유니크 인덱스(`WHERE deleted_at IS NULL`) 적용, `schema.sql` + `defer-datasource-initialization`으로 애플리케이션 레벨과 DB 레벨 검증 일치
+
+**2. 재고 차감 멱등 처리 중 트랜잭션 롤백 오류**
+- 문제: 동일 `orderId` 재요청 시 유니크 제약 위반을 `try-catch`로만 처리했더니, 트랜잭션이 "rollback-only"로 마킹되어 `UnexpectedRollbackException` 발생
+- 해결: 선점 로직을 `REQUIRES_NEW`로 별도 트랜잭션 분리, `TransactionAspectSupport.setRollbackOnly()`로 명시적 롤백 처리하여 부모 트랜잭션과 격리
+
+**3. 공용 모듈(libs/common) merge conflict로 인한 전체 서비스 빌드 실패**
+- 문제: 여러 팀원의 PR이 동시에 `libs/common`을 수정하면서 merge conflict가 잘못 해결되어 `develop`의 컴파일 자체가 실패, 전체 팀의 CI가 막힘
+- 해결: 신속하게 원인 파악 후 hotfix 브랜치로 즉시 수정 및 최우선 병합
+
+**4. Windows/Mac 간 gradlew 줄바꿈 문제로 Docker 빌드 실패**
+- 문제: Windows에서 체크아웃 시 `gradlew`가 CRLF로 저장되며 Alpine 기반 Docker 이미지에서 `exit code 127` 발생
+- 해결: 줄바꿈을 LF로 수정, `.gitattributes`로 재발 방지
+
 <br>
