@@ -16,6 +16,7 @@ import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.Delivery;
 import com.logistics.deliveryservice.domain.model.DeliveryPlan;
 import com.logistics.deliveryservice.domain.model.DeliveryRouteHistory;
+import com.logistics.deliveryservice.domain.model.DeliveryStatus;
 import com.logistics.deliveryservice.domain.port.HubDeliveryPlanProvider;
 import com.logistics.deliveryservice.domain.repository.DeliveryRepository;
 import com.logistics.deliveryservice.domain.repository.DeliveryRouteHistoryRepository;
@@ -127,6 +128,19 @@ public class DeliveryService {
                 .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         return DeliveryGetByOrderResponse.from(delivery);
+    }
+
+    /**
+     * 주문 취소 요청에 연결된 활성 배송을 취소 상태로 저장한다.
+     */
+    @Transactional
+    public void cancelByOrderId(UUID orderId) {
+        Delivery delivery = deliveryRepository.findActiveByOrderId(orderId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // 같은 CANCELED 상태 재요청은 Entity가 성공 처리하고, 다른 상태 전이 규칙도 함께 적용한다.
+        delivery.changeStatus(DeliveryStatus.CANCELED);
+        deliveryRepository.save(delivery);
     }
 
     /**
