@@ -18,27 +18,28 @@ public class ProductClientAdapter implements ProductPort {
     private final ProductFeignClient  productFeignClient;
 
     @Override
-    public List<ProductInfo> getProducts(
-            List<UUID> productIds
-    ) {
-        List<ProductFeignClient.ProductResponse> responses = productFeignClient
-                        .getProducts(productIds)
-                        .getData();
+    public List<ProductInfo> getProducts(List<UUID> productIds) {
+        try {
+            List<ProductFeignClient.ProductResponse> responses = productFeignClient.getProducts(productIds).getData();
 
-        if (responses == null) {
+            if (responses == null) {
+                throw new BusinessException(OrderErrorCode.PRODUCT_NOT_FOUND);
+            }
+
+            return responses.stream()
+                    .map(response -> new ProductInfo(
+                            response.id(),
+                            response.name(),
+                            response.companyId(),
+                            response.hubId()
+                    ))
+                    .toList();
+
+        } catch (FeignException.NotFound exception) {
             throw new BusinessException(
                     OrderErrorCode.PRODUCT_NOT_FOUND
             );
         }
-
-        return responses.stream()
-                .map(response -> new ProductInfo(
-                        response.id(),
-                        response.name(),
-                        response.companyId(),
-                        response.hubId()
-                ))
-                .toList();
     }
 
     @Override
