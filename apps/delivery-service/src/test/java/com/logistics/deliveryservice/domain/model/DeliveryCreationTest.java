@@ -27,8 +27,8 @@ class DeliveryCreationTest {
         Delivery delivery = createDelivery(validPlan());
 
         assertThat(delivery.getOrderId()).isEqualTo(ORDER_ID);
-        assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.HUB_WAITING);
-        assertThat(delivery.getCompanyDeliveryManagerId()).isEqualTo(COMPANY_MANAGER_ID);
+        assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.HUB_WAIT);
+        assertThat(delivery.getDeliveryManagerId()).isEqualTo(COMPANY_MANAGER_ID);
         assertThat(delivery.getRouteHistories())
                 .extracting(
                         DeliveryRouteHistory::getSequence,
@@ -59,7 +59,7 @@ class DeliveryCreationTest {
                 plan
         );
 
-        assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.DEST_HUB_ARRIVED);
+        assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.HUB_ARRIVED);
         assertThat(delivery.getRouteHistories()).isEmpty();
     }
 

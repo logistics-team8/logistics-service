@@ -11,7 +11,9 @@ class RouteStatusTest {
         assertThat(RouteStatus.values()).containsExactly(
                 RouteStatus.WAITING,
                 RouteStatus.MOVING,
-                RouteStatus.ARRIVED
+                RouteStatus.ARRIVED,
+                RouteStatus.COMPLETED,
+                RouteStatus.FAILED
         );
     }
 }

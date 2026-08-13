@@ -63,7 +63,7 @@ class InternalDeliveryControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.deliveryId").value(DELIVERY_ID.toString()))
                 .andExpect(jsonPath("$.data.orderId").value(ORDER_ID.toString()))
-                .andExpect(jsonPath("$.data.status").value("HUB_WAITING"))
+                .andExpect(jsonPath("$.data.status").value("HUB_WAIT"))
                 .andExpect(jsonPath("$.data.routes[0].sequence").value(1))
                 .andExpect(jsonPath("$.error").doesNotExist());
 
@@ -91,7 +91,7 @@ class InternalDeliveryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.deliveryId").value(DELIVERY_ID.toString()))
                 .andExpect(jsonPath("$.data.orderId").value(ORDER_ID.toString()))
-                .andExpect(jsonPath("$.data.status").value("HUB_WAITING"))
+                .andExpect(jsonPath("$.data.status").value("HUB_WAIT"))
                 .andExpect(jsonPath("$.data.routes[0].sequence").value(1))
                 .andExpect(jsonPath("$.error").doesNotExist());
 
@@ -178,7 +178,7 @@ class InternalDeliveryControllerTest {
                 DELIVERY_ID,
                 ORDER_ID,
                 REQUESTER_ID,
-                DeliveryStatus.HUB_WAITING,
+                DeliveryStatus.HUB_WAIT,
                 DEPARTURE_HUB_ID,
                 ARRIVAL_HUB_ID,
                 "서울시 중구 세종대로 1",
@@ -205,7 +205,7 @@ class InternalDeliveryControllerTest {
                 DELIVERY_ID,
                 ORDER_ID,
                 REQUESTER_ID,
-                DeliveryStatus.HUB_WAITING,
+                DeliveryStatus.HUB_WAIT,
                 DEPARTURE_HUB_ID,
                 ARRIVAL_HUB_ID,
                 "서울시 중구 세종대로 1",

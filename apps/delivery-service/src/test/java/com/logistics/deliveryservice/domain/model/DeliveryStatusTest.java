@@ -9,11 +9,12 @@ class DeliveryStatusTest {
     @Test
     void definesDeliveryCrudV1StatusesInProgressOrder() {
         assertThat(DeliveryStatus.values()).containsExactly(
-                DeliveryStatus.HUB_WAITING,
+                DeliveryStatus.HUB_WAIT,
                 DeliveryStatus.HUB_MOVING,
-                DeliveryStatus.DEST_HUB_ARRIVED,
-                DeliveryStatus.COMPANY_MOVING,
-                DeliveryStatus.COMPLETED,
+                DeliveryStatus.HUB_ARRIVED,
+                DeliveryStatus.IN_DELIVERY,
+                DeliveryStatus.DELIVERED,
+                DeliveryStatus.FAILED,
                 DeliveryStatus.CANCELED
         );
     }

@@ -41,7 +41,7 @@ class DeliveryGetByOrderServiceTest {
         DeliveryRouteHistory secondRoute = mock(DeliveryRouteHistory.class);
         when(delivery.getDeliveryId()).thenReturn(DELIVERY_ID);
         when(delivery.getOrderId()).thenReturn(ORDER_ID);
-        when(delivery.getStatus()).thenReturn(DeliveryStatus.HUB_WAITING);
+        when(delivery.getStatus()).thenReturn(DeliveryStatus.HUB_WAIT);
         when(delivery.getRouteHistories()).thenReturn(List.of(secondRoute, firstRoute));
         when(firstRoute.getSequence()).thenReturn(1);
         when(secondRoute.getSequence()).thenReturn(2);
@@ -51,7 +51,7 @@ class DeliveryGetByOrderServiceTest {
 
         assertThat(response.deliveryId()).isEqualTo(DELIVERY_ID);
         assertThat(response.orderId()).isEqualTo(ORDER_ID);
-        assertThat(response.status()).isEqualTo(DeliveryStatus.HUB_WAITING);
+        assertThat(response.status()).isEqualTo(DeliveryStatus.HUB_WAIT);
         assertThat(response.routes())
                 .extracting(DeliveryGetByOrderResponse.RouteResponse::sequence)
                 .containsExactly(1, 2);
