@@ -6,5 +6,7 @@ package com.logistics.deliveryservice.domain.model;
 public enum RouteStatus {
     WAITING,
     MOVING,
-    ARRIVED
+    ARRIVED,
+    COMPLETED,
+    FAILED
 }

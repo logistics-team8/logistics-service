@@ -3,6 +3,7 @@ package com.logistics.deliveryservice.infrastructure.persistence;
 import com.logistics.deliveryservice.domain.model.DeliveryManager;
 import com.logistics.deliveryservice.domain.model.DeliveryManagerType;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -13,7 +14,19 @@ import org.springframework.data.repository.query.Param;
 // Spring Data JPA가 실제 DB 작업을 수행하는 인터페이스
 interface DeliveryManagerJpaRepository extends JpaRepository<DeliveryManager, UUID> {
 
-    // 동적 메서드
+    Optional<DeliveryManager> findByUserIdAndDeletedAtIsNull(UUID userId);
+
+    @Query("""
+            select manager.deliverySequence
+            from DeliveryManager manager
+            where manager.managerType = :managerType
+              and manager.deletedAt is null
+            order by manager.deliverySequence asc
+            """)
+    List<Integer> findActiveDeliverySequencesByManagerType(
+            @Param("managerType") DeliveryManagerType managerType
+    );
+
     @Query("""
             select manager.deliverySequence
             from DeliveryManager manager
@@ -22,13 +35,11 @@ interface DeliveryManagerJpaRepository extends JpaRepository<DeliveryManager, UU
               and manager.deletedAt is null
             order by manager.deliverySequence asc
             """)
-    List<Integer> findActiveDeliverySequences(
+    List<Integer> findActiveDeliverySequencesByManagerTypeAndHubId(
             @Param("managerType") DeliveryManagerType managerType,
             @Param("hubId") UUID hubId
     );
 
-
-    // 동적 메서드
     @Query("""
             select manager
             from DeliveryManager manager

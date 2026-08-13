@@ -46,7 +46,7 @@ public record DeliveryCreateResponse(
                 delivery.getDeliveryAddress(),
                 delivery.getReceiverName(),
                 delivery.getReceiverSlackId(),
-                delivery.getCompanyDeliveryManagerId(),
+                delivery.getDeliveryManagerId(),
                 delivery.getCompletedAt(),
                 delivery.getCreatedAt(),
                 routes

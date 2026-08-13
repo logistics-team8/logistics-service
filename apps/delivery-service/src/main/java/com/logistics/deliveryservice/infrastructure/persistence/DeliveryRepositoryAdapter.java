@@ -1,7 +1,9 @@
 package com.logistics.deliveryservice.infrastructure.persistence;
 
 import com.logistics.deliveryservice.domain.model.Delivery;
+import com.logistics.deliveryservice.domain.model.DeliveryStatus;
 import com.logistics.deliveryservice.domain.repository.DeliveryRepository;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -30,5 +32,16 @@ public class DeliveryRepositoryAdapter implements DeliveryRepository {
     @Override
     public Optional<Delivery> findActiveByOrderId(UUID orderId) {
         return deliveryJpaRepository.findByOrderIdAndDeletedAtIsNull(orderId);
+    }
+
+    @Override
+    public boolean existsActiveManagerAssignment(
+            UUID managerUserId,
+            Collection<DeliveryStatus> deliveryStatuses
+    ) {
+        return deliveryJpaRepository.existsActiveManagerAssignment(
+                managerUserId,
+                deliveryStatuses
+        );
     }
 }

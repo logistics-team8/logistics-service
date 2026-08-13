@@ -28,7 +28,7 @@ import lombok.NoArgsConstructor;
         name = "p_delivery_route_histories",
         uniqueConstraints = @UniqueConstraint(
                 name = "uk_delivery_route_histories_delivery_sequence",
-                columnNames = {"delivery_id", "route_sequence"}
+                columnNames = {"delivery_id", "sequence"}
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -36,14 +36,14 @@ public class DeliveryRouteHistory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "route_id", nullable = false, updatable = false)
+    @Column(name = "id", nullable = false, updatable = false)
     private UUID routeId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "delivery_id", nullable = false)
     private Delivery delivery;
 
-    @Column(name = "route_sequence", nullable = false)
+    @Column(name = "sequence", nullable = false)
     private Integer sequence;
 
     @Column(name = "departure_hub_id", nullable = false)
@@ -52,17 +52,17 @@ public class DeliveryRouteHistory extends BaseEntity {
     @Column(name = "arrival_hub_id", nullable = false)
     private UUID arrivalHubId;
 
-    @Column(name = "estimated_distance_km", nullable = false)
+    @Column(name = "estimated_distance")
     private BigDecimal estimatedDistanceKm;
 
-    @Column(name = "estimated_duration_minutes", nullable = false)
+    @Column(name = "estimated_duration")
     private Integer estimatedDurationMinutes;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 50)
     private RouteStatus status;
 
-    @Column(name = "hub_delivery_manager_id", nullable = false)
+    @Column(name = "hub_delivery_manager_id")
     private UUID hubDeliveryManagerId;
 
     /**

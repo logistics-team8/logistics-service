@@ -4,18 +4,19 @@ import com.logistics.deliveryservice.domain.model.DeliveryManager;
 import com.logistics.deliveryservice.domain.model.DeliveryManagerType;
 import java.util.UUID;
 
-
-public record DeliveryManagerCreateResponse(
+public record DeliveryManagerUpdateResponse(
         UUID userId,
         DeliveryManagerType managerType,
-        UUID hubId
+        UUID hubId,
+        Integer sequenceNumber
 ) {
 
-    public static DeliveryManagerCreateResponse from(DeliveryManager deliveryManager) {
-        return new DeliveryManagerCreateResponse(
+    public static DeliveryManagerUpdateResponse from(DeliveryManager deliveryManager) {
+        return new DeliveryManagerUpdateResponse(
                 deliveryManager.getUserId(),
                 deliveryManager.getManagerType(),
-                deliveryManager.getHubId()
+                deliveryManager.getHubId(),
+                deliveryManager.getDeliverySequence()
         );
     }
 }

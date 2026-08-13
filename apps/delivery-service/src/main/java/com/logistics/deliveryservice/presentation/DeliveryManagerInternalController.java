@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/internal/v1/delivery-managers")
+@RequestMapping("/internal/v1/delivery/managers")
 @RequiredArgsConstructor
 public class DeliveryManagerInternalController {
 

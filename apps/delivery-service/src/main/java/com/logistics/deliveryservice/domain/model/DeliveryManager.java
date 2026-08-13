@@ -34,29 +34,52 @@ public class DeliveryManager extends BaseEntity {
     @Column(name = "delivery_sequence", nullable = false)
     private Integer deliverySequence;
 
-    // Slack은 User Service에서 조회
-
-
     public static DeliveryManager create(
             UUID userId,
-            DeliveryManagerAssignmentGroup assignmentGroup, //배송 담당자 배정 그룹
+            DeliveryManagerType managerType,
+            UUID hubId,
             Integer deliverySequence
     ) {
         if (userId == null) {
             throw new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_USER);
         }
-        if (assignmentGroup == null) {
-            throw new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_HUB);
-        }
 
-        //전달받은 순번이 0~9안에 있는지 검사
+        // managerType나 hubId 둘 다 비어있지 않는지 검사
+        validateManagerFields(managerType, hubId);
+
+        // 전달받은 순번이 0~9안에 있는지 검사
         DeliveryManagerAssignmentGroup.validateSequence(deliverySequence);
 
         DeliveryManager deliveryManager = new DeliveryManager();
         deliveryManager.userId = userId;
-        deliveryManager.hubId = assignmentGroup.hubId();
-        deliveryManager.managerType = assignmentGroup.managerType();
+        deliveryManager.hubId = hubId;
+        deliveryManager.managerType = managerType;
         deliveryManager.deliverySequence = deliverySequence;
         return deliveryManager;
+    }
+
+    public void update(
+            DeliveryManagerType managerType,
+            UUID hubId,
+            Integer deliverySequence
+    ) {
+        validateManagerFields(managerType, hubId);
+        DeliveryManagerAssignmentGroup.validateSequence(deliverySequence);
+
+        this.managerType = managerType;
+        this.hubId = hubId;
+        this.deliverySequence = deliverySequence;
+    }
+
+    // Soft Delete(논리 삭제)
+    public void delete(UUID deletedBy) {
+        markDeleted(deletedBy);
+    }
+
+    // managerType나 hubId 둘 다 비어있지 않는지 검증
+    private static void validateManagerFields(DeliveryManagerType managerType, UUID hubId) {
+        if (managerType == null || hubId == null) {
+            throw new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_MANAGER_HUB);
+        }
     }
 }

@@ -18,6 +18,9 @@ public interface DeliveryManagerRepository {
     // UserId로 조회
     Optional<DeliveryManager> findByUserId(UUID userId);
 
+    // 논리 삭제되지 않은 담당자 단건 조회
+    Optional<DeliveryManager> findActiveByUserId(UUID userId);
+
     // 사용 중인 순번 조회
     List<Integer> findActiveDeliverySequences(DeliveryManagerAssignmentGroup assignmentGroup);
 

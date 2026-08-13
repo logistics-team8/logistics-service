@@ -27,8 +27,8 @@ class DeliveryPersistenceConstraintTest {
                         tuple("idx_deliveries_departure_hub_id", "departure_hub_id"),
                         tuple("idx_deliveries_arrival_hub_id", "arrival_hub_id"),
                         tuple(
-                                "idx_deliveries_company_delivery_manager_id",
-                                "company_delivery_manager_id"
+                                "idx_deliveries_delivery_manager_id",
+                                "delivery_manager_id"
                         )
                 );
     }
@@ -42,6 +42,6 @@ class DeliveryPersistenceConstraintTest {
         assertThat(uniqueConstraint.name())
                 .isEqualTo("uk_delivery_route_histories_delivery_sequence");
         assertThat(uniqueConstraint.columnNames())
-                .containsExactly("delivery_id", "route_sequence");
+                .containsExactly("delivery_id", "sequence");
     }
 }

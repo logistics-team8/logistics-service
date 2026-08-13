@@ -24,20 +24,4 @@ class DeliveryManagerPersistenceConstraintTest {
         assertThat(userIdColumn.updatable()).isFalse();
         assertThat(BaseEntity.class.isAssignableFrom(DeliveryManager.class)).isTrue();
     }
-
-    @Test
-    void mapsCursorGroupKeyUniqueConstraint() {
-        Table table = DeliveryManagerAssignmentCursor.class.getAnnotation(Table.class);
-
-        assertThat(table.name()).isEqualTo("p_delivery_manager_assignment_cursors");
-        assertThat(table.uniqueConstraints()).singleElement().satisfies(constraint -> {
-            assertThat(constraint.name())
-                    .isEqualTo("uk_delivery_manager_assignment_cursors_group_key");
-            assertThat(constraint.columnNames())
-                    .containsExactly("assignment_group_key");
-        });
-        assertThat(BaseEntity.class.isAssignableFrom(
-                DeliveryManagerAssignmentCursor.class
-        )).isTrue();
-    }
 }
