@@ -79,8 +79,131 @@ logistics-service/
 <br>
 
 ## 💾 ERD
-이미지
 
+```mermaid
+erDiagram
+    USERS {
+        uuid id PK
+        string username UK
+        string password
+        string name
+        string slack_id UK
+        string user_status
+        uuid hub_id
+        uuid company_id
+        string requested_role
+        string role
+        uuid approved_by
+        datetime approved_at
+    }
+
+    P_COMPANIES {
+        uuid id PK
+        string name UK
+        string type
+        uuid hub_id
+        string address
+    }
+
+    P_PRODUCTS {
+        uuid id PK
+        string name
+        uuid company_id FK
+        uuid hub_id
+        decimal unit_price
+        int stock_quantity
+    }
+
+    P_STOCK_TRANSACTIONS {
+        uuid id PK
+        uuid order_id
+        string type
+    }
+
+    HUBS {
+        uuid id PK
+        string name
+        string address
+        decimal latitude
+        decimal longitude
+    }
+
+    HUB_ROUTES {
+        uuid id PK
+        uuid source_hub_id FK
+        uuid destination_hub_id FK
+        long distance_meters
+        long duration_seconds
+    }
+
+    ORDERS {
+        uuid id PK
+        string order_number UK
+        uuid requester_id
+        uuid receiver_company_id FK
+        uuid destination_hub_id FK
+        string delivery_address
+        string receiver_name
+        string status
+    }
+
+    ORDER_ITEMS {
+        uuid id PK
+        uuid order_id FK
+        uuid product_id FK
+        string product_name
+        uuid supplier_company_id FK
+        uuid departure_hub_id FK
+        int quantity
+        string status
+    }
+
+    DELIVERIES {
+        uuid delivery_id PK
+        uuid order_id FK
+        uuid requester_id
+        string status
+        uuid departure_hub_id FK
+        uuid arrival_hub_id FK
+        uuid company_delivery_manager_id
+    }
+
+    DELIVERY_ROUTE_HISTORIES {
+        uuid route_id PK
+        uuid delivery_id FK
+        int sequence
+        uuid departure_hub_id FK
+        uuid arrival_hub_id FK
+        string status
+        uuid hub_delivery_manager_id
+    }
+
+    DELIVERY_MANAGERS {
+        uuid user_id PK
+        uuid hub_id FK
+        string manager_type
+        int delivery_sequence
+    }
+
+    SLACK_MESSAGES {
+        uuid slack_message_id PK
+        uuid order_id FK
+        uuid ai_request_id
+        uuid recipient_user_id FK
+        string message
+        string status
+    }
+
+    P_COMPANIES ||--o{ P_PRODUCTS : "생산/보유"
+    ORDERS ||--o{ ORDER_ITEMS : "포함"
+    ORDERS ||--o| DELIVERIES : "생성"
+    DELIVERIES ||--o{ DELIVERY_ROUTE_HISTORIES : "경유"
+    HUBS ||--o{ HUB_ROUTES : "출발/도착"
+    USERS ||--o| DELIVERY_MANAGERS : "배송담당자"
+    ORDERS ||--o{ SLACK_MESSAGES : "알림발송"
+```
+
+> **참고**: 각 서비스는 물리적으로 독립된 스키마(DB)를 사용하는 MSA 구조라, 위 관계는 실제 DB 외래키 제약이 아니라 서비스 간 API 호출로 연결되는 논리적 관계입니다.
 <br>
 
 ## 🚀 실행 방법
