@@ -20,6 +20,9 @@ interface DeliveryJpaRepository extends JpaRepository<Delivery, UUID> {
     @EntityGraph(attributePaths = "routeHistories")
     Optional<Delivery> findByOrderIdAndDeletedAtIsNull(UUID orderId);
 
+    @EntityGraph(attributePaths = "routeHistories")
+    Optional<Delivery> findByDeliveryIdAndDeletedAtIsNull(UUID deliveryId);
+
     @Query("""
             select delivery
             from Delivery delivery

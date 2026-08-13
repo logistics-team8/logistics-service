@@ -37,6 +37,11 @@ public class DeliveryRepositoryAdapter implements DeliveryRepository {
     }
 
     @Override
+    public Optional<Delivery> findActiveByDeliveryId(UUID deliveryId) {
+        return deliveryJpaRepository.findByDeliveryIdAndDeletedAtIsNull(deliveryId);
+    }
+
+    @Override
     public Page<Delivery> search(
             DeliveryStatus status,
             UUID orderId,

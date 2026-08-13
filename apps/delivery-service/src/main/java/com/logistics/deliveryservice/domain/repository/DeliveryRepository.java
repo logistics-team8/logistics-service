@@ -19,6 +19,8 @@ public interface DeliveryRepository {
 
     Optional<Delivery> findActiveByOrderId(UUID orderId);
 
+    Optional<Delivery> findActiveByDeliveryId(UUID deliveryId);
+
     Page<Delivery> search(
             DeliveryStatus status,
             UUID orderId,

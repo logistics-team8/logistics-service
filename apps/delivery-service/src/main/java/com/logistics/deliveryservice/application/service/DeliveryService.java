@@ -3,6 +3,7 @@ package com.logistics.deliveryservice.application.service;
 import com.logistics.deliveryservice.application.command.DeliveryCreateCommand;
 import com.logistics.deliveryservice.application.dto.DeliveryCreateResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryCreateResult;
+import com.logistics.deliveryservice.application.dto.DeliveryDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryGetByOrderResponse;
 import com.logistics.deliveryservice.application.dto.DeliverySearchResponse;
 import com.logistics.common.response.PageableUtil;
@@ -120,6 +121,21 @@ public class DeliveryService {
     }
 
     /**
+     * 로그인 사용자의 역할 범위를 확인한 뒤 활성 배송 한 건을 반환한다.
+     */
+    @Transactional(readOnly = true)
+    public DeliveryDetailResponse getByDeliveryId(
+            UUID deliveryId,
+            CustomUserDetails userDetails
+    ) {
+        Delivery delivery = deliveryRepository.findActiveByDeliveryId(deliveryId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        validateDetailReadPermission(delivery, userDetails);
+        return DeliveryDetailResponse.from(delivery);
+    }
+
+    /**
      * 로그인 사용자의 역할 범위 안에서 활성 배송을 검색한다.
      */
     @Transactional(readOnly = true)
@@ -154,5 +170,47 @@ public class DeliveryService {
                 deliveryManagerId,
                 normalizedPageable
         ).map(DeliverySearchResponse::from);
+    }
+
+    private void validateDetailReadPermission(
+            Delivery delivery,
+            CustomUserDetails userDetails
+    ) {
+        if ("MASTER".equals(userDetails.getRole())) {
+            return;
+        }
+
+        if ("HUB_MANAGER".equals(userDetails.getRole())) {
+            UUID hubId = userDetails.getHubId();
+            if (hubId != null && isHubRelatedDelivery(delivery, hubId)) {
+                return;
+            }
+            throw new AccessDeniedException("허브 매니저는 담당 허브의 배송만 조회할 수 있습니다.");
+        }
+
+        if ("DELIVERY_MANAGER".equals(userDetails.getRole())) {
+            if (isAssignedDelivery(delivery, userDetails.getId())) {
+                return;
+            }
+            throw new AccessDeniedException("배송 담당자는 자신에게 배정된 배송만 조회할 수 있습니다.");
+        }
+    }
+
+    private boolean isHubRelatedDelivery(Delivery delivery, UUID hubId) {
+        return hubId.equals(delivery.getDepartureHubId())
+                || hubId.equals(delivery.getArrivalHubId())
+                || delivery.getRouteHistories().stream()
+                .filter(routeHistory -> !routeHistory.isDeleted())
+                .anyMatch(routeHistory -> hubId.equals(routeHistory.getDepartureHubId())
+                        || hubId.equals(routeHistory.getArrivalHubId()));
+    }
+
+    private boolean isAssignedDelivery(Delivery delivery, UUID managerUserId) {
+        return managerUserId.equals(delivery.getDeliveryManagerId())
+                || delivery.getRouteHistories().stream()
+                .filter(routeHistory -> !routeHistory.isDeleted())
+                .anyMatch(routeHistory -> managerUserId.equals(
+                        routeHistory.getHubDeliveryManagerId()
+                ));
     }
 }
