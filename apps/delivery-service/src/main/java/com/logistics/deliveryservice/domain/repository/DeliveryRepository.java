@@ -5,6 +5,8 @@ import com.logistics.deliveryservice.domain.model.DeliveryStatus;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Delivery Aggregate의 영속성 기능을 애플리케이션 계층에 제공한다.
@@ -16,6 +18,14 @@ public interface DeliveryRepository {
     Optional<Delivery> findByOrderId(UUID orderId);
 
     Optional<Delivery> findActiveByOrderId(UUID orderId);
+
+    Page<Delivery> search(
+            DeliveryStatus status,
+            UUID orderId,
+            UUID hubId,
+            UUID deliveryManagerId,
+            Pageable pageable
+    );
 
     boolean existsActiveManagerAssignment(
             UUID managerUserId,

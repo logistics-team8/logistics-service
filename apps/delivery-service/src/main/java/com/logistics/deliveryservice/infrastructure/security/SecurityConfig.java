@@ -40,6 +40,8 @@ public class SecurityConfig {
                         .hasAnyRole("MASTER", "HUB_MANAGER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/delivery/managers/{userId}")
                         .hasAnyRole("MASTER", "HUB_MANAGER")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/deliveries")
+                        .authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(new UserContextFilter(), UsernamePasswordAuthenticationFilter.class)
                 .build();
