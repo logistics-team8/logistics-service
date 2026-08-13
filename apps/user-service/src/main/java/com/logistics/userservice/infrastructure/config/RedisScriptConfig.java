@@ -11,4 +11,9 @@ public class RedisScriptConfig {
     public RedisScript<Void> loginSessionScript() {
         return RedisScript.of(new ClassPathResource("redis/login.lua"));
     }
+
+    @Bean
+    public RedisScript<Boolean> reissueTokenScript() {
+        return RedisScript.of(new ClassPathResource("redis/rotate.lua"), Boolean.class);
+    }
 }

@@ -45,33 +45,6 @@ class AdminServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     // ============================== CRUD ==============================
-    // TODO : 수정해야됨
-    //        @Test
-    //        @DisplayName("관리자가 회원을 생성한다.")
-    //        void createUserByAdmin_success() {
-    //            // given
-    //            UUID adminId = UUID.randomUUID();
-    //
-    //            UserCreateCommand command =
-    //                    new UserCreateCommand(
-    //                            "admin1234",
-    //                            passwordEncoder.encode("Testtest123!"),
-    //                            "관리자",
-    //                            "U111111111",
-    //                            null,
-    //                            null,
-    //                            RequestedRole.COMPANY_MANAGER,
-    //                            AffiliationType.COMPANY);
-    //
-    //            // when
-    //            adminService.createUserByAdmin(command);
-    //            User savedUser = userRepository.findByUsername(command.username()).get();
-    //
-    //            // then
-    //            assertThat(savedUser.getUsername()).isEqualTo(command.username());
-    //            assertThat(savedUser.getName()).isEqualTo(command.name());
-    //        }
-
     @Test
     @DisplayName("관리자가 회원을 수정한다.")
     void updateUser_success() {
@@ -109,25 +82,6 @@ class AdminServiceIntegrationTest extends AbstractIntegrationTest {
     }
 
     // ============================== Approval ==============================
-    // TODO : 수정해야됨
-    //    @Test
-    //    @DisplayName("관리자가 회원가입 요청을 승인한다.")
-    //    void approveUser_success() {
-    //        // given
-    //        UUID adminId = UUID.randomUUID();
-    //        UUID hubId = UUID.randomUUID();
-    //
-    //        AdminApprovalCommand command =
-    //                new AdminApprovalCommand(adminId, Role.MASTER, hubId, userId);
-    //
-    //        // when
-    //        adminService.approveUser(command);
-    //        User approeUser = userRepository.findById(userId).get();
-    //
-    //        // then
-    //        assertThat(approeUser.getApprovedBy()).isEqualTo(command.adminId());
-    //    }
-
     @Test
     @DisplayName("관리자가 회원가입 요청을 거절한다.")
     void rejectUser_success() {

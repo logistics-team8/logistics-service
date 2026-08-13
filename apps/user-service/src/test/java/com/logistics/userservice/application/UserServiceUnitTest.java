@@ -7,14 +7,18 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 import com.logistics.common.exception.BusinessException;
+import com.logistics.userservice.application.dto.company.CompanyInfo;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.dto.user.UserUpdateCommand;
+import com.logistics.userservice.application.port.CompanyClientPort;
+import com.logistics.userservice.application.port.HubClientPort;
 import com.logistics.userservice.application.validator.UserValidator;
 import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -27,38 +31,98 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @DisplayName("UserService - 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class UserServiceUnitTest {
-    @Mock private UserRepository userRepository;
-    @Mock private UserValidator userValidator;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private UserRepository userRepository;
+    @Mock private HubClientPort hubClientPort;
+    @Mock private CompanyClientPort companyClientPort;
+    @Mock private UserValidator userValidator;
     @InjectMocks private UserService userService;
 
+    private UUID hubId;
+    private UUID companyId;
+    private UserCreateCommand hubCommand;
+    private UserCreateCommand companyCommand;
+
+    @BeforeEach
+    void setUp() {
+        hubId = UUID.randomUUID();
+        companyId = UUID.randomUUID();
+
+        hubCommand =
+                new UserCreateCommand(
+                        "test1234",
+                        "Testtest123!",
+                        "김철수",
+                        "U123456789",
+                        hubId,
+                        null,
+                        RequestedRole.HUB_MANAGER);
+
+        companyCommand =
+                new UserCreateCommand(
+                        "test1234",
+                        "Testtest123!",
+                        "김철수",
+                        "U123456789",
+                        null,
+                        companyId,
+                        RequestedRole.COMPANY_MANAGER);
+    }
+
     @Nested
-    @DisplayName("회원가입 실패 테스트")
+    @DisplayName("소속 회원가입 성공 테스트")
+    class createUserFromAffiliation_success {
+        @Test
+        @DisplayName("허브 실존 여부를 검증하고 회원가입을 성공한다.")
+        void createUserFromHub_success() {
+            // given
+            given(hubClientPort.existsById(hubId)).willReturn(true);
+
+            // when
+            userService.createUser(hubCommand);
+
+            // then
+            verify(hubClientPort).existsById(any());
+            verify(companyClientPort, never()).getCompanyInfo(any());
+            verify(userRepository).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("업체 실존 여부를 검증하고 회원가입을 성공한다.")
+        void createUserFromCompany_success() {
+            // given
+            CompanyInfo companyInfo = new CompanyInfo(companyId, hubId);
+
+            given(companyClientPort.getCompanyInfo(companyId)).willReturn(companyInfo);
+            given(passwordEncoder.encode(companyCommand.password())).willReturn("encoded-password");
+
+            // when
+            userService.createUser(companyCommand);
+
+            // then
+            verify(hubClientPort, never()).existsById(any());
+            verify(companyClientPort).getCompanyInfo(any());
+            verify(userRepository).saveAndFlush(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("회원가입 공통 실패 테스트")
     class createUser {
         @Test
         @DisplayName("이미 존재하는 아이디일 시 USER_DUPLICATE_USERNAME 예외가 발생해야한다.")
         void createMember_fail_when_username_is_duplicate() {
             // given
-            UserCreateCommand command =
-                    new UserCreateCommand(
-                            "test1234",
-                            "Testtest123!",
-                            "김철수",
-                            "U123456789",
-                            null,
-                            UUID.randomUUID(),
-                            RequestedRole.COMPANY_MANAGER);
-
             doThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME))
                     .when(userValidator)
-                    .validateDuplicate(command);
+                    .validateDuplicate(companyCommand);
 
             // when & then
-            assertThatThrownBy(() -> userService.createUser(command))
+            assertThatThrownBy(() -> userService.createUser(companyCommand))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage(UserErrorCode.USER_DUPLICATE_USERNAME.message());
 
-            verify(userValidator).validateDuplicate(command);
+            verify(userValidator).validateDuplicate(companyCommand);
             verify(userRepository, never()).saveAndFlush(any());
         }
 
