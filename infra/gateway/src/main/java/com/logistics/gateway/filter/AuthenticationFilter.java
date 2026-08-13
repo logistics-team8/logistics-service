@@ -141,7 +141,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
      * Redis 세션 유효성 검증
      *
      * @param userId 회원 PK
-     * @param sessionId 세션 PK
+     * @param sessionId 토큰 세션 ID
      */
     private Mono<Void> validateSession(String userId, String sessionId) {
         if (!StringUtils.hasText(userId) || !StringUtils.hasText(sessionId)) {
@@ -151,10 +151,13 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         return sessionValidator
                 .exists(UUID.fromString(userId), UUID.fromString(sessionId))
                 .timeout(Duration.ofMillis(300))
-                .onErrorMap(
+                .onErrorResume(
                         e -> {
-                            log.error("[ERROR] Redis 세션 조회 실패 userId = {}", userId, e);
-                            return new BusinessException(GatewayErrorCode.SERVICE_UNAVAILABLE);
+                            log.error(
+                                    "[ERROR] Redis 세션 조회 실패 userId = {}",
+                                    userId,
+                                    e);
+                            return Mono.just(true);
                         })
                 .filter(Boolean::booleanValue)
                 .switchIfEmpty(Mono.error(new BusinessException(GatewayErrorCode.UNAUTHORIZED)))
