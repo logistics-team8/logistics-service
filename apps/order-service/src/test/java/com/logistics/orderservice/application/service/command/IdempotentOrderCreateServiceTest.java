@@ -16,6 +16,7 @@ import com.logistics.orderservice.domain.repository.OrderRepository;
 import com.logistics.orderservice.error.OrderErrorCode;
 import com.logistics.orderservice.presentation.dto.response.CreateOrderResponse;
 import java.time.LocalDateTime;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -157,7 +159,7 @@ class IdempotentOrderCreateServiceTest {
                 org.mockito.ArgumentMatchers.eq(user),
                 org.mockito.ArgumentMatchers.eq(KEY),
                 anyString()
-        )).willThrow(new DataIntegrityViolationException("duplicate key"));
+        )).willThrow(idempotencyConstraintViolation());
 
         CreateOrderResponse result = service.createOrder(KEY, command, user);
 
@@ -165,6 +167,33 @@ class IdempotentOrderCreateServiceTest {
         assertThat(result.message()).isEqualTo("기존 주문이 존재합니다.");
         verify(orderRepository, org.mockito.Mockito.times(2))
                 .findByRequesterIdAndIdempotencyKey(user.getId(), KEY);
+    }
+
+    @Test
+    @DisplayName("멱등성 제약 이외의 DB 무결성 오류는 기존 주문 응답으로 변환하지 않는다")
+    void createOrder_otherIntegrityViolationRethrown() {
+        DataIntegrityViolationException exception =
+                new DataIntegrityViolationException(
+                        "order status check constraint violation",
+                        new ConstraintViolationException(
+                                "check constraint violation",
+                                new SQLException("check constraint violation"),
+                                "p_orders_status_check"
+                        )
+                );
+        given(orderRepository.findByRequesterIdAndIdempotencyKey(user.getId(), KEY))
+                .willReturn(Optional.empty());
+        given(orderCreateService.createOrder(
+                org.mockito.ArgumentMatchers.eq(command),
+                org.mockito.ArgumentMatchers.eq(user),
+                org.mockito.ArgumentMatchers.eq(KEY),
+                anyString()
+        )).willThrow(exception);
+
+        assertThatThrownBy(() -> service.createOrder(KEY, command, user))
+                .isSameAs(exception);
+
+        verify(orderRepository).findByRequesterIdAndIdempotencyKey(user.getId(), KEY);
     }
 
     @Test
@@ -218,6 +247,17 @@ class IdempotentOrderCreateServiceTest {
                 "파손 주의",
                 LocalDateTime.of(2026, 8, 16, 14, 0),
                 items
+        );
+    }
+
+    private DataIntegrityViolationException idempotencyConstraintViolation() {
+        return new DataIntegrityViolationException(
+                "duplicate idempotency key",
+                new ConstraintViolationException(
+                        "duplicate key",
+                        new SQLException("duplicate key"),
+                        "uk_order_requester_idempotency_key"
+                )
         );
     }
 

@@ -9,6 +9,7 @@ import com.logistics.orderservice.domain.repository.OrderRepository;
 import com.logistics.orderservice.error.OrderErrorCode;
 import com.logistics.orderservice.presentation.dto.response.CreateOrderResponse;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class IdempotentOrderCreateService {
     private static final int MAX_KEY_LENGTH = 100;
+    private static final String IDEMPOTENCY_CONSTRAINT =
+            "uk_order_requester_idempotency_key";
     private final OrderRepository orderRepository;
     private final OrderCreateService orderCreateService;
 
@@ -53,6 +56,10 @@ public class IdempotentOrderCreateService {
         try {
             return orderCreateService.createOrder(command,user,idempotencyKey,requestHash);
         }catch (DataIntegrityViolationException exception){
+            if (!isIdempotencyConstraintViolation(exception)) {
+                throw exception;
+            }
+
             Order existingOrder  = orderRepository
                     .findByRequesterIdAndIdempotencyKey(user.getId(), idempotencyKey)
                     .orElseThrow(() -> exception);
@@ -60,6 +67,21 @@ public class IdempotentOrderCreateService {
             return replayOrReject(existingOrder, requestHash);
         }
 
+    }
+
+    private boolean isIdempotencyConstraintViolation(Throwable exception) {
+        Throwable current = exception;
+
+        while (current != null) {
+            if (current instanceof ConstraintViolationException constraintException) {
+                return IDEMPOTENCY_CONSTRAINT.equals(
+                        constraintException.getConstraintName()
+                );
+            }
+            current = current.getCause();
+        }
+
+        return false;
     }
 
     private CreateOrderResponse replayOrReject(Order existingOrder, String currentRequestHash) {
