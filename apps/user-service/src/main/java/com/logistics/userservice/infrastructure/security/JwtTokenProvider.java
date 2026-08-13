@@ -106,7 +106,7 @@ public class JwtTokenProvider implements TokenProvider {
 
         return Jwts.builder()
                 .subject(userId.toString())
-                .id(UUID.randomUUID().toString()) // 고유성 보장을 위한 JTI 사용 X
+                .id(UUID.randomUUID().toString()) // 고유 식별자 (동시 발급 된 토큰 구별)
                 .claims(claims)
                 .issuedAt(date)
                 .expiration(new Date(date.getTime() + validity))
