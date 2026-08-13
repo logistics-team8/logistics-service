@@ -5,16 +5,25 @@ import com.logistics.deliveryservice.application.dto.DeliveryCreateResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryCreateResult;
 import com.logistics.deliveryservice.application.dto.DeliveryDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryGetByOrderResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryRouteHistoryResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryRouteStatusUpdateResponse;
 import com.logistics.deliveryservice.application.dto.DeliverySearchResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryStatusUpdateResponse;
 import com.logistics.common.response.PageableUtil;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.Delivery;
 import com.logistics.deliveryservice.domain.model.DeliveryPlan;
+import com.logistics.deliveryservice.domain.model.DeliveryRouteHistory;
+import com.logistics.deliveryservice.domain.model.DeliveryStatus;
 import com.logistics.deliveryservice.domain.port.HubDeliveryPlanProvider;
 import com.logistics.deliveryservice.domain.repository.DeliveryRepository;
+import com.logistics.deliveryservice.domain.repository.DeliveryRouteHistoryRepository;
 import com.logistics.deliveryservice.presentation.dto.DeliverySearchRequest;
+import com.logistics.deliveryservice.presentation.dto.DeliveryRouteStatusUpdateRequest;
+import com.logistics.deliveryservice.presentation.dto.DeliveryStatusUpdateRequest;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -39,6 +48,7 @@ public class DeliveryService {
     );
 
     private final DeliveryRepository deliveryRepository;
+    private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
     private final HubDeliveryPlanProvider hubDeliveryPlanProvider;
 
     /**
@@ -121,6 +131,19 @@ public class DeliveryService {
     }
 
     /**
+     * 주문 취소 요청에 연결된 활성 배송을 취소 상태로 저장한다.
+     */
+    @Transactional
+    public void cancelByOrderId(UUID orderId) {
+        Delivery delivery = deliveryRepository.findActiveByOrderId(orderId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // 같은 CANCELED 상태 재요청은 Entity가 성공 처리하고, 다른 상태 전이 규칙도 함께 적용한다.
+        delivery.changeStatus(DeliveryStatus.CANCELED);
+        deliveryRepository.save(delivery);
+    }
+
+    /**
      * 로그인 사용자의 역할 범위를 확인한 뒤 활성 배송 한 건을 반환한다.
      */
     @Transactional(readOnly = true)
@@ -133,6 +156,23 @@ public class DeliveryService {
 
         validateDetailReadPermission(delivery, userDetails);
         return DeliveryDetailResponse.from(delivery);
+    }
+
+    /**
+     * 로그인 사용자의 역할 범위를 확인한 뒤 활성 배송의 경로 이력을 순서대로 반환한다.
+     */
+    @Transactional(readOnly = true)
+    public List<DeliveryRouteHistoryResponse> getRoutesByDeliveryId(
+            UUID deliveryId,
+            CustomUserDetails userDetails
+    ) {
+        Delivery delivery = deliveryRepository.findActiveByDeliveryId(deliveryId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        validateDetailReadPermission(delivery, userDetails);
+        return deliveryRouteHistoryRepository.findActiveByDeliveryOrderBySequence(delivery).stream()
+                .map(DeliveryRouteHistoryResponse::from)
+                .toList();
     }
 
     /**
@@ -183,6 +223,48 @@ public class DeliveryService {
         validateDeletePermission(delivery, userDetails);
         delivery.delete(userDetails.getId());
         deliveryRepository.save(delivery);
+    }
+
+    /**
+     * 활성 배송의 권한 범위를 확인한 뒤 요청한 상태로 변경한다.
+     */
+    @Transactional
+    public DeliveryStatusUpdateResponse updateStatus(
+            UUID deliveryId,
+            DeliveryStatusUpdateRequest request,
+            CustomUserDetails userDetails
+    ) {
+        Delivery delivery = deliveryRepository.findActiveByDeliveryId(deliveryId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        validateDetailReadPermission(delivery, userDetails);
+        delivery.changeStatus(request.status());
+        Delivery savedDelivery = deliveryRepository.save(delivery);
+        return DeliveryStatusUpdateResponse.from(savedDelivery);
+    }
+
+    /**
+     * 활성 배송에 속한 활성 경로의 권한 범위를 확인한 뒤 요청한 상태로 변경한다.
+     */
+    @Transactional
+    public DeliveryRouteStatusUpdateResponse updateRouteStatus(
+            UUID deliveryId,
+            UUID routeId,
+            DeliveryRouteStatusUpdateRequest request,
+            CustomUserDetails userDetails
+    ) {
+        Delivery delivery = deliveryRepository.findActiveByDeliveryId(deliveryId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        validateDetailReadPermission(delivery, userDetails);
+
+        DeliveryRouteHistory routeHistory = deliveryRouteHistoryRepository
+                .findActiveByRouteIdAndDelivery(routeId, delivery)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.ROUTE_NOT_FOUND));
+
+        routeHistory.changeStatus(request.status());
+        DeliveryRouteHistory savedRouteHistory = deliveryRouteHistoryRepository.save(routeHistory);
+        return DeliveryRouteStatusUpdateResponse.from(savedRouteHistory);
     }
 
     private void validateDetailReadPermission(
