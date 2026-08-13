@@ -1,10 +1,9 @@
-package com.logistics.orderservice.application.service;
+package com.logistics.orderservice.application.service.command;
 
 import com.logistics.common.exception.BusinessException;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.orderservice.application.authorization.OrderAuthorization;
 import com.logistics.orderservice.application.command.UpdateOrderCommand;
-import com.logistics.orderservice.application.service.command.OrderManagementService;
 import com.logistics.orderservice.domain.model.Order;
 import com.logistics.orderservice.domain.repository.OrderRepository;
 import com.logistics.orderservice.error.OrderErrorCode;

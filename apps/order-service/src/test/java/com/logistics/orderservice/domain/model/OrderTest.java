@@ -140,7 +140,7 @@ class OrderTest {
         UUID itemId = UUID.randomUUID();
         ReflectionTestUtils.setField(item, "id", itemId);
 
-        order.cancelOrderItem(itemId, requesterId);
+        order.cancelOrderItem(itemId, requesterId, now);
 
         assertThat(item.isCanceled()).isTrue();
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELED);

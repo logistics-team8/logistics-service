@@ -51,7 +51,12 @@ public class ProductClientAdapter implements ProductPort {
         }
 
         catch (FeignException e) {
-            throw new StockDecreaseException("재고 차감 요청에 실패했습니다.", e);
+            if (isTransientStatus(e.status())) {
+                throw new StockDecreaseUnknownException(
+                        "재고 서비스의 일시적 장애로 차감 결과를 확인할 수 없습니다.", e
+                );
+            }
+            throw new StockDecreaseException("재고 차감 요청이 거절되었습니다.", e);
         }
     }
 
@@ -65,7 +70,12 @@ public class ProductClientAdapter implements ProductPort {
         }
 
         catch (FeignException e) {
-            throw new StockRestoreException("재고 복원 요청에 실패했습니다.", e);
+            if (isTransientStatus(e.status())) {
+                throw new StockRestoreUnknownException(
+                        "재고 서비스의 일시적 장애로 복원 결과를 확인할 수 없습니다.", e
+                );
+            }
+            throw new StockRestoreException("재고 복원 요청이 거절되었습니다.", e);
         }
     }
 
@@ -100,6 +110,10 @@ public class ProductClientAdapter implements ProductPort {
         catch (FeignException e) {
             throw new StockStatusLookupException(  "재고 복원 상태 조회에 실패했습니다.", e);
         }
+    }
+
+    private boolean isTransientStatus(int status) {
+        return status == 502 || status == 503 || status == 504;
     }
 
 

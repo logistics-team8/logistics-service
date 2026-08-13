@@ -46,12 +46,13 @@ public class DeliveryManagerService {
     }
 
     /** 배송 담당자 PROCESSING 상태 동기화 */
+    @Transactional
     public void syncProcessingDeliveryManagers() {
         List<User> processingUsers =
                 userRepository.findAllByUserStatus(UserStatus.PROCESSING, PageRequest.of(0, 100));
 
         if (processingUsers.isEmpty()) {
-            log.info("[SUCCESS] 배송 담당자 상태 동기화 불필요 {} 건", processingUsers.size());
+            log.info("[SUCCESS] 배송 담당자 상태 동기화 불필요");
             return;
         }
 

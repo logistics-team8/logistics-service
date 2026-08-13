@@ -52,8 +52,12 @@ public class OrderCreateService {
      *   ↓
      * DELIVERY_CREATED
      */
-
-    public CreateOrderResponse createOrder(CreateOrderCommand command, CustomUserDetails user) {
+    public CreateOrderResponse createOrder(
+            CreateOrderCommand command,
+            CustomUserDetails user,
+            String idempotencyKey,
+            String requestHash
+    ) {
         LocalDateTime now = LocalDateTime.now(clock);
 
         //중복 상품 검증
@@ -101,6 +105,12 @@ public class OrderCreateService {
                 command.requestedDeliveryAt(),
                 now
         );
+
+        //주문이 Pending으로 최초 저장될 때
+        //Idempotency-Key와 요청 해시도 같이 저장
+        if(idempotencyKey != null) {
+            order.assignIdempotencyKey(idempotencyKey, requestHash);
+        }
 
         //조회한 상품 정보 주문상품을 생성
         for (CreateOrderItemCommand item : command.items()) {
@@ -178,10 +188,13 @@ public class OrderCreateService {
         //배송이 확인 되어 주문->배송 성공 CONFIRMED에서 DELIVERY_CREATED 상태로 변환한다.
         Order successOrder = orderStateService.markDeliveryCreated(orderId);
         //주문 생성 완료
-        return CreateOrderResponse.from(successOrder);
+        return CreateOrderResponse.created(successOrder);
     }
 
 
+
+
+    //==============================================================================================
     /**
      * 주문 번호 생성 메서드
      * //ex)ORD-20260804-A12F45C98D01

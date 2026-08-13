@@ -3,6 +3,7 @@ package com.logistics.orderservice.presentation;
 import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
+import com.logistics.orderservice.application.service.command.IdempotentOrderCreateService;
 import com.logistics.orderservice.application.service.command.OrderCancelService;
 import com.logistics.orderservice.application.service.command.OrderManagementService;
 import com.logistics.orderservice.application.service.command.OrderCreateService;
@@ -28,18 +29,24 @@ import java.util.UUID;
 public class OrderController {
 
     private final OrderManagementService orderCommandService;
-    private final OrderCreateService orderCreateService;
     private final OrderCancelService  orderCancelService;
     private final OrderQueryService orderQueryService;
+    private final IdempotentOrderCreateService idempotentOrderCreateService;
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping
     public ApiResponse<CreateOrderResponse> createOrder(
+            @RequestHeader(
+                    value = "Idempotency-Key",
+                    required = false
+            )
+            String idempotencyKey,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CreateOrderRequest request
 
     ) {
-        CreateOrderResponse response = orderCreateService.createOrder(request.toCommand(), userDetails);
+        CreateOrderResponse response =
+                idempotentOrderCreateService.createOrder(idempotencyKey, request.toCommand(), userDetails);
         return ApiResponse.success(response);
     }
 

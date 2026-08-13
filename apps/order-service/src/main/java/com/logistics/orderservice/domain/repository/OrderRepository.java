@@ -9,6 +9,7 @@ import java.util.UUID;
 public interface OrderRepository{
     Order save(Order order);
 
+    Optional<Order> findByRequesterIdAndIdempotencyKey(UUID requesterId, String idempotencyKey);
 
 
     /**

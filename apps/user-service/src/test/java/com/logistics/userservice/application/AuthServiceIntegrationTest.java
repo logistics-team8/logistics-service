@@ -54,5 +54,5 @@ class AuthServiceIntegrationTest extends AbstractIntegrationTest {
         assertThat(tokens.refreshToken()).isNotBlank();
     }
 
-    // TODO : AuthService 통합 테스트 추후에 추가 작성, 로그아웃, 토큰 재발급 성공 케이스
+    // TODO : AuthService 통합 테스트 시간 관계 상 미구현 추후에 추가 작성, 로그아웃, 토큰 재발급 성공 케이스
 }

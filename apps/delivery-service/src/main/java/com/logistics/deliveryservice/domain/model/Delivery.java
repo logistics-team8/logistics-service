@@ -162,16 +162,21 @@ public class Delivery extends BaseEntity {
         return status == DeliveryStatus.CANCELED || isDeleted();
     }
 
+    // soft delete
+    public void delete(UUID deletedBy) {
+        markDeleted(deletedBy);
+    }
+
     private static void validateDeliveryPlan(
             UUID departureHubId,
             UUID arrivalHubId,
             DeliveryPlan deliveryPlan
     ) {
         // 배송과 계획을 구성하는 최상위 필수값이 하나라도 없으면 전체 계획을 거부한다.
+        // 배송·경로 담당자는 배송 생성 이후의 배정 단계에서 설정하므로 이 시점에는 없을 수 있다.
         if (departureHubId == null
                 || arrivalHubId == null
                 || deliveryPlan == null
-                || deliveryPlan.companyDeliveryManagerId() == null
                 || deliveryPlan.routes() == null) {
             throw invalidDeliveryPlan();
         }
@@ -216,7 +221,7 @@ public class Delivery extends BaseEntity {
     }
 
     private static void validateRoute(DeliveryPlan.Route route, int expectedSequence) {
-        // Route 순서는 1부터 연속되어야 하며 거리·시간은 음수가 될 수 없고 담당자가 필요하다.
+        // Route 순서는 1부터 연속되어야 하며 거리·시간은 음수가 될 수 없다.
         if (route == null
                 || route.sequence() == null
                 || route.sequence() != expectedSequence
@@ -225,8 +230,7 @@ public class Delivery extends BaseEntity {
                 || route.estimatedDistanceKm() == null
                 || route.estimatedDistanceKm().signum() < 0
                 || route.estimatedDurationMinutes() == null
-                || route.estimatedDurationMinutes() < 0
-                || route.hubDeliveryManagerId() == null) {
+                || route.estimatedDurationMinutes() < 0) {
             throw invalidDeliveryPlan();
         }
     }

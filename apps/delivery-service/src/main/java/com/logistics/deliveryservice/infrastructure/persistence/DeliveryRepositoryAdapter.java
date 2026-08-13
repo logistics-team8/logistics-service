@@ -7,6 +7,8 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -32,6 +34,28 @@ public class DeliveryRepositoryAdapter implements DeliveryRepository {
     @Override
     public Optional<Delivery> findActiveByOrderId(UUID orderId) {
         return deliveryJpaRepository.findByOrderIdAndDeletedAtIsNull(orderId);
+    }
+
+    @Override
+    public Optional<Delivery> findActiveByDeliveryId(UUID deliveryId) {
+        return deliveryJpaRepository.findByDeliveryIdAndDeletedAtIsNull(deliveryId);
+    }
+
+    @Override
+    public Page<Delivery> search(
+            DeliveryStatus status,
+            UUID orderId,
+            UUID hubId,
+            UUID deliveryManagerId,
+            Pageable pageable
+    ) {
+        return deliveryJpaRepository.search(
+                status,
+                orderId,
+                hubId,
+                deliveryManagerId,
+                pageable
+        );
     }
 
     @Override
