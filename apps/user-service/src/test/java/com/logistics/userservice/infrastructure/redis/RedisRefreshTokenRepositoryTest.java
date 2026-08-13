@@ -3,29 +3,21 @@ package com.logistics.userservice.infrastructure.redis;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.config.test.ConcurrencyTestingUtil;
-import com.logistics.userservice.error.AuthErrorCode;
-import com.logistics.userservice.error.UserErrorCode;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
-
 @SpringBootTest
 @DisplayName("RedisRefreshTokenRepositoryTest - 통합 테스트")
 class RedisRefreshTokenRepositoryTest extends AbstractIntegrationTest {
     @Autowired private RedisRefreshTokenRepository refreshTokenRepository;
     @Autowired private StringRedisTemplate redisTemplate;
-
 
     @BeforeEach
     void setUp() {
@@ -44,8 +36,7 @@ class RedisRefreshTokenRepositoryTest extends AbstractIntegrationTest {
         refreshTokenRepository.save(userId, sessionId, refreshToken);
 
         // then
-        assertThat(refreshTokenRepository.findByUserId(userId, sessionId))
-                .contains(refreshToken);
+        assertThat(refreshTokenRepository.findByUserId(userId, sessionId)).contains(refreshToken);
     }
 
     @Nested
@@ -82,10 +73,7 @@ class RedisRefreshTokenRepositoryTest extends AbstractIntegrationTest {
             // when
             boolean result =
                     refreshTokenRepository.rotate(
-                            userId,
-                            sessionId,
-                            "refreshToken",
-                            "newRefreshToken");
+                            userId, sessionId, "refreshToken", "newRefreshToken");
 
             // then
             assertThat(result).isFalse();
@@ -111,10 +99,7 @@ class RedisRefreshTokenRepositoryTest extends AbstractIntegrationTest {
                     () -> {
                         boolean result =
                                 refreshTokenRepository.rotate(
-                                        userId,
-                                        sessionId,
-                                        refreshToken,
-                                        newRefreshToken);
+                                        userId, sessionId, refreshToken, newRefreshToken);
 
                         if (result) {
                             successCount.incrementAndGet();
@@ -146,7 +131,6 @@ class RedisRefreshTokenRepositoryTest extends AbstractIntegrationTest {
         refreshTokenRepository.delete(userId, sessionId);
 
         // then
-        assertThat(refreshTokenRepository.findByUserId(userId, sessionId))
-                .isEmpty();
+        assertThat(refreshTokenRepository.findByUserId(userId, sessionId)).isEmpty();
     }
 }

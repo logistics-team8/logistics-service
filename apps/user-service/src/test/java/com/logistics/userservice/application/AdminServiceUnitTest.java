@@ -1,6 +1,5 @@
 package com.logistics.userservice.application;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -15,10 +14,8 @@ import com.logistics.userservice.application.port.CompanyClientPort;
 import com.logistics.userservice.application.port.HubClientPort;
 import com.logistics.userservice.application.validator.UserValidator;
 import com.logistics.userservice.domain.*;
-
 import java.util.Optional;
 import java.util.UUID;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -69,15 +66,13 @@ class AdminServiceUnitTest {
         AdminApprovalCommand command =
                 new AdminApprovalCommand(adminId, Role.HUB_MANAGER, hubId, userId);
 
-        given(userRepository.findByIdAndDeletedAtIsNull(userId))
-                .willReturn(Optional.of(user));
+        given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.of(user));
 
         given(user.isManagedByHub(hubId)).willReturn(true);
         given(user.getHubId()).willReturn(hubId);
         given(user.getCompanyId()).willReturn(null);
         given(user.getId()).willReturn(userId);
-        given(user.getRequestedRole())
-                .willReturn(RequestedRole.HUB_DELIVERY);
+        given(user.getRequestedRole()).willReturn(RequestedRole.HUB_DELIVERY);
 
         // when
         adminService.approveUser(command);
@@ -87,9 +82,7 @@ class AdminServiceUnitTest {
         verify(hubClientPort).existsById(hubId);
         verifyNoInteractions(companyClientPort);
 
-        verify(applicationEventPublisher).publishEvent(
-                any(UserApprovalEvent.class)
-        );
+        verify(applicationEventPublisher).publishEvent(any(UserApprovalEvent.class));
     }
 
     @Test
