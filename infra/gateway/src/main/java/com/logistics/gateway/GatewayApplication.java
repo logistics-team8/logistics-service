@@ -1,0 +1,15 @@
+package com.logistics.gateway;
+
+import com.logistics.gateway.config.PathProperties;
+import com.logistics.gateway.security.JwtProperties;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+
+@SpringBootApplication
+@EnableConfigurationProperties({JwtProperties.class, PathProperties.class})
+public class GatewayApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(GatewayApplication.class, args);
+    }
+}

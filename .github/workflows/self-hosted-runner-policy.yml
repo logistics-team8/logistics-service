@@ -1,0 +1,30 @@
+name: Self-hosted Runner Policy
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - ".github/scripts/check_self_hosted_runner_policy.py"
+      - ".github/scripts/test_check_self_hosted_runner_policy.py"
+  push:
+    branches: [main, develop]
+    paths:
+      - ".github/workflows/**"
+      - ".github/scripts/check_self_hosted_runner_policy.py"
+      - ".github/scripts/test_check_self_hosted_runner_policy.py"
+
+permissions:
+  contents: read
+
+jobs:
+  reject-pr-runner-use:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test runner policy checker
+        run: python3 .github/scripts/test_check_self_hosted_runner_policy.py
+
+      - name: Allow self-hosted runners only in the scheduled Dev deployment
+        run: python3 .github/scripts/check_self_hosted_runner_policy.py

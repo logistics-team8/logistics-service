@@ -1,0 +1,29 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+  cloud:
+    discovery:
+      enabled: false
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+    eureka:
+      client:
+        enabled: false
+        register-with-eureka: false
+        fetch-registry: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+jwt: # 테스트용 더미 값
+  access-secret: 8Xn6SF+pB8BIodzuhKV+WCOJf+L+biGG4UD0Uch6fdA=
+  refresh-secret: snNL4F2vawnUY+RM6t/IVloSZhrdHyKu96RV9c/h4kg=
+  cookie-secure: false
+  access-token-expiration: 30m
+  refresh-token-expiration: 14d

@@ -1,0 +1,247 @@
+name: Dev Candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit SHA or branch to build as the development candidate
+        required: false
+        default: develop
+        type: string
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit SHA or branch to build as the development candidate
+        required: false
+        default: develop
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Resolve candidate revision
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      sha: ${{ steps.revision.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || 'develop' }}
+          fetch-depth: 1
+
+      - id: revision
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Test ${{ matrix.service }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: config-server
+            gradle-task: :infra:config-server:build
+          - service: eureka-server
+            gradle-task: :infra:eureka-server:build
+          - service: gateway
+            gradle-task: :infra:gateway:build
+          - service: user-service
+            gradle-task: :apps:user-service:build
+          - service: hub-service
+            gradle-task: :apps:hub-service:build
+          - service: company-product-service
+            gradle-task: :apps:company-product-service:build
+          - service: delivery-service
+            gradle-task: :apps:delivery-service:build
+          - service: order-service
+            gradle-task: :apps:order-service:build
+          - service: notification-service
+            gradle-task: :apps:notification-service:build
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: logistics
+          POSTGRES_USER: logistics
+          POSTGRES_PASSWORD: logistics
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U logistics -d logistics"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPRING_CLOUD_CONFIG_ENABLED: "false"
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/logistics
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_DATASOURCE_USERNAME: logistics
+      SPRING_DATASOURCE_PASSWORD: logistics
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      - name: Build and test
+        run: bash ./gradlew "${{ matrix.gradle-task }}" --no-daemon
+
+  image:
+    name: Build ARM64 ${{ matrix.service }}
+    needs: [prepare, test]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: development
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: config-server
+            module: infra:config-server
+            module-dir: infra/config-server
+            target: config-server
+          - service: eureka-server
+            module: infra:eureka-server
+            module-dir: infra/eureka-server
+            target: service
+          - service: gateway
+            module: infra:gateway
+            module-dir: infra/gateway
+            target: service
+          - service: user-service
+            module: apps:user-service
+            module-dir: apps/user-service
+            target: service
+          - service: hub-service
+            module: apps:hub-service
+            module-dir: apps/hub-service
+            target: service
+          - service: company-product-service
+            module: apps:company-product-service
+            module-dir: apps/company-product-service
+            target: service
+          - service: delivery-service
+            module: apps:delivery-service
+            module-dir: apps/delivery-service
+            target: service
+          - service: order-service
+            module: apps:order-service
+            module-dir: apps/order-service
+            target: service
+          - service: notification-service
+            module: apps:notification-service
+            module-dir: apps/notification-service
+            target: service
+    env:
+      OCIR_REGISTRY: ${{ vars.OCIR_REGISTRY }}
+      OCIR_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.OCIR_REGISTRY }}
+          username: ${{ secrets.OCIR_USERNAME }}
+          password: ${{ secrets.OCIR_AUTH_TOKEN }}
+
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          target: ${{ matrix.target }}
+          platforms: linux/arm64
+          push: true
+          build-args: |
+            MODULE=${{ matrix.module }}
+            MODULE_DIR=${{ matrix.module-dir }}
+          tags: ${{ env.OCIR_REGISTRY }}/${{ env.OCIR_NAMESPACE }}/logistics-dev/${{ matrix.service }}:${{ needs.prepare.outputs.sha }}
+
+      - name: Record immutable image reference
+        env:
+          SERVICE: ${{ matrix.service }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          IMAGE_BASE: ${{ env.OCIR_REGISTRY }}/${{ env.OCIR_NAMESPACE }}/logistics-dev/${{ matrix.service }}
+        run: |
+          jq -n --arg service "$SERVICE" --arg image "${IMAGE_BASE}@${DIGEST}" \
+            '{service: $service, image: $image}' > "$RUNNER_TEMP/${SERVICE}.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-digest-${{ matrix.service }}
+          path: ${{ runner.temp }}/${{ matrix.service }}.json
+          retention-days: 30
+
+  manifest:
+    name: Publish candidate manifest
+    needs: [prepare, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: development
+    env:
+      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_REGION: ${{ vars.OCI_REGION }}
+      OCI_PRIVATE_KEY_B64: ${{ secrets.OCI_PRIVATE_KEY_B64 }}
+      OCI_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
+      RELEASE_MANIFEST_BUCKET: ${{ vars.RELEASE_MANIFEST_BUCKET }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-digest-*
+          path: image-digests
+          merge-multiple: true
+
+      - name: Build candidate manifest
+        run: |
+          jq -s \
+            --arg commit_sha "${{ needs.prepare.outputs.sha }}" \
+            --arg config_sha "${{ needs.prepare.outputs.sha }}" \
+            --arg ci_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{commit_sha: $commit_sha, config_sha: $config_sha, ci_url: $ci_url, images: (map({key: .service, value: .image}) | from_entries)}' \
+            image-digests/*.json > candidate.json
+          test "$(jq '.images | length' candidate.json)" -eq 9
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install and configure OCI CLI
+        run: |
+          pipx install --force oci-cli
+          bash .github/scripts/configure-oci-cli.sh
+
+      - name: Persist CI-passed candidate
+        run: |
+          oci os object put --namespace "$OCI_NAMESPACE" --bucket-name "${RELEASE_MANIFEST_BUCKET}" --name "candidates/${{ needs.prepare.outputs.sha }}.json" --file candidate.json --force
+          oci os object put --namespace "$OCI_NAMESPACE" --bucket-name "$RELEASE_MANIFEST_BUCKET" --name latest.json --file candidate.json --force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dev-release-manifest
+          path: candidate.json
+          retention-days: 30

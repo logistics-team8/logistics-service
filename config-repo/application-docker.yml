@@ -1,0 +1,25 @@
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+
+management:
+  tracing:
+    export:
+      zipkin:
+        endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
+
+app:
+  database:
+    host: ${DB_HOST:postgres}
+    port: ${DB_PORT:5432}
+    name: ${DB_NAME:logistics}
+
+spring:
+  reactor:
+    context-propagation: auto
+  datasource:
+    username: ${DB_USERNAME:logistics}
+    password: ${DB_PASSWORD:logistics}

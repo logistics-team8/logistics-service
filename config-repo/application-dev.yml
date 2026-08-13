@@ -1,0 +1,36 @@
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+
+app:
+  database:
+    host: postgres
+    port: 5432
+    name: logistics
+
+spring:
+  reactor:
+    context-propagation: auto
+  datasource:
+    username: logistics
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: 6379
+
+server:
+  forward-headers-strategy: framework
+
+management:
+  tracing:
+    export:
+      zipkin:
+        endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}

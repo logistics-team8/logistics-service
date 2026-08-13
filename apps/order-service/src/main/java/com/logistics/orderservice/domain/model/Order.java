@@ -1,0 +1,378 @@
+package com.logistics.orderservice.domain.model;
+
+import com.logistics.common.exception.BusinessException;
+import com.logistics.orderservice.error.OrderErrorCode;
+import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Table(
+        name = "p_orders",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_order_requester_idempotency_key",
+                columnNames = {
+                        "requester_id",
+                        "idempotency_key"
+                }
+        )
+)
+@Entity
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Order extends BaseEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "order_id")
+    private UUID id;
+
+    @Column(
+            name = "order_number",
+            nullable = false,
+            unique = true,
+            length = 50
+    )
+    private String orderNumber;
+
+    @Column(name = "idempotency_key", length = 100)
+    private String idempotencyKey;
+
+    @Column(name = "request_hash", length = 64)
+    private String requestHash;
+
+    @Column(name = "requester_id", nullable = false)
+    private UUID requesterId;
+
+    @Column(name = "receiver_company_id", nullable = false)
+    private UUID receiverCompanyId;
+
+    /**
+     * 수령업체의 소속 허브
+     *
+     * Company Service 연동 후 저장한다.
+     */
+    @Column(name = "destination_hub_id")
+    private UUID destinationHubId;
+
+    /**
+     * 주문 생성 당시 수령업체 주소
+     *
+     * Company Service 연동 후 저장한다.
+     */
+    @Column(name = "delivery_address", length = 255)
+    private String deliveryAddress;
+
+    /**
+     * 주문 생성 당시 수령인 이름
+     *
+     * User Service 연동 후 저장한다.
+     */
+    @Column(name = "receiver_name", length = 100)
+    private String receiverName;
+
+    /**
+     * 주문 생성 당시 수령인 Slack ID
+     *
+     * User Service 연동 후 저장한다.
+     */
+    @Column(name = "receiver_slack_id", length = 100)
+    private String receiverSlackId;
+
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    private OrderStatus status;
+
+    @Column(name = "request_message", length = 500)
+    private String requestMessage;
+
+    @Column(name = "requested_delivery_at")
+    private LocalDateTime requestedDeliveryAt;
+
+    @OneToMany(
+            mappedBy = "order",
+            cascade = CascadeType.ALL
+            //orphanRemoval = true
+    )
+    private final List<OrderItem> orderItems =
+            new ArrayList<>();
+
+    @Column(name = "canceled_by")
+    private UUID canceledBy;
+
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "failure_reason", length = 50)
+    private OrderFailureReason failureReason;
+
+    private Order(
+            String orderNumber,
+            UUID requesterId,
+            UUID receiverCompanyId,
+            UUID destinationHubId,
+            String deliveryAddress,
+            String receiverName,
+            String receiverSlackId,
+            String requestMessage,
+            LocalDateTime requestedDeliveryAt
+    ) {
+        this.orderNumber = orderNumber;
+        this.requesterId = requesterId;
+        this.receiverCompanyId = receiverCompanyId;
+        this.destinationHubId = destinationHubId;
+        this.deliveryAddress = deliveryAddress;
+        this.receiverName = receiverName;
+        this.receiverSlackId = receiverSlackId;
+        this.requestMessage = requestMessage;
+        this.requestedDeliveryAt = requestedDeliveryAt;
+        this.status = OrderStatus.PENDING;
+    }
+
+    public static Order create(
+            String orderNumber,
+            UUID requesterId,
+            UUID receiverCompanyId,
+            UUID destinationHubId,
+            String deliveryAddress,
+            String receiverName,
+            String receiverSlackId,
+            String requestMessage,
+            LocalDateTime requestedDeliveryAt,
+            LocalDateTime now
+    ) {
+        validateRequestedDeliveryAt(requestedDeliveryAt,now);
+
+        return new Order(
+                orderNumber,
+                requesterId,
+                receiverCompanyId,
+                destinationHubId,
+                deliveryAddress,
+                receiverName,
+                receiverSlackId,
+                requestMessage,
+                requestedDeliveryAt
+        );
+    }
+
+
+    public void addOrderItem(
+            UUID productId,
+            String productName,
+            UUID supplierCompanyId,
+            UUID departureHubId,
+            Integer quantity
+    ){
+        validateDuplicateProduct(productId);
+
+        OrderItem orderItem = OrderItem.create(
+                this,
+                productId,
+                productName,
+                supplierCompanyId,
+                departureHubId,
+                quantity
+        );
+        this.orderItems.add(orderItem);
+    }
+
+
+    public void update(
+            String requestMessage,
+            LocalDateTime requestedDeliveryAt,
+            LocalDateTime now
+    ){
+        if(this.status != OrderStatus.PENDING){
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_NOT_UPDATABLE
+            );
+        }
+        if(requestMessage != null){
+            this.requestMessage = requestMessage;
+        }
+        if(requestedDeliveryAt != null){
+            validateRequestedDeliveryAt(requestedDeliveryAt,now);
+            this.requestedDeliveryAt = requestedDeliveryAt;
+        }
+    }
+
+
+    public void delete(UUID deleteBy){
+        if(this.status != OrderStatus.CANCELED
+                && this.status != OrderStatus.FAILED){
+            throw new BusinessException(OrderErrorCode.ORDER_NOT_DELETABLE);
+        }
+
+        this.orderItems.forEach(
+                orderItem -> orderItem.delete(deleteBy)
+        );
+
+        softDelete(deleteBy, LocalDateTime.now());
+    }
+
+
+    public void cancel(UUID canceledBy, LocalDateTime canceledAt){
+        validateCancelable();
+
+        this.orderItems.stream()
+                .filter(orderItem ->
+                        !orderItem.isCanceled()
+                )
+                .forEach(orderItem ->
+                        orderItem.cancel(
+                                canceledBy,
+                                canceledAt
+                        )
+                );
+        this.status = OrderStatus.CANCELED;
+        this.canceledBy = canceledBy;
+        this.canceledAt = canceledAt;
+    }
+
+
+    public OrderItem cancelOrderItem(UUID orderItemId, UUID canceledBy, LocalDateTime canceledAt) {
+        validateCancelable();
+
+        OrderItem orderItem = orderItems.stream()
+                .filter(item -> item.getId().equals(orderItemId))
+                .findFirst()
+                .orElseThrow( () ->
+                            new BusinessException(OrderErrorCode.ORDER_ITEM_NOT_FOUND)
+                );
+
+        orderItem.cancel(canceledBy, LocalDateTime.now());
+
+        if(orderItems.stream().allMatch(OrderItem::isCanceled)){
+            this.status = OrderStatus.CANCELED;
+            this.canceledBy = canceledBy;
+            this.canceledAt = canceledAt;
+        }
+
+        return orderItem;
+
+    }
+
+
+
+
+
+    //하나의 주문안에 같은 상품ID 중복 방지
+    private void validateDuplicateProduct(UUID productId){
+        boolean duplicatedOrderItem = orderItems.stream()
+                .anyMatch(orderItem ->
+                        orderItem.getProductId().equals(productId)
+                );
+
+        if(duplicatedOrderItem){
+            throw new BusinessException(
+                    OrderErrorCode.DUPLICATE_ORDER_PRODUCT
+            );
+        }
+    }
+
+    //현재 시간에서 최소 1일 이후의 납품 일시를 선택해야 한다.
+    private static void validateRequestedDeliveryAt(LocalDateTime requestedDeliveryAt, LocalDateTime now){
+        if(requestedDeliveryAt == null){
+            throw new BusinessException(OrderErrorCode.REQUESTED_DELIVERY_AT_REQUIRED);
+        }
+
+        LocalDateTime minimumDeliveryAt = now.plusDays(1);
+
+        if(requestedDeliveryAt.isBefore(minimumDeliveryAt)){
+            throw new BusinessException(OrderErrorCode.INVALID_REQUESTED_DELIVERY_AT);
+        }
+    }
+
+    public void validateCancelable(){
+
+        //재고 차감 결과를 알 수 없는 주문은 실제 Product 재고가 이미 감소했을 수도 있다.
+        if (this.failureReason == OrderFailureReason.STOCK_DECREASE_UNKNOWN) {
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_STOCK_STATUS_UNKNOWN
+            );
+        }
+        if (this.status == OrderStatus.DELIVERY_CREATED) {
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_NOT_CANCELABLE
+            );
+        }
+
+        if (this.status != OrderStatus.PENDING
+                && this.status != OrderStatus.CONFIRMED) {
+
+            throw new BusinessException(
+                    OrderErrorCode.ORDER_NOT_CANCELABLE
+            );
+        }
+    }
+
+    public void confirm() {
+        if(this.status != OrderStatus.PENDING){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.CONFIRMED;
+        this.failureReason = null;
+
+    }
+
+    public void markDeliveryCreated(){
+        if(this.status != OrderStatus.CONFIRMED){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.DELIVERY_CREATED;
+        this.failureReason = null;
+    }
+
+    public void fail(OrderFailureReason failureReason) {
+        if(this.status != OrderStatus.PENDING && this.status != OrderStatus.CONFIRMED){
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+        this.status = OrderStatus.FAILED;
+        this.failureReason = failureReason;
+    }
+
+    public boolean requiresStockRestoreForCancel(){
+        return this.status == OrderStatus.CONFIRMED;
+    }
+
+
+    public void markStockDecreaseUnknown(){
+       if (this.status != OrderStatus.PENDING) {
+           throw new BusinessException(
+                   OrderErrorCode.INVALID_ORDER_STATUS
+           );
+       }
+       this.failureReason = OrderFailureReason.STOCK_DECREASE_UNKNOWN;
+    }
+
+    public void markDeliveryStatusCheckFailed(){
+        if (this.status != OrderStatus.CONFIRMED) {
+            throw new BusinessException(
+                    OrderErrorCode.INVALID_ORDER_STATUS
+            );
+        }
+
+        this.failureReason = OrderFailureReason.DELIVERY_STATUS_CHECK_FAILED;
+    }
+
+    public void assignIdempotencyKey(
+            String idempotencyKey,
+            String requestHash
+    ){
+        this.idempotencyKey = idempotencyKey;
+        this.requestHash = requestHash;
+    }
+}

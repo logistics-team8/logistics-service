@@ -1,0 +1,14 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
+  application:
+    name: company-product-service
+  profiles:
+    default: local
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}

@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: "0 4 * * *" # 13:00 KST (UTC+09:00)
   workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit SHA or branch to build as the development candidate
+        required: false
+        default: develop
+        type: string
 
 permissions:
   contents: read
@@ -13,47 +19,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  resolve-candidate:
-    name: Resolve latest CI-passed candidate
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: development
-    env:
-      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
-      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
-      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
-      OCI_CLI_REGION: ${{ vars.OCI_REGION }}
-      OCI_PRIVATE_KEY_B64: ${{ secrets.OCI_PRIVATE_KEY_B64 }}
-      OCI_NAMESPACE: ${{ vars.OCIR_NAMESPACE }}
-      RELEASE_MANIFEST_BUCKET: ${{ vars.RELEASE_MANIFEST_BUCKET }}
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: main
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install and configure OCI CLI
-        run: |
-          pipx install --force oci-cli
-          bash "${GITHUB_WORKSPACE}/.github/scripts/configure-oci-cli.sh"
-
-      - name: Download latest manifest
-        run: |
-          oci os object get --namespace "$OCI_NAMESPACE" --bucket-name "$RELEASE_MANIFEST_BUCKET" --name latest.json --file candidate.json
-          jq -e '.commit_sha and (.images | length == 9)' candidate.json >/dev/null
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dev-release-manifest
-          path: candidate.json
-          retention-days: 1
+  candidate:
+    name: Build development candidate
+    uses: ./.github/workflows/dev-candidate.yml
+    with:
+      ref: ${{ inputs.ref || 'develop' }}
+    secrets: inherit
 
   deploy:
     name: Deploy immutable images on my-instance-1
-    needs: resolve-candidate
+    needs: candidate
     runs-on: [self-hosted, linux, arm64, logistics-dev-deploy]
     timeout-minutes: 20
     environment: development
@@ -63,6 +38,7 @@ jobs:
       DEV_JWT_ACCESS_SECRET_OCID: ${{ secrets.DEV_JWT_ACCESS_SECRET_OCID }}
       DEV_JWT_REFRESH_SECRET_OCID: ${{ secrets.DEV_JWT_REFRESH_SECRET_OCID }}
       DEV_PROVISION_KEY_SECRET_OCID: ${{ secrets.DEV_PROVISION_KEY_SECRET_OCID }}
+      DEV_ZIPKIN_BASIC_AUTH_HASH_SECRET_OCID: ${{ secrets.DEV_ZIPKIN_BASIC_AUTH_HASH_SECRET_OCID }}
       DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID: ${{ secrets.DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID }}
       DEV_NAVER_MAPS_API_KEY_SECRET_OCID: ${{ secrets.DEV_NAVER_MAPS_API_KEY_SECRET_OCID }}
     steps:

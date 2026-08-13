@@ -2,3 +2,5 @@
 POSTGRES_IMAGE=docker.io/library/postgres:17-alpine@sha256:b797483593b82cbea9a7ee41c88f324a90d10d9c2504d40e755d91c75456366d
 REDIS_IMAGE=docker.io/library/redis:7-alpine@sha256:102aa93d02c163a634662ec18a1a1db51bf5b8b6a2f28547ce24626218a40d54
 CADDY_IMAGE=docker.io/library/caddy:2-alpine@sha256:1172d4213087d3fc30bafc7ff2c2896180eb0c41ff7f75f315568fb36cabdcba
+# 2026-08-13 Docker Hub에서 검증한 ARM64 이미지 manifest다.
+ZIPKIN_IMAGE=docker.io/openzipkin/zipkin-slim:3@sha256:18d2f860ec4c7a1246fe41368ff244bbfef0bb8ede153da8045dd17773595d48
