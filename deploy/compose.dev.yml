@@ -55,6 +55,15 @@ services:
       timeout: 3s
       retries: 12
 
+  zipkin:
+    <<: *java-service
+    # 트레이스는 인메모리 저장이라 컨테이너 재시작 시 사라진다.
+    # 이전 릴리스 env에 ZIPKIN_IMAGE가 없어도 롤백할 수 있도록 기본 digest를 유지한다.
+    image: ${ZIPKIN_IMAGE:-docker.io/openzipkin/zipkin-slim:3@sha256:18d2f860ec4c7a1246fe41368ff244bbfef0bb8ede153da8045dd17773595d48}
+    environment:
+      JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m -XX:+ExitOnOutOfMemoryError
+    mem_limit: 512m
+
   config-server:
     <<: *java-service
     image: ${CONFIG_SERVER_IMAGE:?CONFIG_SERVER_IMAGE is required}
@@ -75,6 +84,7 @@ services:
     <<: *java-service
     image: ${EUREKA_SERVER_IMAGE:?EUREKA_SERVER_IMAGE is required}
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: -Xms128m -Xmx256m -XX:+ExitOnOutOfMemoryError
     mem_limit: 512m
     healthcheck:
@@ -209,6 +219,7 @@ services:
     environment:
       DEV_DOMAIN: ${DEV_DOMAIN:?DEV_DOMAIN is required}
       DEV_PROVISION_KEY: ${DEV_PROVISION_KEY:?DEV_PROVISION_KEY is required}
+      ZIPKIN_BASIC_AUTH_HASH: ${ZIPKIN_BASIC_AUTH_HASH:?ZIPKIN_BASIC_AUTH_HASH is required}
     ports:
       - "80:80"
       - "443:443"
@@ -223,6 +234,8 @@ services:
     depends_on:
       gateway:
         condition: service_healthy
+      zipkin:
+        condition: service_started
 
 volumes:
   postgres-data:

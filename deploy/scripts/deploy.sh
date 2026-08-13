@@ -27,6 +27,7 @@ done
 : "${DEV_JWT_ACCESS_SECRET_OCID:?DEV_JWT_ACCESS_SECRET_OCID is required}"
 : "${DEV_JWT_REFRESH_SECRET_OCID:?DEV_JWT_REFRESH_SECRET_OCID is required}"
 : "${DEV_PROVISION_KEY_SECRET_OCID:?DEV_PROVISION_KEY_SECRET_OCID is required}"
+: "${DEV_ZIPKIN_BASIC_AUTH_HASH_SECRET_OCID:?DEV_ZIPKIN_BASIC_AUTH_HASH_SECRET_OCID is required}"
 : "${DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID:?DEV_NAVER_MAPS_API_KEY_ID_SECRET_OCID is required}"
 : "${DEV_NAVER_MAPS_API_KEY_SECRET_OCID:?DEV_NAVER_MAPS_API_KEY_SECRET_OCID is required}"
 
@@ -59,6 +60,7 @@ read_locked_image() {
 LOCKED_POSTGRES_IMAGE="$(read_locked_image POSTGRES_IMAGE)"
 LOCKED_REDIS_IMAGE="$(read_locked_image REDIS_IMAGE)"
 LOCKED_CADDY_IMAGE="$(read_locked_image CADDY_IMAGE)"
+LOCKED_ZIPKIN_IMAGE="$(read_locked_image ZIPKIN_IMAGE)"
 
 current_env="$STATE_DIR/runtime/current.env"
 previous_env="$STATE_DIR/runtime/previous.env"
@@ -70,18 +72,6 @@ env_value() {
   awk -F= -v key="$key" '$1 == key {sub(/^[^=]*=/, ""); print; exit}' "$file"
 }
 
-if [[ -f "$current_env" ]] \
-  && [[ "$(env_value CANDIDATE_SHA "$current_env")" == "$candidate_sha" ]] \
-  && [[ "$(env_value POSTGRES_IMAGE "$current_env")" == "$LOCKED_POSTGRES_IMAGE" ]] \
-  && [[ "$(env_value REDIS_IMAGE "$current_env")" == "$LOCKED_REDIS_IMAGE" ]] \
-  && [[ "$(env_value CADDY_IMAGE "$current_env")" == "$LOCKED_CADDY_IMAGE" ]] \
-  && [[ "$(env_value HUB_ROUTE_DEFAULT_DATA_ENABLED "$current_env")" == "true" ]] \
-  && [[ -n "$(env_value NAVER_MAPS_API_KEY_ID "$current_env")" ]] \
-  && [[ -n "$(env_value NAVER_MAPS_API_KEY "$current_env")" ]]; then
-  echo "No-op: candidate $candidate_sha is already deployed."
-  exit 0
-fi
-
 secret_value() {
   local secret_ocid="$1"
   OCI_CLI_AUTH=instance_principal \
@@ -89,6 +79,32 @@ secret_value() {
       --query 'data."secret-bundle-content".content' --raw-output \
     | base64 --decode
 }
+
+zipkin_basic_auth_hash="$(secret_value "$DEV_ZIPKIN_BASIC_AUTH_HASH_SECRET_OCID")"
+if [[ ! "$zipkin_basic_auth_hash" =~ ^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$ ]]; then
+  echo "Zipkin Basic Auth Secret must contain one bcrypt hash." >&2
+  exit 65
+fi
+zipkin_basic_auth_cost="${zipkin_basic_auth_hash:4:2}"
+if (( 10#$zipkin_basic_auth_cost < 10 || 10#$zipkin_basic_auth_cost > 31 )); then
+  echo "Zipkin Basic Auth bcrypt cost must be between 10 and 31." >&2
+  exit 65
+fi
+zipkin_basic_auth_env_value="'${zipkin_basic_auth_hash}'"
+
+if [[ -f "$current_env" ]] \
+  && [[ "$(env_value CANDIDATE_SHA "$current_env")" == "$candidate_sha" ]] \
+  && [[ "$(env_value POSTGRES_IMAGE "$current_env")" == "$LOCKED_POSTGRES_IMAGE" ]] \
+  && [[ "$(env_value REDIS_IMAGE "$current_env")" == "$LOCKED_REDIS_IMAGE" ]] \
+  && [[ "$(env_value CADDY_IMAGE "$current_env")" == "$LOCKED_CADDY_IMAGE" ]] \
+  && [[ "$(env_value ZIPKIN_IMAGE "$current_env")" == "$LOCKED_ZIPKIN_IMAGE" ]] \
+  && [[ "$(env_value ZIPKIN_BASIC_AUTH_HASH "$current_env")" == "$zipkin_basic_auth_env_value" ]] \
+  && [[ "$(env_value HUB_ROUTE_DEFAULT_DATA_ENABLED "$current_env")" == "true" ]] \
+  && [[ -n "$(env_value NAVER_MAPS_API_KEY_ID "$current_env")" ]] \
+  && [[ -n "$(env_value NAVER_MAPS_API_KEY "$current_env")" ]]; then
+  echo "No-op: candidate $candidate_sha is already deployed."
+  exit 0
+fi
 
 write_release_env() {
   local target="$1"
@@ -113,12 +129,14 @@ write_release_env() {
     printf 'JWT_ACCESS_SECRET=%s\n' "$jwt_access_secret"
     printf 'JWT_REFRESH_SECRET=%s\n' "$jwt_refresh_secret"
     printf 'DEV_PROVISION_KEY=%s\n' "$provision_key"
+    printf "ZIPKIN_BASIC_AUTH_HASH='%s'\n" "$zipkin_basic_auth_hash"
     printf 'HUB_ROUTE_DEFAULT_DATA_ENABLED=true\n'
     printf 'NAVER_MAPS_API_KEY_ID=%s\n' "$naver_maps_api_key_id"
     printf 'NAVER_MAPS_API_KEY=%s\n' "$naver_maps_api_key"
     printf 'POSTGRES_IMAGE=%s\n' "$LOCKED_POSTGRES_IMAGE"
     printf 'REDIS_IMAGE=%s\n' "$LOCKED_REDIS_IMAGE"
     printf 'CADDY_IMAGE=%s\n' "$LOCKED_CADDY_IMAGE"
+    printf 'ZIPKIN_IMAGE=%s\n' "$LOCKED_ZIPKIN_IMAGE"
     while IFS=$'\t' read -r environment_key image; do
       printf '%s=%s\n' "$environment_key" "$image"
     done <<< "$image_lines"
@@ -213,10 +231,11 @@ wait_https() {
 
 deploy_environment() {
   compose pull || return 1
-  compose up -d postgres redis || return 1
+  compose up -d postgres redis zipkin || return 1
   wait_healthy postgres || return 1
   initialize_database_schemas || return 1
   wait_healthy redis || return 1
+  wait_healthy zipkin || return 1
   compose up -d config-server eureka-server || return 1
   wait_healthy config-server || return 1
   wait_healthy eureka-server || return 1
@@ -266,6 +285,9 @@ handle_deployment_failure() {
 
 if [[ -f "$current_env" ]]; then
   cp "$current_env" "$previous_env"
+  if [[ -z "$(env_value ZIPKIN_BASIC_AUTH_HASH "$previous_env")" ]]; then
+    printf "ZIPKIN_BASIC_AUTH_HASH='%s'\n" "$zipkin_basic_auth_hash" >> "$previous_env"
+  fi
   ROLLBACK_ENV="$previous_env"
 fi
 

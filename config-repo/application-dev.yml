@@ -10,6 +10,8 @@ app:
     name: logistics
 
 spring:
+  reactor:
+    context-propagation: auto
   datasource:
     username: logistics
     password: ${DB_PASSWORD}
@@ -24,3 +26,11 @@ spring:
 
 server:
   forward-headers-strategy: framework
+
+management:
+  tracing:
+    export:
+      zipkin:
+        endpoint: ${ZIPKIN_ENDPOINT:http://zipkin:9411/api/v2/spans}
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:1.0}
