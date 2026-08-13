@@ -3,6 +3,7 @@ package com.logistics.gateway.filter;
 import com.logistics.gateway.config.PathProperties;
 import com.logistics.gateway.error.BusinessException;
 import com.logistics.gateway.error.GatewayErrorCode;
+import com.logistics.gateway.redis.RedisSessionValidator;
 import com.logistics.gateway.redis.RedisUserRoleCache;
 import com.logistics.gateway.response.UserRoleResponse;
 import com.logistics.gateway.security.JwtTokenProvider;
@@ -10,6 +11,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import java.time.Duration;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -32,6 +34,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
     private final RedisUserRoleCache roleCache;
     private final WebClient.Builder webClientBuilder;
+    private final RedisSessionValidator sessionValidator;
     private final JwtTokenProvider jwtTokenProvider;
     private final PathProperties pathProperties;
 
@@ -86,10 +89,12 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         String userId = claims.getSubject();
+        String sessionId = claims.get("sessionId", String.class);
         String hubId = claims.get("hubId", String.class);
         String companyId = claims.get("companyId", String.class);
 
-        return verifyUserRole(userId)
+        return validateSession(userId, sessionId)
+                .then(verifyUserRole(userId))
                 .flatMap(
                         role -> {
                             ServerHttpRequest.Builder requestBuilder =
@@ -110,7 +115,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                             ServerWebExchange mutatedExchange =
                                     exchange.mutate().request(requestBuilder.build()).build();
 
-                            log.info("캐시 정보 {}", role);
                             return chain.filter(mutatedExchange);
                         });
     }
@@ -131,6 +135,33 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         if (StringUtils.hasText(value)) {
             builder.header(header, value);
         }
+    }
+
+    /**
+     * Redis 세션 유효성 검증
+     *
+     * @param userId 회원 PK
+     * @param sessionId 토큰 세션 ID
+     */
+    private Mono<Void> validateSession(String userId, String sessionId) {
+        if (!StringUtils.hasText(userId) || !StringUtils.hasText(sessionId)) {
+            return Mono.error(new BusinessException(GatewayErrorCode.TOKEN_INVALID));
+        }
+
+        return sessionValidator
+                .exists(UUID.fromString(userId), UUID.fromString(sessionId))
+                .timeout(Duration.ofMillis(300))
+                .onErrorResume(
+                        e -> {
+                            log.error(
+                                    "[ERROR] Redis 세션 조회 실패 userId = {}",
+                                    userId,
+                                    e);
+                            return Mono.just(true);
+                        })
+                .filter(Boolean::booleanValue)
+                .switchIfEmpty(Mono.error(new BusinessException(GatewayErrorCode.UNAUTHORIZED)))
+                .then();
     }
 
     /**
@@ -173,7 +204,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                                         .onErrorResume(
                                                 e -> {
                                                     log.warn(
-                                                            "[Cache] Role Cache 저장 실패 userId = {}",
+                                                            "[CACHE] Role Cache 저장 실패 userId = {}",
                                                             userId,
                                                             e);
                                                     return Mono.just(role);
@@ -202,7 +233,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 .onStatus(
                         status -> status.equals(HttpStatus.NOT_FOUND),
                         response -> {
-                            log.warn("[Fail] 해당 유저를 찾을 수 없음 userId = {}", userId);
+                            log.warn("[FAIL] 해당 유저를 찾을 수 없음 userId = {}", userId);
                             return Mono.error(
                                     new BusinessException(
                                             GatewayErrorCode.USER_NOT_FOUND)); // 또는 401/403 처리

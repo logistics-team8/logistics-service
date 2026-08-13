@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import com.logistics.gateway.config.PathProperties;
 import com.logistics.gateway.error.BusinessException;
 import com.logistics.gateway.error.GatewayErrorCode;
+import com.logistics.gateway.redis.RedisSessionValidator;
 import com.logistics.gateway.redis.RedisUserRoleCache;
 import com.logistics.gateway.security.JwtTokenProvider;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -27,6 +28,9 @@ import reactor.test.StepVerifier;
 class AuthenticationFilterTest {
     @Mock RedisUserRoleCache roleCache;
 
+    @Mock
+    private RedisSessionValidator sessionValidator;
+
     @Mock WebClient.Builder webClientBuilder;
 
     @Mock JwtTokenProvider jwtTokenProvider;
@@ -39,7 +43,7 @@ class AuthenticationFilterTest {
     void setUp() {
         filter =
                 new AuthenticationFilter(
-                        roleCache, webClientBuilder, jwtTokenProvider, pathProperties);
+                        roleCache, webClientBuilder, sessionValidator, jwtTokenProvider, pathProperties);
     }
 
     @Test
