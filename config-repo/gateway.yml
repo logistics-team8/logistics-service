@@ -90,7 +90,7 @@ spring:
             - id: notification-service
               uri: lb://notification-service
               predicates:
-                - Path=/api/v1/notifications/**
+                - Path=/api/slack-messages/**
 
             - id: notification-swagger
               uri: lb://notification-service
@@ -121,6 +121,15 @@ springdoc:
     urls[2]:
       name: company-product-service
       url: /company-product-service/v3/api-docs
+    urls[3]:
+      name: order-service
+      url: /order-service/v3/api-docs
+    urls[4]:
+      name: delivery-service
+      url: /delivery-service/v3/api-docs
+    urls[5]:
+      name: notification-service
+      url: /notification-service/v3/api-docs
 
 
 path:

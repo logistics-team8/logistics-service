@@ -2,6 +2,10 @@ plugins {
     id 'java'
 }
 
+ext {
+    springdocVersion = '3.0.3'
+}
+
 allprojects {
     group = 'com.logistics'
     version = '0.0.1-SNAPSHOT'

@@ -32,12 +32,6 @@ spring:
 server:
   port: 8086
 
-eureka:
-  client:
-    enabled: false
-    register-with-eureka: false
-    fetch-registry: false
-
 slack:
   bot-token: ${SLACK_BOT_TOKEN}
   base-url: https://slack.com/api
