@@ -4,14 +4,6 @@
 
 ### 물류 관리와 배송을 위한 Spring Cloud 기반 MSA 플랫폼
 
-![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0.7-6DB33F?logo=springboot&logoColor=white)
-![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2025.1.2-6DB33F?logo=spring&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-336791?logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-7.4-DC382D?logo=redis&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
-![Zipkin](https://img.shields.io/badge/Tracing-Zipkin-F9C642)
-
 </div>
 
 ---
@@ -35,8 +27,6 @@
 | DevOps | Gradle, Docker, Docker Compose, GitHub Actions, OCIR, OCI Compute, Caddy |
 
 ## 시스템 아키텍처
-
-<img width="11043" height="7866" alt="logistics-service 시스템 아키텍처" src="https://github.com/user-attachments/assets/a8a2ec3b-756e-43cc-b124-4da7b7614840" />
 
 주요 요청 흐름은 다음과 같습니다.
 
