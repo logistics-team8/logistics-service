@@ -44,6 +44,8 @@ public class SecurityConfig {
                         .authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/deliveries/{deliveryId}")
                         .authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/deliveries/{deliveryId}/routes")
+                        .authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/deliveries/{deliveryId}")
                         .hasAnyRole("MASTER", "HUB_MANAGER")
                         .anyRequest().permitAll())

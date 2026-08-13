@@ -4,9 +4,11 @@ import com.logistics.common.response.ApiResponse;
 import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.deliveryservice.application.dto.DeliveryDetailResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryRouteHistoryResponse;
 import com.logistics.deliveryservice.application.dto.DeliverySearchResponse;
 import com.logistics.deliveryservice.application.service.DeliveryService;
 import com.logistics.deliveryservice.presentation.dto.DeliverySearchRequest;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +49,16 @@ public class DeliveryController {
     ) {
         return ResponseEntity.ok(
                 ApiResponse.success(deliveryService.getByDeliveryId(deliveryId, userDetails))
+        );
+    }
+
+    @GetMapping("/{deliveryId}/routes")
+    public ResponseEntity<ApiResponse<List<DeliveryRouteHistoryResponse>>> getDeliveryRoutes(
+            @PathVariable UUID deliveryId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(deliveryService.getRoutesByDeliveryId(deliveryId, userDetails))
         );
     }
 

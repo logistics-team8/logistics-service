@@ -5,6 +5,7 @@ import com.logistics.deliveryservice.application.dto.DeliveryCreateResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryCreateResult;
 import com.logistics.deliveryservice.application.dto.DeliveryDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryGetByOrderResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryRouteHistoryResponse;
 import com.logistics.deliveryservice.application.dto.DeliverySearchResponse;
 import com.logistics.common.response.PageableUtil;
 import com.logistics.common.security.principal.CustomUserDetails;
@@ -14,7 +15,9 @@ import com.logistics.deliveryservice.domain.model.Delivery;
 import com.logistics.deliveryservice.domain.model.DeliveryPlan;
 import com.logistics.deliveryservice.domain.port.HubDeliveryPlanProvider;
 import com.logistics.deliveryservice.domain.repository.DeliveryRepository;
+import com.logistics.deliveryservice.domain.repository.DeliveryRouteHistoryRepository;
 import com.logistics.deliveryservice.presentation.dto.DeliverySearchRequest;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -39,6 +42,7 @@ public class DeliveryService {
     );
 
     private final DeliveryRepository deliveryRepository;
+    private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
     private final HubDeliveryPlanProvider hubDeliveryPlanProvider;
 
     /**
@@ -133,6 +137,23 @@ public class DeliveryService {
 
         validateDetailReadPermission(delivery, userDetails);
         return DeliveryDetailResponse.from(delivery);
+    }
+
+    /**
+     * 로그인 사용자의 역할 범위를 확인한 뒤 활성 배송의 경로 이력을 순서대로 반환한다.
+     */
+    @Transactional(readOnly = true)
+    public List<DeliveryRouteHistoryResponse> getRoutesByDeliveryId(
+            UUID deliveryId,
+            CustomUserDetails userDetails
+    ) {
+        Delivery delivery = deliveryRepository.findActiveByDeliveryId(deliveryId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        validateDetailReadPermission(delivery, userDetails);
+        return deliveryRouteHistoryRepository.findActiveByDeliveryOrderBySequence(delivery).stream()
+                .map(DeliveryRouteHistoryResponse::from)
+                .toList();
     }
 
     /**
