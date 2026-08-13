@@ -146,7 +146,7 @@ docker-compose up -d
 - 주문 및 배송 정보를 기반으로 알림 메시지 생성
 - Slack을 통한 배송 알림 발송
 - 알림 발송 상태와 발송 이력 관리
-- Gemini gemini-3.5-flash를 활용한 알림 메시지 생성
+- Gemini gemini-3.1-flash-lite를 활용한 알림 메시지 생성
 
 ### 6. Delivery
 - 배송 생성·조회 및 상태 관리
