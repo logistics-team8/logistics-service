@@ -6,6 +6,7 @@ import com.logistics.deliveryservice.application.dto.DeliveryCreateResult;
 import com.logistics.deliveryservice.application.dto.DeliveryDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryGetByOrderResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryRouteHistoryResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryRouteStatusUpdateResponse;
 import com.logistics.deliveryservice.application.dto.DeliverySearchResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryStatusUpdateResponse;
 import com.logistics.common.response.PageableUtil;
@@ -14,10 +15,12 @@ import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.Delivery;
 import com.logistics.deliveryservice.domain.model.DeliveryPlan;
+import com.logistics.deliveryservice.domain.model.DeliveryRouteHistory;
 import com.logistics.deliveryservice.domain.port.HubDeliveryPlanProvider;
 import com.logistics.deliveryservice.domain.repository.DeliveryRepository;
 import com.logistics.deliveryservice.domain.repository.DeliveryRouteHistoryRepository;
 import com.logistics.deliveryservice.presentation.dto.DeliverySearchRequest;
+import com.logistics.deliveryservice.presentation.dto.DeliveryRouteStatusUpdateRequest;
 import com.logistics.deliveryservice.presentation.dto.DeliveryStatusUpdateRequest;
 import java.util.List;
 import java.util.Optional;
@@ -224,6 +227,30 @@ public class DeliveryService {
         delivery.changeStatus(request.status());
         Delivery savedDelivery = deliveryRepository.save(delivery);
         return DeliveryStatusUpdateResponse.from(savedDelivery);
+    }
+
+    /**
+     * 활성 배송에 속한 활성 경로의 권한 범위를 확인한 뒤 요청한 상태로 변경한다.
+     */
+    @Transactional
+    public DeliveryRouteStatusUpdateResponse updateRouteStatus(
+            UUID deliveryId,
+            UUID routeId,
+            DeliveryRouteStatusUpdateRequest request,
+            CustomUserDetails userDetails
+    ) {
+        Delivery delivery = deliveryRepository.findActiveByDeliveryId(deliveryId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        validateDetailReadPermission(delivery, userDetails);
+
+        DeliveryRouteHistory routeHistory = deliveryRouteHistoryRepository
+                .findActiveByRouteIdAndDelivery(routeId, delivery)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.ROUTE_NOT_FOUND));
+
+        routeHistory.changeStatus(request.status());
+        DeliveryRouteHistory savedRouteHistory = deliveryRouteHistoryRepository.save(routeHistory);
+        return DeliveryRouteStatusUpdateResponse.from(savedRouteHistory);
     }
 
     private void validateDetailReadPermission(

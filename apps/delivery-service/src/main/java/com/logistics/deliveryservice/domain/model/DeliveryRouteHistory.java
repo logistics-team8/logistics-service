@@ -80,4 +80,11 @@ public class DeliveryRouteHistory extends BaseEntity {
         routeHistory.hubDeliveryManagerId = routePlan.hubDeliveryManagerId();
         return routeHistory;
     }
+
+    /**
+     * 요청한 경로 상태로 변경
+     */
+    public void changeStatus(RouteStatus status) {
+        this.status = status;
+    }
 }

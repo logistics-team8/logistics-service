@@ -4,6 +4,8 @@ import com.logistics.deliveryservice.domain.model.Delivery;
 import com.logistics.deliveryservice.domain.model.DeliveryRouteHistory;
 import com.logistics.deliveryservice.domain.repository.DeliveryRouteHistoryRepository;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -17,8 +19,22 @@ public class DeliveryRouteHistoryRepositoryAdapter implements DeliveryRouteHisto
     private final DeliveryRouteHistoryJpaRepository deliveryRouteHistoryJpaRepository;
 
     @Override
+    public DeliveryRouteHistory save(DeliveryRouteHistory routeHistory) {
+        return deliveryRouteHistoryJpaRepository.saveAndFlush(routeHistory);
+    }
+
+    @Override
     public List<DeliveryRouteHistory> findActiveByDeliveryOrderBySequence(Delivery delivery) {
         return deliveryRouteHistoryJpaRepository
                 .findByDeliveryAndDeletedAtIsNullOrderBySequenceAsc(delivery);
+    }
+
+    @Override
+    public Optional<DeliveryRouteHistory> findActiveByRouteIdAndDelivery(
+            UUID routeId,
+            Delivery delivery
+    ) {
+        return deliveryRouteHistoryJpaRepository
+                .findByRouteIdAndDeliveryAndDeletedAtIsNull(routeId, delivery);
     }
 }

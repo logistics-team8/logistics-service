@@ -5,10 +5,12 @@ import com.logistics.common.response.PageResponse;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.deliveryservice.application.dto.DeliveryDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryRouteHistoryResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryRouteStatusUpdateResponse;
 import com.logistics.deliveryservice.application.dto.DeliverySearchResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryStatusUpdateResponse;
 import com.logistics.deliveryservice.application.service.DeliveryService;
 import com.logistics.deliveryservice.presentation.dto.DeliverySearchRequest;
+import com.logistics.deliveryservice.presentation.dto.DeliveryRouteStatusUpdateRequest;
 import com.logistics.deliveryservice.presentation.dto.DeliveryStatusUpdateRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -75,6 +77,20 @@ public class DeliveryController {
     ) {
         return ResponseEntity.ok(
                 ApiResponse.success(deliveryService.updateStatus(deliveryId, request, userDetails))
+        );
+    }
+
+    @PatchMapping("/{deliveryId}/routes/{routeId}/status")
+    public ResponseEntity<ApiResponse<DeliveryRouteStatusUpdateResponse>> updateDeliveryRouteStatus(
+            @PathVariable UUID deliveryId,
+            @PathVariable UUID routeId,
+            @Valid @RequestBody DeliveryRouteStatusUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(
+                ApiResponse.success(
+                        deliveryService.updateRouteStatus(deliveryId, routeId, request, userDetails)
+                )
         );
     }
 
