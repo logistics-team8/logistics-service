@@ -172,6 +172,19 @@ public class DeliveryService {
         ).map(DeliverySearchResponse::from);
     }
 
+    /**
+     * 활성 배송을 권한 범위 안에서 논리 삭제
+     */
+    @Transactional
+    public void delete(UUID deliveryId, CustomUserDetails userDetails) {
+        Delivery delivery = deliveryRepository.findActiveByDeliveryId(deliveryId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        validateDeletePermission(delivery, userDetails);
+        delivery.delete(userDetails.getId());
+        deliveryRepository.save(delivery);
+    }
+
     private void validateDetailReadPermission(
             Delivery delivery,
             CustomUserDetails userDetails
@@ -212,5 +225,22 @@ public class DeliveryService {
                 .anyMatch(routeHistory -> managerUserId.equals(
                         routeHistory.getHubDeliveryManagerId()
                 ));
+    }
+
+    private void validateDeletePermission(
+            Delivery delivery,
+            CustomUserDetails userDetails
+    ) {
+        if ("MASTER".equals(userDetails.getRole())) {
+            return;
+        }
+
+        if ("HUB_MANAGER".equals(userDetails.getRole())
+                && userDetails.getHubId() != null
+                && isHubRelatedDelivery(delivery, userDetails.getHubId())) {
+            return;
+        }
+
+        throw new AccessDeniedException("배송 삭제 권한이 없습니다.");
     }
 }

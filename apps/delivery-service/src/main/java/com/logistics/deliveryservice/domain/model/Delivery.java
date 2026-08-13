@@ -162,6 +162,11 @@ public class Delivery extends BaseEntity {
         return status == DeliveryStatus.CANCELED || isDeleted();
     }
 
+    // soft delete
+    public void delete(UUID deletedBy) {
+        markDeleted(deletedBy);
+    }
+
     private static void validateDeliveryPlan(
             UUID departureHubId,
             UUID arrivalHubId,
