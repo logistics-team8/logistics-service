@@ -7,6 +7,7 @@ import com.logistics.deliveryservice.application.dto.DeliveryDetailResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryGetByOrderResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryRouteHistoryResponse;
 import com.logistics.deliveryservice.application.dto.DeliverySearchResponse;
+import com.logistics.deliveryservice.application.dto.DeliveryStatusUpdateResponse;
 import com.logistics.common.response.PageableUtil;
 import com.logistics.common.security.principal.CustomUserDetails;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
@@ -17,6 +18,7 @@ import com.logistics.deliveryservice.domain.port.HubDeliveryPlanProvider;
 import com.logistics.deliveryservice.domain.repository.DeliveryRepository;
 import com.logistics.deliveryservice.domain.repository.DeliveryRouteHistoryRepository;
 import com.logistics.deliveryservice.presentation.dto.DeliverySearchRequest;
+import com.logistics.deliveryservice.presentation.dto.DeliveryStatusUpdateRequest;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -204,6 +206,24 @@ public class DeliveryService {
         validateDeletePermission(delivery, userDetails);
         delivery.delete(userDetails.getId());
         deliveryRepository.save(delivery);
+    }
+
+    /**
+     * 활성 배송의 권한 범위를 확인한 뒤 요청한 상태로 변경한다.
+     */
+    @Transactional
+    public DeliveryStatusUpdateResponse updateStatus(
+            UUID deliveryId,
+            DeliveryStatusUpdateRequest request,
+            CustomUserDetails userDetails
+    ) {
+        Delivery delivery = deliveryRepository.findActiveByDeliveryId(deliveryId)
+                .orElseThrow(() -> new DeliveryException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        validateDetailReadPermission(delivery, userDetails);
+        delivery.changeStatus(request.status());
+        Delivery savedDelivery = deliveryRepository.save(delivery);
+        return DeliveryStatusUpdateResponse.from(savedDelivery);
     }
 
     private void validateDetailReadPermission(

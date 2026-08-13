@@ -167,6 +167,13 @@ public class Delivery extends BaseEntity {
         markDeleted(deletedBy);
     }
 
+    /**
+     * 요청한 배송 상태로 변경
+     */
+    public void changeStatus(DeliveryStatus status) {
+        this.status = status;
+    }
+
     private static void validateDeliveryPlan(
             UUID departureHubId,
             UUID arrivalHubId,
