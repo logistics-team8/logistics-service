@@ -12,9 +12,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-
+@Table(
+        name = "p_orders",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_order_requester_idempotency_key",
+                columnNames = {
+                        "requester_id",
+                        "idempotency_key"
+                }
+        )
+)
 @Entity
-@Table(name = "p_orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Order extends BaseEntity {
@@ -30,6 +38,12 @@ public class Order extends BaseEntity {
             length = 50
     )
     private String orderNumber;
+
+    @Column(name = "idempotency_key", length = 100)
+    private String idempotencyKey;
+
+    @Column(name = "request_hash", length = 64)
+    private String requestHash;
 
     @Column(name = "requester_id", nullable = false)
     private UUID requesterId;
@@ -208,17 +222,13 @@ public class Order extends BaseEntity {
         validateCancelable();
 
         this.orderItems.stream()
-                //제외 가능
-                .filter(orderItem ->
-                        orderItem.getDeletedAt() == null
-                )
                 .filter(orderItem ->
                         !orderItem.isCanceled()
                 )
                 .forEach(orderItem ->
                         orderItem.cancel(
                                 canceledBy,
-                                LocalDateTime.now()
+                                canceledAt
                         )
                 );
         this.status = OrderStatus.CANCELED;
@@ -227,7 +237,7 @@ public class Order extends BaseEntity {
     }
 
 
-    public OrderItem cancelOrderItem(UUID orderItemId, UUID canceledBy) {
+    public OrderItem cancelOrderItem(UUID orderItemId, UUID canceledBy, LocalDateTime canceledAt) {
         validateCancelable();
 
         OrderItem orderItem = orderItems.stream()
@@ -242,7 +252,7 @@ public class Order extends BaseEntity {
         if(orderItems.stream().allMatch(OrderItem::isCanceled)){
             this.status = OrderStatus.CANCELED;
             this.canceledBy = canceledBy;
-            this.canceledAt = LocalDateTime.now();
+            this.canceledAt = canceledAt;
         }
 
         return orderItem;
@@ -356,5 +366,13 @@ public class Order extends BaseEntity {
         }
 
         this.failureReason = OrderFailureReason.DELIVERY_STATUS_CHECK_FAILED;
+    }
+
+    public void assignIdempotencyKey(
+            String idempotencyKey,
+            String requestHash
+    ){
+        this.idempotencyKey = idempotencyKey;
+        this.requestHash = requestHash;
     }
 }

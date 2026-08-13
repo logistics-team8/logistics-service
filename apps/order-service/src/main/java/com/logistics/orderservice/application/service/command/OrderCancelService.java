@@ -62,6 +62,7 @@ public class OrderCancelService {
 
     /**
      * 주문 상품 취소
+     * 상품 개별 취소는 미구현
      */
     @Transactional
     public CancelOrderItemResponse cancelOrderItem(CustomUserDetails user, UUID orderId, UUID orderItemId) {
@@ -73,7 +74,8 @@ public class OrderCancelService {
 
         orderAuthorization.validateCancelPermission(user, order);
 
-        OrderItem canceledOrderItem = order.cancelOrderItem(orderItemId, user.getId());
+        LocalDateTime now = LocalDateTime.now(clock);
+        OrderItem canceledOrderItem = order.cancelOrderItem(orderItemId, user.getId(), now);
         return CancelOrderItemResponse.from(order,canceledOrderItem);
     }
 

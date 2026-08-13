@@ -52,5 +52,10 @@ public class OrderRepositoryImpl implements OrderRepository {
                 .findAllByManagedHubIdAndDeletedAtIsNull(hubId, pageable);
     }
 
+    @Override
+    public Optional<Order> findByRequesterIdAndIdempotencyKey(UUID requesterId, String idempotencyKey) {
+        return orderJpaRepository.findByRequesterIdAndIdempotencyKey(requesterId, idempotencyKey);
+    }
+
 
 }

@@ -214,9 +214,20 @@ public enum OrderErrorCode implements ErrorCode {
             "재고 처리 상태를 확인할 수 없어 주문을 취소할 수 없습니다."
     ),
     USER_NOT_FOUND(
-            "ORDER_404",
+            "ORDER_035",
             HttpStatus.NOT_FOUND,
             "주문 요청자 정보를 찾을 수 없습니다."
+    ),
+    IDEMPOTENCY_KEY_INVALID(
+        "ORD_035",
+        HttpStatus.BAD_REQUEST,
+        "Idempotency-Key는 1자 이상 100자 이하여야 합니다."
+    ),
+
+    IDEMPOTENCY_REQUEST_CONFLICT(
+        "ORD_036",
+        HttpStatus.CONFLICT,
+        "동일한 Idempotency-Key에 다른 주문 요청을 사용할 수 없습니다."
     );
 
 
