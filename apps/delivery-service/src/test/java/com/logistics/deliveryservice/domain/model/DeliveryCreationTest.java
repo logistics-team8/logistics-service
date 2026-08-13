@@ -46,7 +46,7 @@ class DeliveryCreationTest {
 
     @Test
     void createsSameHubDeliveryWithoutRoutesAsDestinationHubArrived() {
-        DeliveryPlan plan = new DeliveryPlan(COMPANY_MANAGER_ID, List.of());
+        DeliveryPlan plan = new DeliveryPlan(null, List.of());
 
         Delivery delivery = Delivery.create(
                 ORDER_ID,
@@ -60,6 +60,7 @@ class DeliveryCreationTest {
         );
 
         assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.HUB_ARRIVED);
+        assertThat(delivery.getDeliveryManagerId()).isNull();
         assertThat(delivery.getRouteHistories()).isEmpty();
     }
 
@@ -109,11 +110,17 @@ class DeliveryCreationTest {
     }
 
     @Test
-    void rejectsMissingManagersAndNegativeEstimate() {
-        assertInvalidPlan(new DeliveryPlan(null, validPlan().routes()));
-        assertInvalidPlan(new DeliveryPlan(COMPANY_MANAGER_ID, List.of(
-                route(1, DEPARTURE_HUB_ID, ARRIVAL_HUB_ID, BigDecimal.ONE, 1, null)
-        )));
+    void createsDeliveryAndRoutesWithoutAssignedManagers() {
+        Delivery delivery = createDelivery(unassignedPlan());
+
+        assertThat(delivery.getDeliveryManagerId()).isNull();
+        assertThat(delivery.getRouteHistories())
+                .extracting(DeliveryRouteHistory::getHubDeliveryManagerId)
+                .containsOnlyNulls();
+    }
+
+    @Test
+    void rejectsNegativeEstimate() {
         assertInvalidPlan(new DeliveryPlan(COMPANY_MANAGER_ID, List.of(
                 route(1, DEPARTURE_HUB_ID, ARRIVAL_HUB_ID, new BigDecimal("-0.1"), 1, HUB_MANAGER_ID_1)
         )));
@@ -166,6 +173,13 @@ class DeliveryCreationTest {
         return new DeliveryPlan(COMPANY_MANAGER_ID, List.of(
                 route(1, DEPARTURE_HUB_ID, MIDDLE_HUB_ID, new BigDecimal("10.5"), 25, HUB_MANAGER_ID_1),
                 route(2, MIDDLE_HUB_ID, ARRIVAL_HUB_ID, new BigDecimal("8.3"), 18, HUB_MANAGER_ID_2)
+        ));
+    }
+
+    private DeliveryPlan unassignedPlan() {
+        return new DeliveryPlan(null, List.of(
+                route(1, DEPARTURE_HUB_ID, MIDDLE_HUB_ID, new BigDecimal("10.5"), 25, null),
+                route(2, MIDDLE_HUB_ID, ARRIVAL_HUB_ID, new BigDecimal("8.3"), 18, null)
         ));
     }
 

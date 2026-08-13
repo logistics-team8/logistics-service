@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.logistics.deliveryservice.application.command.DeliveryCreateCommand;
 import com.logistics.deliveryservice.application.dto.DeliveryCreateResult;
+import com.logistics.deliveryservice.application.dto.DeliveryCreateResponse;
 import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
 import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import com.logistics.deliveryservice.domain.model.Delivery;
@@ -70,6 +71,28 @@ class DeliveryCreateServiceTest {
                 DEPARTURE_HUB_ID,
                 ARRIVAL_HUB_ID
         );
+        verify(deliveryRepository).save(any(Delivery.class));
+    }
+
+    @Test
+    void createsDeliveryWithoutManagersFromHubPlan() {
+        DeliveryCreateCommand command = command("서울시 중구 세종대로 1");
+        when(deliveryRepository.findByOrderId(ORDER_ID)).thenReturn(Optional.empty());
+        when(hubDeliveryPlanProvider.getDeliveryPlan(
+                ORDER_ID,
+                DEPARTURE_HUB_ID,
+                ARRIVAL_HUB_ID
+        )).thenReturn(unassignedPlan());
+        when(deliveryRepository.save(any(Delivery.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        DeliveryCreateResult result = deliveryService.create(command);
+
+        assertThat(result.created()).isTrue();
+        assertThat(result.response().companyDeliveryManagerId()).isNull();
+        assertThat(result.response().routes())
+                .extracting(DeliveryCreateResponse.RouteResponse::hubDeliveryManagerId)
+                .containsOnlyNulls();
         verify(deliveryRepository).save(any(Delivery.class));
     }
 
@@ -199,6 +222,19 @@ class DeliveryCreateServiceTest {
                         new BigDecimal("12.4"),
                         30,
                         HUB_MANAGER_ID
+                )
+        ));
+    }
+
+    private DeliveryPlan unassignedPlan() {
+        return new DeliveryPlan(null, List.of(
+                new DeliveryPlan.Route(
+                        1,
+                        DEPARTURE_HUB_ID,
+                        ARRIVAL_HUB_ID,
+                        new BigDecimal("12.4"),
+                        30,
+                        null
                 )
         ));
     }
