@@ -6,7 +6,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.*;
 
-import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.token.TokenPayload;
@@ -18,6 +17,7 @@ import com.logistics.userservice.domain.redis.RefreshTokenRepository;
 import com.logistics.userservice.domain.redis.RoleCacheRepository;
 import com.logistics.userservice.domain.redis.SessionRepository;
 import com.logistics.userservice.error.AuthErrorCode;
+import com.logistics.userservice.error.ClientErrorCode;
 import com.logistics.userservice.error.UserErrorCode;
 import com.logistics.userservice.presentation.dto.auth.LoginRequest;
 import io.jsonwebtoken.Claims;
@@ -132,7 +132,7 @@ class AuthServiceUnitTest {
             // when & then
             assertThatThrownBy(() -> authService.login(request.toCommand()))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessage(CommonErrorCode.INTERNAL_SERVER_ERROR.message());
+                    .hasMessage(ClientErrorCode.SERVICE_UNAVAILABLE.message());
         }
 
         @Test
@@ -235,8 +235,7 @@ class AuthServiceUnitTest {
             given(tokenPayload.userId()).willReturn(userId);
             given(tokenPayload.sessionId()).willReturn(sessionId);
 
-            given(refreshTokenRepository.findByUserId(userId, sessionId))
-                    .willReturn(Optional.of(redisToken));
+            given(sessionRepository.exists(userId, sessionId)).willReturn(false);
 
             // when & then
             assertThatThrownBy(() -> authService.reissue(refreshToken))
@@ -289,10 +288,7 @@ class AuthServiceUnitTest {
             given(tokenPayload.userId()).willReturn(userId);
             given(tokenPayload.sessionId()).willReturn(sessionId);
 
-            given(refreshTokenRepository.findByUserId(userId, sessionId))
-                    .willReturn(Optional.of(refreshToken));
             given(sessionRepository.exists(userId, sessionId)).willReturn(true);
-
             given(userRepository.findByIdAndDeletedAtIsNull(userId)).willReturn(Optional.empty());
 
             // when & then

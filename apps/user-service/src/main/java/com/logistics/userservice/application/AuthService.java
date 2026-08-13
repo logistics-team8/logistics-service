@@ -1,6 +1,5 @@
 package com.logistics.userservice.application;
 
-import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.auth.UserLoginCommand;
 import com.logistics.userservice.application.token.TokenClaims;
@@ -19,15 +18,12 @@ import com.logistics.userservice.error.UserErrorCode;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
-import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -46,7 +42,6 @@ public class AuthService {
      * @param command Login 정보가 담긴 DTO
      * @return Token값이 담긴 TokenResult DTO 반환
      */
-    @Transactional(readOnly = true)
     public TokenResult login(UserLoginCommand command) {
         User user =
                 userRepository
@@ -63,7 +58,7 @@ public class AuthService {
         TokenClaims tokenClaims =
                 new TokenClaims(user.getId(), user.getHubId(), user.getCompanyId());
 
-        return createAuthResponse(tokenClaims, UUID.randomUUID(), user.getRole());
+        return createLoginResponse(tokenClaims, UUID.randomUUID(), user.getRole());
     }
 
     /**
@@ -99,27 +94,16 @@ public class AuthService {
         try {
             TokenPayload tokenPayload = tokenProvider.getAllClaimsFromRefreshToken(refreshToken);
             UUID userId = tokenPayload.userId();
-
-            // 새로운 세션이 아닌 기존 사용자가 재발급 하므로 세션 ID 유지
-            UUID sessionId = tokenPayload.sessionId();
-
-            String savedRefreshToken;
-            boolean activeSession;
+            UUID sessionId = tokenPayload.sessionId(); // 기존 사용자가 재발급 하므로 세션 ID 유지
 
             try {
-                savedRefreshToken =
-                        refreshTokenRepository.findByUserId(userId, sessionId).orElse(null);
-                activeSession = sessionRepository.exists(userId, sessionId);
+                if (!sessionRepository.exists(userId, sessionId)) {
+                    throw new BusinessException(AuthErrorCode.TOKEN_INVALID);
+                }
             } catch (DataAccessException e) {
                 log.error("[ERROR] 인증 세션 조회 실패 userId = {}", userId, e);
                 throw new BusinessException(ClientErrorCode.SERVICE_UNAVAILABLE);
             }
-
-            if (!activeSession) {
-                throw new BusinessException(AuthErrorCode.TOKEN_INVALID);
-            }
-
-            validateRefreshToken(refreshToken, savedRefreshToken, userId, sessionId);
 
             User user =
                     userRepository
@@ -129,7 +113,7 @@ public class AuthService {
             TokenClaims tokenClaims =
                     new TokenClaims(user.getId(), user.getHubId(), user.getCompanyId());
 
-            return createAuthResponse(tokenClaims, sessionId, user.getRole());
+            return rotateRefreshToken(tokenClaims, sessionId, user.getRole(), refreshToken);
 
         } catch (ExpiredJwtException e) {
             throw new BusinessException(AuthErrorCode.TOKEN_EXPIRED);
@@ -139,6 +123,7 @@ public class AuthService {
         }
     }
 
+    // ============================== Helper Method ====================================
     /**
      * 액세스 토큰, 리프래시 토큰 생성 후 Redis에 Session, Refresh Token을 저장한 뒤 TokenResult 반환
      *
@@ -147,27 +132,21 @@ public class AuthService {
      * @param role 사용자 권한
      * @return TokenResult (AccessToken, RefreshToken)
      */
-    private TokenResult createAuthResponse(TokenClaims tokenClaims, UUID sessionId, Role role) {
+    private TokenResult createLoginResponse(TokenClaims tokenClaims, UUID sessionId, Role role) {
         UUID userId = tokenClaims.userId();
 
         String accessToken = tokenProvider.generateAccessToken(tokenClaims, sessionId);
         String refreshToken = tokenProvider.generateRefreshToken(tokenClaims, sessionId);
 
         try {
-            int maxSessionSize = 1;
-
-            if (Role.DELIVERY_MANAGER == role) {
-                maxSessionSize = 5;
-            }
-
             // 세션 저장
-            sessionRepository.save(tokenClaims.userId(), sessionId, maxSessionSize);
+            sessionRepository.save(tokenClaims.userId(), sessionId, getSessionSize(role));
 
             // 리프레시 토큰 저장
             refreshTokenRepository.save(userId, sessionId, refreshToken);
         } catch (DataAccessException e) {
             log.error("[ERROR] 인증 세션 저장 실패 userId = {}", userId, e);
-            throw new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+            throw new BusinessException(ClientErrorCode.SERVICE_UNAVAILABLE);
         }
 
         try {
@@ -179,19 +158,65 @@ public class AuthService {
     }
 
     /**
-     * 리프레시 토큰이 일치하는지 확인 일치하지 않을 시 리프레시 토큰 폐기
+     * 토큰 재발급
      *
-     * @param refreshToken
-     * @param savedToken
+     * @param tokenClaims 토큰 클레임 DTO
+     * @param sessionId 사용자 식별 세션 ID
+     * @param role 사용자 권한
+     * @param oldRefreshToken
+     * @return TokenResult (AccessToken, RefreshToken)
      */
-    private void validateRefreshToken(
-            String refreshToken, String savedToken, UUID userId, UUID sessionId) {
-        if (!StringUtils.hasText(savedToken) || !Objects.equals(refreshToken, savedToken)) {
-            deleteUserDataFromRedis(userId, sessionId);
-            log.warn("[WARN] 유효하지 않은 토큰으로 재발급 시도 userId = {}, sessionId = {}", userId, sessionId);
+    private TokenResult rotateRefreshToken(
+            TokenClaims tokenClaims, UUID sessionId, Role role, String oldRefreshToken) {
 
-            throw new BusinessException(AuthErrorCode.TOKEN_INVALID);
+        UUID userId = tokenClaims.userId();
+
+        String newAccessToken = tokenProvider.generateAccessToken(tokenClaims, sessionId);
+        String newRefreshToken = tokenProvider.generateRefreshToken(tokenClaims, sessionId);
+
+        try {
+            boolean result =
+                    refreshTokenRepository.rotate(
+                            userId, sessionId, oldRefreshToken, newRefreshToken);
+
+            if (!result) {
+                log.warn(
+                        "[FAIL] Refresh Token 재발급 실패 userId = {}, sessionId = {}",
+                        userId,
+                        sessionId);
+
+                throw new BusinessException(AuthErrorCode.TOKEN_INVALID);
+            }
+
+            sessionRepository.save(userId, sessionId, getSessionSize(role));
+
+        } catch (DataAccessException e) {
+            log.error(
+                    "[ERROR] Refresh Token 재발급 실패 userId = {}, sessionId = {}",
+                    userId,
+                    sessionId,
+                    e);
+
+            throw new BusinessException(ClientErrorCode.SERVICE_UNAVAILABLE);
         }
+
+        try {
+            roleCacheRepository.save(userId, role.name());
+        } catch (DataAccessException e) {
+            log.warn("[CACHE] Role Cache 저장 실패 userId = {}", userId, e);
+        }
+
+        return new TokenResult(newAccessToken, newRefreshToken);
+    }
+
+    /**
+     * 권한에 따라 세션 크기 결정
+     *
+     * @param role
+     * @return
+     */
+    private int getSessionSize(Role role) {
+        return Role.DELIVERY_MANAGER == role ? 5 : 1;
     }
 
     /**
@@ -205,7 +230,7 @@ public class AuthService {
             sessionRepository.delete(userId, sessionId);
         } catch (DataAccessException e) {
             log.error("[ERROR] 인증 세션 삭제 실패 userId = {}", userId, e);
-            throw new BusinessException(CommonErrorCode.INTERNAL_SERVER_ERROR);
+            throw new BusinessException(ClientErrorCode.SERVICE_UNAVAILABLE);
         }
         try {
             roleCacheRepository.delete(userId);
