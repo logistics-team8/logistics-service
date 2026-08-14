@@ -228,6 +228,12 @@ public enum OrderErrorCode implements ErrorCode {
         "ORD_036",
         HttpStatus.CONFLICT,
         "동일한 Idempotency-Key에 다른 주문 요청을 사용할 수 없습니다."
+    ),
+
+    RECEIVER_COMPANY_NOT_FOUND(
+        "ORD_037",
+        HttpStatus.NOT_FOUND,
+        "수령 업체를 찾을 수 없습니다."
     );
 
 
