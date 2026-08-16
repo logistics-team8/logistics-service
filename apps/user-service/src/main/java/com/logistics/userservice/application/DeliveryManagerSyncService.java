@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DeliveryManagerService {
+public class DeliveryManagerSyncService {
     private final DeliveryClientPort deliveryClientPort;
     private final UserRepository userRepository;
 

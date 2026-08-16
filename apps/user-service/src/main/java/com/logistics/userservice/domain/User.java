@@ -145,6 +145,7 @@ public class User extends BaseEntity {
     /** 배송 담당자 최종 가입 승인 */
     public void completeProvisioning() {
         this.userStatus = UserStatus.APPROVED;
+        this.role = this.requestedRole.toRole();
         this.requestedRole = null;
     }
 
