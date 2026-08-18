@@ -7,7 +7,6 @@ import com.logistics.userservice.config.test.AbstractIntegrationTest;
 import com.logistics.userservice.config.test.ConcurrencyTestingUtil;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -82,6 +81,7 @@ class RedisRefreshTokenRepositoryTest extends AbstractIntegrationTest {
         @Test
         @DisplayName("동일한 리프레시 토큰을 동시에 재발급하면 하나만 성공한다.")
         void reissue_only_one_success() throws InterruptedException {
+            // given
             UUID userId = UUID.randomUUID();
             UUID sessionId = UUID.randomUUID();
             String refreshToken = "refreshToken";
@@ -91,7 +91,7 @@ class RedisRefreshTokenRepositoryTest extends AbstractIntegrationTest {
 
             int threadCount = 10;
             AtomicInteger successCount = new AtomicInteger(0);
-            AtomicInteger failureCount = new AtomicInteger();
+            AtomicInteger failureCount = new AtomicInteger(0);
 
             // when
             ConcurrencyTestingUtil.run(
@@ -109,10 +109,10 @@ class RedisRefreshTokenRepositoryTest extends AbstractIntegrationTest {
                     });
 
             // then
-            Assertions.assertThat(successCount.get()).isEqualTo(1);
-            Assertions.assertThat(failureCount.get()).isEqualTo(9);
+            assertThat(successCount.get()).isEqualTo(1);
+            assertThat(failureCount.get()).isEqualTo(9);
 
-            Assertions.assertThat(refreshTokenRepository.findByUserId(userId, sessionId))
+            assertThat(refreshTokenRepository.findByUserId(userId, sessionId))
                     .contains(newRefreshToken);
         }
     }

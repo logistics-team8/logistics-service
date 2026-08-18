@@ -3,16 +3,9 @@ package com.logistics.userservice.application;
 import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.company.CompanyInfo;
-import com.logistics.userservice.application.dto.user.UserCreateCommand;
-import com.logistics.userservice.application.dto.user.UserInfo;
-import com.logistics.userservice.application.dto.user.UserRoleInfo;
-import com.logistics.userservice.application.dto.user.UserSlackInfo;
-import com.logistics.userservice.application.dto.user.UserUpdateCommand;
+import com.logistics.userservice.application.dto.user.*;
 import com.logistics.userservice.application.event.UserDeletedEvent;
-import com.logistics.userservice.application.port.CompanyClientPort;
-import com.logistics.userservice.application.port.HubClientPort;
 import com.logistics.userservice.application.validator.UserValidator;
-import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
@@ -33,8 +26,6 @@ public class UserService {
     private final UserValidator validator;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final HubClientPort hubClientPort;
-    private final CompanyClientPort companyClientPort;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
@@ -45,19 +36,19 @@ public class UserService {
     @Transactional
     public void createUser(UserCreateCommand command) {
         validator.validateDuplicate(command);
-        User user = User.create(command);
 
-        if (command.requestedRole() != RequestedRole.COMPANY_MANAGER) {
-            hubClientPort.existsById(command.hubId());
-        } else {
-            CompanyInfo companyInfo = companyClientPort.getCompanyInfo(command.companyId());
-            user.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
+        // 허브, 업체 존재 여부 검증 - 업체의 경우 CompanyInfo(hubId, CompanyId) 반환
+        CompanyInfo companyInfo = validator.validateSignUpAffiliation(command);
+        User createdUser = User.create(command);
+
+        if (companyInfo != null) {
+            createdUser.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
         }
 
-        user.encodePassword(passwordEncoder.encode(user.getPassword()));
+        createdUser.encodePassword(passwordEncoder.encode(createdUser.getPassword()));
 
         try {
-            userRepository.saveAndFlush(user);
+            userRepository.saveAndFlush(createdUser);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
         }
@@ -135,7 +126,7 @@ public class UserService {
      * 회원 조회 헬퍼 메서드
      *
      * @param userId
-     * @return
+     * @return 조회 결과
      */
     private User findUserById(UUID userId) {
         return userRepository

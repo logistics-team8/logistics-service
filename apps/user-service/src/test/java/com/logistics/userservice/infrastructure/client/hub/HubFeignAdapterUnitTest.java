@@ -42,13 +42,11 @@ class HubFeignAdapterUnitTest {
     }
 
     @Test
-    @DisplayName("허브의 ID가 일치하지 않으면 false를 반환한다.")
+    @DisplayName("허브의 ID가 존재하지 않으면 false를 반환한다.")
     void checkHubExists_fail_when_invalid_hubId() {
+        // given
         UUID hubId = UUID.randomUUID();
-        HubExistsResponse hubExistsResponse = new HubExistsResponse(hubId, false);
-
-        given(hubFeignClient.checkHubExists(hubId))
-                .willReturn(ApiResponse.success(hubExistsResponse));
+        given(hubFeignClient.checkHubExists(hubId)).willThrow(FeignException.NotFound.class);
 
         // when
         boolean result = hubFeignAdapter.existsById(hubId);

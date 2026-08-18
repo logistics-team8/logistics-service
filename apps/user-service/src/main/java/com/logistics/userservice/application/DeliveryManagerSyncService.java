@@ -24,7 +24,7 @@ public class DeliveryManagerSyncService {
     /**
      * 배송 담당자 승인
      *
-     * @param command
+     * @param command 승인할 회원 정보
      */
     @Transactional
     public void create(DeliveryManagerCreateCommand command) {

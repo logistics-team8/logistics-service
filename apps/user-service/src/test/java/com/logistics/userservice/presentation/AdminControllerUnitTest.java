@@ -44,7 +44,7 @@ class AdminControllerUnitTest extends AbstractControllerTest {
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .with(user(createPrincipal(Role.HUB_MANAGER))))
                 .andExpect(status().isForbidden());
-        verify(adminService, never()).createUserByAdmin(any());
+        verify(adminService, never()).createUserByAdmin(any(), any());
     }
 
     @Nested

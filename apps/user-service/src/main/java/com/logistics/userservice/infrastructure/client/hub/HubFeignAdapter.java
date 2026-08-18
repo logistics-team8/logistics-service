@@ -24,6 +24,12 @@ public class HubFeignAdapter implements HubClientPort {
             log.info("[SUCCESS] Hub 존재 여부 조회 성공 hubId = {} result = {}", hubId, exists);
             return exists;
 
+        } catch (FeignException.NotFound e) {
+            boolean exists = false;
+
+            log.info("[SUCCESS] Hub 존재 여부 조회 성공 hubId = {} result = {}", hubId, exists);
+            return exists;
+
         } catch (FeignException e) {
             log.error(
                     "[ERROR] Hub-Service 호출 실패 hubId = {}, status = {}, content = {}",

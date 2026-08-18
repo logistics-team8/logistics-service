@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
 @SpringBootTest
+@DisplayName("AdminUserQueryRepositoryImplTest - 통합 테스트")
 class AdminUserQueryRepositoryImplTest extends AbstractIntegrationTest {
     @Autowired private AdminUserQueryRepository adminUserQueryRepository;
     @Autowired private UserRepository userRepository;
