@@ -181,7 +181,6 @@ class AuthServiceUnitTest {
             // given
             String accessToken = "accessToken";
             UUID userId = UUID.randomUUID();
-            UUID sessionId = UUID.randomUUID();
 
             Claims claims = mock(Claims.class);
             given(claims.getSubject()).willReturn(userId.toString());
