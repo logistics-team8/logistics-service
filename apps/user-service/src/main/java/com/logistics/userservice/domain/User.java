@@ -80,6 +80,7 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
+    /** 활성 유저 검증 */
     public void validateActive() {
         if (this.userStatus == UserStatus.PENDING || this.userStatus == UserStatus.PROCESSING) {
             throw new BusinessException(AuthErrorCode.PENDING_APPROVAL);
@@ -174,7 +175,17 @@ public class User extends BaseEntity {
         return Objects.equals(this.hubId, hubId);
     }
 
-    /** UUID 삽입 */
+    /**
+     * 배송 담당자로 회원가입을 요청 여부 확인
+     *
+     * @return boolean
+     */
+    public boolean isDelivery() {
+        return this.getRequestedRole() == RequestedRole.HUB_DELIVERY
+                || this.getRequestedRole() == RequestedRole.COMPANY_DELIVERY;
+    }
+
+    /** UUID v7 userId에 삽입 */
     @PrePersist
     protected void onCreate() {
         if (this.id == null) {

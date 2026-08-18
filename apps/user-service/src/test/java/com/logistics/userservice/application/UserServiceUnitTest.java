@@ -4,17 +4,17 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.logistics.common.exception.BusinessException;
-import com.logistics.userservice.application.dto.company.CompanyInfo;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.dto.user.UserUpdateCommand;
-import com.logistics.userservice.application.port.CompanyClientPort;
-import com.logistics.userservice.application.port.HubClientPort;
 import com.logistics.userservice.application.validator.UserValidator;
 import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.UserRepository;
+import com.logistics.userservice.error.ClientErrorCode;
 import com.logistics.userservice.error.UserErrorCode;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,27 +26,21 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @DisplayName("UserService - 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class UserServiceUnitTest {
-    @Mock private PasswordEncoder passwordEncoder;
     @Mock private UserRepository userRepository;
-    @Mock private HubClientPort hubClientPort;
-    @Mock private CompanyClientPort companyClientPort;
-    @Mock private UserValidator userValidator;
+    @Mock private UserValidator validator;
     @InjectMocks private UserService userService;
 
-    private UUID hubId;
-    private UUID companyId;
     private UserCreateCommand hubCommand;
     private UserCreateCommand companyCommand;
 
     @BeforeEach
     void setUp() {
-        hubId = UUID.randomUUID();
-        companyId = UUID.randomUUID();
+        UUID hubId = UUID.randomUUID();
+        UUID companyId = UUID.randomUUID();
 
         hubCommand =
                 new UserCreateCommand(
@@ -70,51 +64,14 @@ class UserServiceUnitTest {
     }
 
     @Nested
-    @DisplayName("소속 회원가입 성공 테스트")
-    class createUserFromAffiliation_success {
-        @Test
-        @DisplayName("허브 실존 여부를 검증하고 회원가입을 성공한다.")
-        void createUserFromHub_success() {
-            // given
-            given(hubClientPort.existsById(hubId)).willReturn(true);
-
-            // when
-            userService.createUser(hubCommand);
-
-            // then
-            verify(hubClientPort).existsById(any());
-            verify(companyClientPort, never()).getCompanyInfo(any());
-            verify(userRepository).saveAndFlush(any());
-        }
-
-        @Test
-        @DisplayName("업체 실존 여부를 검증하고 회원가입을 성공한다.")
-        void createUserFromCompany_success() {
-            // given
-            CompanyInfo companyInfo = new CompanyInfo(companyId, hubId);
-
-            given(companyClientPort.getCompanyInfo(companyId)).willReturn(companyInfo);
-            given(passwordEncoder.encode(companyCommand.password())).willReturn("encoded-password");
-
-            // when
-            userService.createUser(companyCommand);
-
-            // then
-            verify(hubClientPort, never()).existsById(any());
-            verify(companyClientPort).getCompanyInfo(any());
-            verify(userRepository).saveAndFlush(any());
-        }
-    }
-
-    @Nested
     @DisplayName("회원가입 공통 실패 테스트")
     class createUser {
         @Test
         @DisplayName("이미 존재하는 아이디일 시 USER_DUPLICATE_USERNAME 예외가 발생해야한다.")
-        void createMember_fail_when_username_is_duplicate() {
+        void createUser_fail_when_username_is_duplicate() {
             // given
-            doThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME))
-                    .when(userValidator)
+            willThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_USERNAME))
+                    .given(validator)
                     .validateDuplicate(companyCommand);
 
             // when & then
@@ -122,35 +79,53 @@ class UserServiceUnitTest {
                     .isInstanceOf(BusinessException.class)
                     .hasMessage(UserErrorCode.USER_DUPLICATE_USERNAME.message());
 
-            verify(userValidator).validateDuplicate(companyCommand);
+            verify(validator).validateDuplicate(companyCommand);
             verify(userRepository, never()).saveAndFlush(any());
         }
 
         @Test
         @DisplayName("이미 존재하는 Slack 아이디일 시 USER_DUPLICATE_SLACK_ID 예외가 발생해야한다.")
-        void createMember_fail_when_slack_id_is_duplicate() {
+        void createUser_fail_when_slack_id_is_duplicate() {
             // given
-            UserCreateCommand command =
-                    new UserCreateCommand(
-                            "test1234",
-                            "Testtest123!",
-                            "김철수",
-                            "U123456789",
-                            UUID.randomUUID(),
-                            UUID.randomUUID(),
-                            RequestedRole.COMPANY_MANAGER);
-
-            doThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID))
-                    .when(userValidator)
-                    .validateDuplicate(command);
+            willThrow(new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID))
+                    .given(validator)
+                    .validateDuplicate(companyCommand);
 
             // when & then
-            assertThatThrownBy(() -> userService.createUser(command))
+            assertThatThrownBy(() -> userService.createUser(companyCommand))
                     .isInstanceOf(BusinessException.class)
                     .hasMessage(UserErrorCode.USER_DUPLICATE_SLACK_ID.message());
 
-            verify(userValidator).validateDuplicate(command);
+            verify(validator).validateDuplicate(companyCommand);
             verify(userRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        @DisplayName("허브가 존재하지 않을 시 HUB_NOT_FOUND 예외가 발생해야한다.")
+        void createUser_fail_when_hub_not_found() {
+            // given
+            willThrow(new BusinessException(ClientErrorCode.HUB_NOT_FOUND))
+                    .given(validator)
+                    .validateSignUpAffiliation(any());
+
+            // when & then
+            assertThatThrownBy(() -> userService.createUser(hubCommand))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage(ClientErrorCode.HUB_NOT_FOUND.message());
+        }
+
+        @Test
+        @DisplayName("업체가 존재하지 않을 시 COMPANY_NOT_FOUND 예외가 발생해야한다.")
+        void createUser_fail_when_company_not_found() {
+            // given
+            willThrow(new BusinessException(ClientErrorCode.COMPANY_NOT_FOUND))
+                    .given(validator)
+                    .validateSignUpAffiliation(any());
+
+            // when & then
+            assertThatThrownBy(() -> userService.createUser(companyCommand))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessage(ClientErrorCode.COMPANY_NOT_FOUND.message());
         }
     }
 

@@ -52,7 +52,6 @@ public class AuthService {
             throw new BusinessException(AuthErrorCode.INVALID_LOGIN);
         }
 
-        // TODO : 사용자 상태 검증 로직 (PENDING, REJECTED)
         user.validateActive();
 
         TokenClaims tokenClaims =
@@ -62,7 +61,7 @@ public class AuthService {
     }
 
     /**
-     * 로그아웃 요청이 들어왔을 시 Redis에서 Refresh Token과 Role 캐싱 삭제
+     * 로그아웃 요청이 들어왔을 시 Redis에서 인증 정보 삭제 Refresh Token, Session, Role
      *
      * @param accessToken
      */

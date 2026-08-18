@@ -10,11 +10,8 @@ import com.logistics.userservice.application.dto.user.UserUpdateCommand;
 import com.logistics.userservice.application.event.UserApprovalEvent;
 import com.logistics.userservice.application.event.UserDeletedEvent;
 import com.logistics.userservice.application.port.AdminUserQueryRepository;
-import com.logistics.userservice.application.port.CompanyClientPort;
-import com.logistics.userservice.application.port.HubClientPort;
 import com.logistics.userservice.application.validator.UserValidator;
 import com.logistics.userservice.domain.RequestedRole;
-import com.logistics.userservice.domain.Role;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
@@ -36,34 +33,43 @@ public class AdminService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AdminUserQueryRepository adminUserQueryRepository;
-    private final HubClientPort hubClientPort;
-    private final CompanyClientPort companyClientPort;
     private final ApplicationEventPublisher applicationEventPublisher;
 
     // ============================== CRUD ==============================
     /**
-     * Admin User 등록 OpenFeign 호출로 회원가입 시 실존 허브 / 업체 1차 검증
+     * Admin User 등록 OpenFeign 호출로 회원가입 시 실존 허브 / 업체 검증 후 회원가입 승인 진행
      *
+     * @param adminId
      * @param command
      */
     @Transactional
-    public void createUserByAdmin(UserCreateCommand command) {
+    public void createUserByAdmin(UUID adminId, UserCreateCommand command) {
         validator.validateDuplicate(command);
+
+        // 허브, 업체 존재 여부 검증 - 업체의 경우 CompanyInfo(hubId, CompanyId) 반환
+        CompanyInfo companyInfo = validator.validateSignUpAffiliation(command);
         User createdUser = User.create(command);
 
-        if (command.requestedRole() != RequestedRole.COMPANY_MANAGER) {
-            hubClientPort.existsById(command.hubId());
-        } else {
-            CompanyInfo companyInfo = companyClientPort.getCompanyInfo(command.companyId());
+        if (companyInfo != null) {
             createdUser.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
         }
 
         createdUser.encodePassword(passwordEncoder.encode(createdUser.getPassword()));
+        createdUser.approve(adminId);
 
         try {
             userRepository.saveAndFlush(createdUser);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
+        }
+
+        if (createdUser.isDelivery()) {
+            RequestedRole requestedRole = createdUser.getRequestedRole();
+
+            // 배송 담당자 가입 승인 시 배송 담당자 생성 이벤트 발행
+            applicationEventPublisher.publishEvent(
+                    new UserApprovalEvent(
+                            createdUser.getId(), createdUser.getHubId(), requestedRole));
         }
     }
 
@@ -129,9 +135,8 @@ public class AdminService {
 
     // ============================== Approval ==============================
     /**
-     * 회원가입 요청 승인 실존 허브 / 업체 2차 검증 배송이 아닌 경우 바로 APPROVED(승인) 배송 담당자 생성의 경우 Delivery Service 호출 필요로
-     * 인해 필요하므로 상태 값을 PROVISIONING로 한 뒤, 호출 성공 시 APPROVED(승인) 처리 서버 장애 시 회원가입 자체는 완료 -> 스케쥴러를 사용해 일정
-     * 주기 재시도
+     * 회원가입 요청 승인 실존 허브 / 업체 2차 검증 배송이 아닌 경우 바로 APPROVED(승인) 배송 담당자 생성의 경우 Delivery Service 호출이
+     * 필요하므로 상태 값을 처리 중 상태로 한 뒤, 호출 성공 시 APPROVED(승인) 처리 서버 장애 시 회원가입 자체는 완료 -> 스케쥴러를 사용해 일정 주기 재시도
      *
      * @param command
      */
@@ -140,18 +145,12 @@ public class AdminService {
         User user = findUserById(command.userId());
 
         // 허브 관리자의 경우 본인 담당 허브만 관리 가능
-        validateManagerPermission(command.hubId(), command.role(), user);
+        validator.validateManagerPermission(command.hubId(), command.role(), user);
+        validator.validateAffiliation(user);
 
-        // 허브 or 업체 실존 여부 검증
-        if (user.getCompanyId() == null) {
-            hubClientPort.existsById(user.getHubId());
-        } else {
-            companyClientPort.getCompanyInfo(user.getCompanyId());
-        }
         user.approve(command.adminId());
 
-        if (user.getRequestedRole() == RequestedRole.HUB_DELIVERY
-                || user.getRequestedRole() == RequestedRole.COMPANY_DELIVERY) {
+        if (user.isDelivery()) {
             RequestedRole requestedRole = user.getRequestedRole();
 
             // 배송 담당자 가입 승인 시 배송 담당자 생성 이벤트 발행
@@ -168,7 +167,7 @@ public class AdminService {
     @Transactional
     public void rejectUser(AdminRejectCommand command) {
         User user = findUserById(command.userId());
-        validateManagerPermission(command.hubId(), command.role(), user);
+        validator.validateManagerPermission(command.hubId(), command.role(), user);
 
         user.reject(command.adminId(), command.reason());
     }
@@ -189,24 +188,15 @@ public class AdminService {
     }
 
     // ============================== Helper Method ====================================
+    /**
+     * 단일 사용자 검색
+     *
+     * @param userId 검색할 사용자 PK
+     * @return User Entity
+     */
     private User findUserById(UUID userId) {
         return userRepository
                 .findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
-    }
-
-    /**
-     * 허브 관리자의 경우 본인 허브 유무 체크
-     *
-     * @param adminHubId
-     * @param adminRole
-     * @param user
-     */
-    private void validateManagerPermission(UUID adminHubId, Role adminRole, User user) {
-        if (Role.HUB_MANAGER.equals(adminRole)) {
-            if (!user.isManagedByHub(adminHubId)) {
-                throw new BusinessException(CommonErrorCode.FORBIDDEN);
-            }
-        }
     }
 }

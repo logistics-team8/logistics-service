@@ -20,9 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @DisplayName("CompanyFeignAdapterTest - 단위 테스트")
 @ExtendWith(MockitoExtension.class)
 class CompanyFeignAdapterUnitTest {
-
     @Mock private CompanyFeignClient companyFeignClient;
-
     @InjectMocks private CompanyFeignAdapter companyFeignAdapter;
 
     @Test

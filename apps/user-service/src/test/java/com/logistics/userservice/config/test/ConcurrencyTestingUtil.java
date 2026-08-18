@@ -25,6 +25,8 @@ public class ConcurrencyTestingUtil {
                             task.run();
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         } finally {
                             done.countDown();
                         }
