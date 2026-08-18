@@ -1,8 +1,6 @@
 name: Deploy Development
 
 on:
-  schedule:
-    - cron: "0 4 * * *" # 13:00 KST (UTC+09:00)
   workflow_dispatch:
     inputs:
       ref:

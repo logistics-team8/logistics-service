@@ -26,5 +26,5 @@ jobs:
       - name: Test runner policy checker
         run: python3 .github/scripts/test_check_self_hosted_runner_policy.py
 
-      - name: Allow self-hosted runners only in the scheduled Dev deployment
+      - name: Allow self-hosted runners only in the Dev deployment
         run: python3 .github/scripts/check_self_hosted_runner_policy.py
