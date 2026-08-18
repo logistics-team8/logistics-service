@@ -5,6 +5,7 @@ import com.logistics.deliveryservice.application.dto.DeliveryCreateResponse;
 import com.logistics.deliveryservice.application.dto.DeliveryCreateResult;
 import com.logistics.deliveryservice.application.dto.DeliveryGetByOrderResponse;
 import com.logistics.deliveryservice.application.service.DeliveryService;
+import com.logistics.deliveryservice.presentation.dto.DeliveryCancelRequest;
 import com.logistics.deliveryservice.presentation.dto.DeliveryCreateRequest;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -52,5 +53,18 @@ public class InternalDeliveryController {
         // HTTP 경로의 주문 ID를 조회 유스케이스로 전달하고 공통 성공 응답으로 감싼다.
         DeliveryGetByOrderResponse response = deliveryService.getByOrderId(orderId);
         return ApiResponse.success(response);
+    }
+
+    /**
+     * 주문 취소에 맞춰 활성 배송 상태만 CANCELED로 변경한다.
+     */
+    @PostMapping("/by-order/{orderId}/cancel")
+    public ResponseEntity<Void> cancelDeliveryByOrder(
+            @PathVariable UUID orderId,
+            @RequestBody DeliveryCancelRequest request
+    ) {
+        // cancelReason은 현재 저장하지 않는 요청 계약 필드이므로 Service로 전달하지 않는다.
+        deliveryService.cancelByOrderId(orderId);
+        return ResponseEntity.noContent().build();
     }
 }

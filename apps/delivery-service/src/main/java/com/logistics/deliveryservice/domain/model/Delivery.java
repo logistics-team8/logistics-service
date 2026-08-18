@@ -167,6 +167,39 @@ public class Delivery extends BaseEntity {
         markDeleted(deletedBy);
     }
 
+    /**
+     * 확정된 배송 상태 전이 규칙에 따라 상태를 변경한다.
+     */
+    public void changeStatus(DeliveryStatus status) {
+        if (this.status == status) {
+            return;
+        }
+
+        if (!canChangeTo(status)) {
+            throw new DeliveryException(DeliveryErrorCode.INVALID_DELIVERY_STATUS_TRANSITION);
+        }
+
+        this.status = status;
+        if (status == DeliveryStatus.DELIVERED) {
+            this.completedAt = LocalDateTime.now();
+        }
+    }
+
+    private boolean canChangeTo(DeliveryStatus status) {
+        return switch (this.status) {
+            case HUB_WAIT -> status == DeliveryStatus.HUB_MOVING
+                    || status == DeliveryStatus.CANCELED
+                    || status == DeliveryStatus.FAILED;
+            case HUB_MOVING -> status == DeliveryStatus.HUB_ARRIVED
+                    || status == DeliveryStatus.FAILED;
+            case HUB_ARRIVED -> status == DeliveryStatus.IN_DELIVERY
+                    || status == DeliveryStatus.FAILED;
+            case IN_DELIVERY -> status == DeliveryStatus.DELIVERED
+                    || status == DeliveryStatus.FAILED;
+            case DELIVERED, FAILED, CANCELED -> false;
+        };
+    }
+
     private static void validateDeliveryPlan(
             UUID departureHubId,
             UUID arrivalHubId,

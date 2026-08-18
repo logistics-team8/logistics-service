@@ -1,7 +1,9 @@
 package com.logistics.orderservice.infrastructure.client.company;
 
+import com.logistics.common.exception.BusinessException;
 import com.logistics.orderservice.application.port.CompanyPort;
-import com.logistics.orderservice.application.port.ProductPort;
+import com.logistics.orderservice.error.OrderErrorCode;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -15,15 +17,25 @@ public class CompanyClientAdapter implements CompanyPort {
 
     @Override
     public CompanyInfo getCompanyInfo(UUID companyId) {
-        CompanyFeignClient.CompanyResponse response = companyFeignClient
-                .getCompany(companyId)
-                .getData();
+        try {
+            CompanyFeignClient.CompanyResponse response = companyFeignClient.getCompany(companyId).getData();
 
-        return new CompanyInfo(
-                response.id(),
-                response.hubId(),
-                response.name(),
-                response.address()
-        );
+            if (response == null) {
+                throw new BusinessException(
+                        OrderErrorCode.RECEIVER_COMPANY_NOT_FOUND
+                );
+            }
+
+            return new CompanyInfo(
+                    response.id(),
+                    response.hubId(),
+                    response.name(),
+                    response.address()
+            );
+        } catch (FeignException.NotFound exception) {
+            throw new BusinessException(
+                    OrderErrorCode.RECEIVER_COMPANY_NOT_FOUND
+            );
+        }
     }
 }

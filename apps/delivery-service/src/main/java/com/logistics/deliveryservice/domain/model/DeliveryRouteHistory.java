@@ -1,6 +1,8 @@
 package com.logistics.deliveryservice.domain.model;
 
 import com.logistics.deliveryservice.domain.common.BaseEntity;
+import com.logistics.deliveryservice.domain.exception.DeliveryErrorCode;
+import com.logistics.deliveryservice.domain.exception.DeliveryException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -79,5 +81,29 @@ public class DeliveryRouteHistory extends BaseEntity {
         routeHistory.status = RouteStatus.WAITING;
         routeHistory.hubDeliveryManagerId = routePlan.hubDeliveryManagerId();
         return routeHistory;
+    }
+
+    /**
+     * 확정된 경로 상태 전이 규칙에 따라 상태를 변경한다.
+     */
+    public void changeStatus(RouteStatus status) {
+        if (this.status == status) {
+            return;
+        }
+
+        if (!canChangeTo(status)) {
+            throw new DeliveryException(DeliveryErrorCode.INVALID_ROUTE_STATUS_TRANSITION);
+        }
+
+        this.status = status;
+    }
+
+    private boolean canChangeTo(RouteStatus status) {
+        return switch (this.status) {
+            case WAITING -> status == RouteStatus.MOVING || status == RouteStatus.FAILED;
+            case MOVING -> status == RouteStatus.ARRIVED || status == RouteStatus.FAILED;
+            case ARRIVED -> status == RouteStatus.COMPLETED || status == RouteStatus.FAILED;
+            case COMPLETED, FAILED -> false;
+        };
     }
 }
