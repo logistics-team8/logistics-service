@@ -99,17 +99,6 @@ spring:
               filters:
                 - RewritePath=/notification-service/(?<segment>.*), /${segment}
 
-jwt:
-  access-secret: ${JWT_ACCESS_SECRET}
-  refresh-secret: ${JWT_REFRESH_SECRET}
-  cookie-secure: ${JWT_COOKIE_SECURE:false}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: gateway,health,info
-
 springdoc:
   swagger-ui:
     urls[0]:
@@ -131,7 +120,6 @@ springdoc:
       name: notification-service
       url: /notification-service/v3/api-docs
 
-
 path:
   whitelist:
     # Service
@@ -147,3 +135,14 @@ path:
       pattern: /swagger-ui/**
     - method: GET
       pattern: /**/v3/api-docs/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway,health,info
+
+jwt:
+  access-secret: ${JWT_ACCESS_SECRET}
+  refresh-secret: ${JWT_REFRESH_SECRET}
+  cookie-secure: ${JWT_COOKIE_SECURE:false}
