@@ -1,37 +1,33 @@
 package com.logistics.userservice.application;
 
-import com.logistics.common.error.CommonErrorCode;
 import com.logistics.common.exception.BusinessException;
 import com.logistics.userservice.application.dto.admin.*;
-import com.logistics.userservice.application.dto.company.CompanyInfo;
 import com.logistics.userservice.application.dto.user.UserContext;
 import com.logistics.userservice.application.dto.user.UserCreateCommand;
 import com.logistics.userservice.application.dto.user.UserUpdateCommand;
 import com.logistics.userservice.application.event.UserApprovalEvent;
-import com.logistics.userservice.application.event.UserDeletedEvent;
 import com.logistics.userservice.application.port.AdminUserQueryRepository;
 import com.logistics.userservice.application.validator.UserValidator;
 import com.logistics.userservice.domain.RequestedRole;
 import com.logistics.userservice.domain.User;
 import com.logistics.userservice.domain.UserRepository;
 import com.logistics.userservice.error.UserErrorCode;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AdminService {
     private final UserValidator validator;
+    private final UserService userService;
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final AdminUserQueryRepository adminUserQueryRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
 
@@ -44,24 +40,8 @@ public class AdminService {
      */
     @Transactional
     public void createUserByAdmin(UUID adminId, UserCreateCommand command) {
-        validator.validateDuplicate(command);
-
-        // 허브, 업체 존재 여부 검증 - 업체의 경우 CompanyInfo(hubId, CompanyId) 반환
-        CompanyInfo companyInfo = validator.validateSignUpAffiliation(command);
-        User createdUser = User.create(command);
-
-        if (companyInfo != null) {
-            createdUser.assignAffiliation(companyInfo.hubId(), companyInfo.companyId());
-        }
-
-        createdUser.encodePassword(passwordEncoder.encode(createdUser.getPassword()));
+        User createdUser = userService.createUser(command);
         createdUser.approve(adminId);
-
-        try {
-            userRepository.saveAndFlush(createdUser);
-        } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
-        }
 
         if (createdUser.isDelivery()) {
             RequestedRole requestedRole = createdUser.getRequestedRole();
@@ -108,16 +88,7 @@ public class AdminService {
      * @param command
      */
     @Transactional
-    public void updateUser(UserUpdateCommand command) {
-        User updatedUser = findUserById(command.userId());
-        updatedUser.update(command.name(), command.slackId());
-
-        try {
-            userRepository.flush();
-        } catch (DataIntegrityViolationException e) {
-            throw new BusinessException(UserErrorCode.USER_DUPLICATE_SLACK_ID);
-        }
-    }
+    public void updateUser(UserUpdateCommand command) {userService.updateUser(command);}
 
     /**
      * 회원 정보 삭제
@@ -125,13 +96,7 @@ public class AdminService {
      * @param userId
      */
     @Transactional
-    public void deleteUser(UUID userId) {
-        User deletedUser = findUserById(userId);
-        deletedUser.delete(userId);
-
-        // Redis 인증 정보 삭제는 이벤트 처리
-        applicationEventPublisher.publishEvent(new UserDeletedEvent(userId));
-    }
+    public void deleteUser(UUID userId) { userService.deleteUser(userId); }
 
     // ============================== Approval ==============================
     /**
