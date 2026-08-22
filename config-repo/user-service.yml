@@ -6,6 +6,8 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      connect-timeout: 1s
+      timeout: 2s
   datasource:
     url: jdbc:postgresql://${app.database.host}:${app.database.port}/${app.database.name}?currentSchema=users
   jpa:
