@@ -34,7 +34,7 @@ public class UserService {
      * @param command
      */
     @Transactional
-    public void createUser(UserCreateCommand command) {
+    public User createUser(UserCreateCommand command) {
         validator.validateDuplicate(command);
 
         // 허브, 업체 존재 여부 검증 - 업체의 경우 CompanyInfo(hubId, CompanyId) 반환
@@ -48,7 +48,7 @@ public class UserService {
         createdUser.encodePassword(passwordEncoder.encode(createdUser.getPassword()));
 
         try {
-            userRepository.saveAndFlush(createdUser);
+            return userRepository.saveAndFlush(createdUser);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(CommonErrorCode.DUPLICATE_RESOURCE);
         }
@@ -72,7 +72,7 @@ public class UserService {
     @Transactional
     public void deleteUser(UUID userId) {
         User deletedUser = findUserById(userId);
-        deletedUser.delete(deletedUser.getId());
+        deletedUser.delete(userId);
 
         // Redis 인증 정보 삭제는 이벤트 처리
         applicationEventPublisher.publishEvent(new UserDeletedEvent(userId));

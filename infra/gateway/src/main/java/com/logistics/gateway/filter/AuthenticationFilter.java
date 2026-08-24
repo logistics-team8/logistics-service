@@ -38,11 +38,18 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     private final JwtTokenProvider jwtTokenProvider;
     private final PathProperties pathProperties;
 
+    private static final String X_USER_ID = "X-User-Id";
+    private static final String X_HUB_ID = "X-Hub-Id";
+    private static final String X_COMPANY_ID = "X-Company-Id";
+    private static final String X_ROLE = "X-Role";
+
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
         String path = exchange.getRequest().getURI().getPath();
         HttpMethod httpMethod = request.getMethod();
+
+        ServerHttpRequest cleanRequest = removeHeader(request);
 
         boolean isWhitelisted =
                 pathProperties.whitelist().stream()
@@ -53,19 +60,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
 
         // Whitelist 체크
         if (isWhitelisted) {
-            ServerHttpRequest sanitizedRequest =
-                    request.mutate()
-                            // 헤더 스푸핑 방지
-                            .headers(
-                                    httpHeaders -> {
-                                        httpHeaders.remove("X-User-Id");
-                                        httpHeaders.remove("X-Hub-Id");
-                                        httpHeaders.remove("X-Company-Id");
-                                        httpHeaders.remove("X-Role");
-                                    })
-                            .build();
-
-            return chain.filter(exchange.mutate().request(sanitizedRequest).build());
+            return chain.filter(exchange.mutate().request(cleanRequest).build());
         }
 
         // 액세스 토큰 유무 확인
@@ -97,20 +92,12 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 .then(verifyUserRole(userId))
                 .flatMap(
                         role -> {
-                            ServerHttpRequest.Builder requestBuilder =
-                                    request.mutate()
-                                            .headers(
-                                                    headers -> {
-                                                        headers.remove("X-User-Id");
-                                                        headers.remove("X-Hub-Id");
-                                                        headers.remove("X-Company-Id");
-                                                        headers.remove("X-Role");
-                                                    });
+                            ServerHttpRequest.Builder requestBuilder = cleanRequest.mutate();
 
-                            addHeader(requestBuilder, "X-User-Id", userId);
-                            addHeader(requestBuilder, "X-Hub-Id", hubId);
-                            addHeader(requestBuilder, "X-Company-Id", companyId);
-                            addHeader(requestBuilder, "X-Role", role);
+                            addHeader(requestBuilder, X_USER_ID, userId);
+                            addHeader(requestBuilder, X_HUB_ID, hubId);
+                            addHeader(requestBuilder, X_COMPANY_ID, companyId);
+                            addHeader(requestBuilder, X_ROLE, role);
 
                             ServerWebExchange mutatedExchange =
                                     exchange.mutate().request(requestBuilder.build()).build();
@@ -138,6 +125,24 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     /**
+     * 헤더 스푸핑 방지용 메서드
+     *
+     * @param request
+     * @return header가 삭제된 Request 객체
+     */
+    private ServerHttpRequest removeHeader(ServerHttpRequest request) {
+        return request.mutate()
+                .headers(
+                        httpHeaders -> {
+                            httpHeaders.remove(X_USER_ID);
+                            httpHeaders.remove(X_HUB_ID);
+                            httpHeaders.remove(X_COMPANY_ID);
+                            httpHeaders.remove(X_ROLE);
+                        })
+                .build();
+    }
+
+    /**
      * Redis 세션 유효성 검증
      *
      * @param userId 회원 PK
@@ -153,10 +158,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 .timeout(Duration.ofMillis(300))
                 .onErrorResume(
                         e -> {
-                            log.error(
-                                    "[ERROR] Redis 세션 조회 실패 userId = {}",
-                                    userId,
-                                    e);
+                            log.error("[ERROR] Redis 세션 조회 실패 userId = {}", userId, e);
                             return Mono.just(true);
                         })
                 .filter(Boolean::booleanValue)
