@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -55,8 +56,8 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 pathProperties.whitelist().stream()
                         .anyMatch(
                                 whitelist ->
-                                        httpMethod.name().equalsIgnoreCase(whitelist.method())
-                                                && pathMatcher.match(whitelist.pattern(), path));
+                                        httpMethod == whitelist.method()
+                                                && pathMatcher.match(whitelist.path(), path));
 
         // Whitelist 체크
         if (isWhitelisted) {
@@ -64,7 +65,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         // 액세스 토큰 유무 확인
-        String accessToken = jwtTokenProvider.resolveAccessToken(exchange);
+        String accessToken = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
         if (accessToken == null) {
             // 액세스 토큰이 없는 경우
@@ -159,7 +160,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
                 .onErrorResume(
                         e -> {
                             log.error("[ERROR] Redis 세션 조회 실패 userId = {}", userId, e);
-                            return Mono.just(true);
+                            return Mono.just(false);
                         })
                 .filter(Boolean::booleanValue)
                 .switchIfEmpty(Mono.error(new BusinessException(GatewayErrorCode.UNAUTHORIZED)))

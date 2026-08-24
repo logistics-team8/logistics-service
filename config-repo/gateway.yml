@@ -124,17 +124,17 @@ path:
   whitelist:
     # Service
     - method: POST
-      pattern: /api/v1/users
+      path: /api/v1/users
     - method: POST
-      pattern: /api/v1/auth/login
+      path: /api/v1/auth/login
     - method: POST
-      pattern: /api/v1/auth/reissue
+      path: /api/v1/auth/reissue
 
     # Swagger
     - method: GET
-      pattern: /swagger-ui/**
+      path: /swagger-ui/**
     - method: GET
-      pattern: /**/v3/api-docs/**
+      path: /**/v3/api-docs/**
 
 management:
   endpoints:
